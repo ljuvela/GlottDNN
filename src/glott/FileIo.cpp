@@ -1,6 +1,7 @@
 #include "FileIo.h"
 
 #include <sndfile.hh>
+#include <cstring>
 #include <gslwrap/vector_double.h>
 #include <gslwrap/matrix_double.h>
 #include "definitions.h"

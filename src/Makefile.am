@@ -19,7 +19,7 @@ bin_PROGRAMS = Analysis
 Analysis_SOURCES = glott/Analysis.cpp Filters.h \
 					glott/definitions.h glott/definitions.cpp \
 					glott/ReadConfig.h glott/ReadConfig.cpp \
-					glott/FileIO.h glott/FileIO.cpp \
+					glott/FileIo.h glott/FileIo.cpp \
 					glott/InverseFiltering.h glott/InverseFiltering.cpp \
 					glott/SpFunctions.h glott/SpFunctions.cpp \
 					glott/AnalysisFunctions.h glott/AnalysisFunctions.cpp \

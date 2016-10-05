@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <libconfig.h++>
+#include <cstring>
 #include "definitions.h"
 #include "ReadConfig.h"
 
