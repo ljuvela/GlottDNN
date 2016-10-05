@@ -107,8 +107,6 @@ int main(int argc, char *argv[]) {
 	ReadFile(wav_filename, &(data.signal), &params);
 	data.AllocateData(params);
 
-
-
 	/* F0 Analysis */
 	GetF0(params, data.signal, &(data.fundf));
 
