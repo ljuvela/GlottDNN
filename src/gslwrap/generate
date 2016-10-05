@@ -1,0 +1,24 @@
+#!/bin/sh
+
+# source template files 
+sources=`ls *_source.cc *_source.h`
+# typenames that we want to use 
+types="float double int"
+
+for source in $sources; do
+	for typ in $types; do
+		echo xxx source $source, typ $typ
+		# compute new filename
+		if test `basename $source .cc` = $source; then
+			dest=`basename $source _source.h`_$typ.h
+		else
+			dest=`basename $source _source.cc`_$typ.cc
+		fi
+		cp $source $dest
+		# replace in file
+		typeext=_$typ
+		if test $typ = double;then typeext=;fi
+		perl -pi -e "s/#type#/$typ/g" $dest
+		perl -pi -e "s/#typeext#/$typeext/g" $dest
+    done
+done
