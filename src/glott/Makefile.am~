@@ -1,4 +1,0 @@
-
-bin_PROGRAMS = Analysis Synthesis PulseGen
-
-Analysis_SOURCES = Analysis.cpp definitions.h 
