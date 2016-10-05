@@ -65,10 +65,6 @@ int main(int argc, char *argv[]) {
 
 	// Process VT parameters?
 
-        // REMOVED FOO
-
-
-
 	/* Finish */
 	printf("Finished analysis.\n\n");
 	return EXIT_SUCCESS;
