@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
 
 	// Process VT parameters?
 
-    std::cout << "Foo" << std::endl;
+    // conflict exercise
 
 
 
