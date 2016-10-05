@@ -47,9 +47,6 @@ int main(int argc, char *argv[]) {
 			return EXIT_FAILURE;
 	}
 
-	//double foo[] = {1,2,3};
-    std::cout << "Foo" << std::endl;
-
 	//create_file(fname, SF_FORMAT_WAV | SF_FORMAT_PCM_16) ;
 	/* Read sound file and allocate data */
 	AnalysisData data;
@@ -61,7 +58,6 @@ int main(int argc, char *argv[]) {
 
 	GetGci(params, data.signal, &(data.gci_inds));
 
-    std::cout << "Foo" << std::endl;
 
 	GetGain(params, data.signal, &(data.frame_energy));
 
@@ -69,7 +65,7 @@ int main(int argc, char *argv[]) {
 
 	// Process VT parameters?
 
-    std::cout << "Foo" << std::endl;
+        // REMOVED FOO
 
 
 
