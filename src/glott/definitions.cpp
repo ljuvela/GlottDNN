@@ -12,6 +12,7 @@
 Param::Param() {
 	external_f0_filename = NULL;
 	external_gci_filename = NULL;
+	basename = NULL;
 	default_windowing_function = HANN;
 }
 
@@ -20,6 +21,8 @@ Param::~Param() {
 		delete[] external_f0_filename;
 	if (external_gci_filename != NULL)
 		delete[] external_gci_filename;
+	if (basename != NULL)
+	   delete[] basename;
 }
 
 AnalysisData::AnalysisData() {}
@@ -36,4 +39,9 @@ int AnalysisData::AllocateData(const Param &params) {
 	lsf_glott = gsl::matrix(params.lpc_order_glot,params.number_of_frames,true);
 
 	return EXIT_SUCCESS;
+}
+
+int AnalysisData::SaveData(const Param &params) {
+
+   return EXIT_SUCCESS;
 }

@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
    //create_file(fname, SF_FORMAT_WAV | SF_FORMAT_PCM_16) ;
    /* Read sound file and allocate data */
    AnalysisData data;
-   ReadFile(wav_filename, &(data.signal), &params);
+   ReadWavFile(wav_filename, &(data.signal), &params);
    data.AllocateData(params);
 
 
@@ -58,7 +58,6 @@ int main(int argc, char *argv[]) {
    GetF0(params, data.signal, &(data.fundf));
 
    GetGci(params, data.signal, &(data.gci_inds));
-
 
    GetGain(params, data.signal, &(data.frame_energy));
 

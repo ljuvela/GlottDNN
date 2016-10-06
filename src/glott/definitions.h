@@ -38,6 +38,7 @@ public:
 	double ame_duration_quotient;
 	double ame_position_quotient;
 	WindowingFunctionType default_windowing_function;
+	char *basename;
 };
 
 
@@ -47,6 +48,7 @@ struct AnalysisData {
 	AnalysisData();
 	~AnalysisData();
 	int AllocateData(const Param &params);
+	int SaveData(const Param &params);
 public:
 	gsl::vector signal;
 	gsl::vector fundf;

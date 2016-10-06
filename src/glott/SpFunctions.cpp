@@ -221,4 +221,49 @@ void AllPassDelay(const double &lambda, gsl::vector *signal) {
 	}
 }
 
+void FFT() {
+
+}
+
+/* Function AC_stabilize
+ * Stabilize a polynomial by computing its autocorrelation and performing Levinson-Duribin recursion
+ *  */
+void AC_stabilize(gsl_vector *a,int Nframe) {
+   int i;
+   size_t N = a->size;
+   size_t nfft = NextPow2(Nframe);
+      double *data = calloc(nfft,sizeof(double)); /* complex, takes 2*nfft/2  values*/
+      gsl_vector *X = gsl_vector_calloc(nfft/2+1);
+
+      /* Calculate power spectral density */
+      for (i=0; i<a->size; i++)
+         data[i] = gsl_vector_get(a,i);
+      gsl_fft_real_radix2_transform(data, 1, nfft);
+      for(i=1; i<nfft/2; i++){
+         gsl_vector_set(X, i, 1.0/(pow(data[i], 2) + pow(data[nfft-i], 2)));
+      }
+      gsl_vector_set(X, 0, 1.0/pow(data[0],2));
+      gsl_vector_set(X,nfft/2,1.0/pow(data[nfft/2],2));
+
+       /* Inverse transform PSD for autocorrelation */
+       for (i=0;i<nfft/2+1;i++)
+           data[i] = gsl_vector_get(X,i);
+       for (i=nfft/2+1;i<nfft;i++)
+           data[i] = 0;
+       gsl_fft_halfcomplex_radix2_inverse(data, 1,nfft);
+
+       /* Set values symmetrically to AC vector */
+       gsl_vector *ac = gsl_vector_alloc(N);
+
+       for(i=0;i<ac->size;i++)
+         gsl_vector_set(ac,i,data[i]);
+       /* Free memory*/
+
+       Levinson(ac, a);
+       free(data);
+      gsl_vector_free(ac);
+      gsl_vector_free(X);
+
+}
+
 
