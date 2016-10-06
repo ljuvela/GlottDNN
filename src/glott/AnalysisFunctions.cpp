@@ -114,9 +114,9 @@ int GetFrame(const Param &params, const gsl::vector &signal, const int frame_ind
   */
 int SpectralAnalysis(const Param &params, const AnalysisData &data, gsl::matrix *poly_vocal_tract) {
 
-	gsl::vector frame = gsl::vector(params.frame_length);
-	gsl::vector pre_frame = gsl::vector(params.lpc_order_vt);
-	gsl::vector lp_weight;
+	gsl::vector frame(params.frame_length);
+	gsl::vector pre_frame(params.lpc_order_vt);
+	gsl::vector lp_weight(params.frame_length + params.lpc_order_vt,true);
 	gsl::vector A(params.lpc_order_vt+1,true);
 	size_t frame_index;
 

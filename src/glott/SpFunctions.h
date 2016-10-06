@@ -19,5 +19,6 @@ void Filter(const std::vector<double> &b, const gsl::vector a, const gsl::vector
 void ApplyWindowingFunction(const WindowingFunctionType &window_function, gsl::vector *frame);
 void Autocorrelation(const gsl::vector &frame, const int &order, gsl::vector *r);
 void Levinson(const gsl::vector &r, gsl::vector *A);
+void AllPassDelay(const double &lambda, gsl::vector *signal);
 
 #endif /* SRC_GLOTT_SPFUNCTIONS_H_ */

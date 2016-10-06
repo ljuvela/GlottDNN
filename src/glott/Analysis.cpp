@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
 
 	Param params;
 	if (ReadConfig(default_config_filename, true, &params) == EXIT_FAILURE)
-		return EXIT_FAILURE;
+      return EXIT_FAILURE;
 	if (argc > 3) {
 		if (ReadConfig(user_config_filename, false, &params) == EXIT_FAILURE)
 			return EXIT_FAILURE;
@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
 	/* F0 Analysis */
 	GetF0(params, data.signal, &(data.fundf));
 
-	GetGci(params, data.signal, &(data.gci_inds));
+   GetGci(params, data.signal, &(data.gci_inds));
 
 
 	GetGain(params, data.signal, &(data.frame_energy));
@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
 
 	// Process VT parameters?
 
-	/* Finish */
+   /* Finish */
 	printf("Finished analysis.\n\n");
 	return EXIT_SUCCESS;
 }

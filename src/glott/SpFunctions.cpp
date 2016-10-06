@@ -201,6 +201,24 @@ void Levinson(const gsl::vector &r, gsl::vector *A) {
 }
 
 
+void AllPassDelay(const double &lambda, gsl::vector *signal) {
+	double A[2] = {-lambda, 1.0};
+	double B[2] = {0.0, lambda};
 
+	int i,j;
+	double sum;
+
+	gsl::vector signal_orig(signal->size());
+	signal_orig.copy(*signal);
+
+	for(i=0;i<(int)signal->size();i++) {
+		sum = 0.0;
+		for(j=0;j<2;j++) {
+			if((i-j) >= 0)
+				sum += signal_orig(i-j)*A[j] + (*signal)(i-j)*B[j];
+		}
+		(*signal)(i) = sum;
+	}
+}
 
 

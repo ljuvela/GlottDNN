@@ -179,7 +179,7 @@ int ReadConfig(const char *filename, const bool default_config, Param *params) {
 	}
 	catch(const libconfig::FileIOException &fioex)
 	{
-		std::cerr << "I/O error while reading file." << std::endl;
+		std::cerr << "I/O error while reading file: " << filename << std::endl;
 		return(EXIT_FAILURE);
 	}
 	catch(const libconfig::ParseException &pex)
