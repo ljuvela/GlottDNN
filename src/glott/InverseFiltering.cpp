@@ -136,7 +136,7 @@ void GetLpWeight(const Param &params, const LpWeightingFunction &weight_type,
  * @param Wn pointer to WWLP weighting function
  * @param lambda warping coefficient
  */
-void WWLP(const gsl::vector &weight_function, const double &warping_lambda_vt, const LpWeightingFunction weight_type,
+void WWLP(const gsl::vector &weight_function, const double &warping_lambda, const LpWeightingFunction weight_type,
 		const int &lp_order, const gsl::vector &frame, gsl::vector *A) {
 
    size_t i,j;
@@ -158,7 +158,7 @@ void WWLP(const gsl::vector &weight_function, const double &warping_lambda_vt, c
       }
    }
    for(i=1;i<p+1;i++) { // Set delayed (warped) rows
-      AllPassDelay(warping_lambda_vt, &frame_w);
+      AllPassDelay(warping_lambda, &frame_w);
       for(j=0;j<frame_w.size();j++) {
          if(weight_type == 0) {
             Y(i,j) = frame_w(j);
@@ -170,38 +170,46 @@ void WWLP(const gsl::vector &weight_function, const double &warping_lambda_vt, c
    // Rfull = Dw*Dw'
    gsl::matrix Rfull = Y*(Y.transpose());
 
-   // Autocorrelation matrix R (R = (YT*Y)/N, size p*p) and vector b (size p)
-   double sum = 0.0;
-   gsl::matrix R(p,p);
-   gsl::matrix b(p,1);
-   for(i=0;i<p;i++) {
-      for(j=0;j<p;j++) {
-         R(i,j) = Rfull(i+1,j+1);
+   /// Use generic Ra=b solver if LP weighting is used
+   if(weight_type != NONE) {
+      // Autocorrelation matrix R (R = (YT*Y)/N, size p*p) and vector b (size p)
+      double sum = 0.0;
+      gsl::matrix R(p,p);
+      gsl::matrix b(p,1);
+      for(i=0;i<p;i++) {
+         for(j=0;j<p;j++) {
+            R(i,j) = Rfull(i+1,j+1);
+         }
+         b(i,0) = Rfull(i+1,0);
+         sum += b(i,0);
       }
-      b(i,0) = Rfull(i+1,0);
-      sum += b(i,0);
+
+      //Ra=b solver (LU-decomposition) (Do not evaluate LU if sum = 0)
+      gsl::matrix a_tmp(p,1,true);
+      if(sum != 0.0)
+         a_tmp = R.LU_invert() * b;
+
+      if(!A->is_set()) {
+         *A = gsl::vector(p+1);
+      } else {
+         if(A->size() != p+1) {
+            A->resize(p+1);
+         } else {
+            A->set_all(0.0);
+         }
+      }
+
+      // Set LP-coefficients to vector "A"
+      for(i=1; i<A->size(); i++) {
+         (*A)(i) =  (-1.0)*a_tmp(i-1,0);
+      }
+      (*A)(0) = 1.0;
+   /// Use Levinson if no LP weighting
+   } else {
+      Levinson(Rfull.get_col_vec(0), A);
    }
 
-   //Ra=b solver (LU-decomposition) (Do not evaluate LU if sum = 0)
-   gsl::matrix a_tmp(p,1,true);
-   if(sum != 0.0)
-      a_tmp = R.LU_invert() * b;
 
-	if(!A->is_set()) {
-		*A = gsl::vector(p+1);
-	} else {
-		if(A->size() != p+1) {
-			A->resize(p+1);
-		} else {
-			A->set_all(0.0);
-		}
-	}
-
-   // Set LP-coefficients to vector "A"
-   for(i=1; i<A->size(); i++) {
-      (*A)(i) =  (-1.0)*a_tmp(i-1,0);
-   }
-   (*A)(0) = 1.0;
 
     // Stabilize unstable filter by scaling the poles along the unit circle
    //AC_stabilize(A,frame->size);
@@ -221,21 +229,14 @@ void LPC(const gsl::vector &frame, const int &lpc_order, gsl::vector *A) {
 	Levinson(r,A);
 }
 
-void ArAnalysis(const Param &params , const bool &use_iterative_gif,
-					   const double &warping_lambda_vt, const gsl::vector &lp_weight,
-					   const gsl::vector &frame, const gsl::vector &pre_frame, gsl::vector *A) {
+void ArAnalysis(const int &lp_order,const double &warping_lambda, const LpWeightingFunction &weight_type,
+                  const gsl::vector &lp_weight, const gsl::vector &frame, gsl::vector *A) {
 
-	/* First-loop envelope */
-	gsl::vector frame_pre_emph;
-	Filter(std::vector<double>{1.0, params.gif_pre_emphasis_coefficient},std::vector<double>{1.0}, frame, &frame_pre_emph);
-	ApplyWindowingFunction(params.default_windowing_function, &frame_pre_emph);
-   WWLP(lp_weight, warping_lambda_vt, params.lp_weighting_function, params.lpc_order_vt, frame, A);
-	//LPC(frame_pre_emph, params.lpc_order_vt, A);
-
-	if(use_iterative_gif) {
-		std::cout << "TODO" << std::endl;
-		// TODO
-	}
+   if(weight_type == NONE && warping_lambda == 0.0) {
+      LPC(frame, lp_order, A);
+   } else {
+      WWLP(lp_weight, warping_lambda, weight_type, lp_order, frame, A);
+   }
 
 }
 
