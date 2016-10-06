@@ -46,11 +46,13 @@ int main(int argc, char *argv[]) {
          return EXIT_FAILURE;
    }
 
+
    //create_file(fname, SF_FORMAT_WAV | SF_FORMAT_PCM_16) ;
    /* Read sound file and allocate data */
    AnalysisData data;
    ReadFile(wav_filename, &(data.signal), &params);
    data.AllocateData(params);
+
 
    /* F0 Analysis */
    GetF0(params, data.signal, &(data.fundf));
@@ -67,6 +69,7 @@ int main(int argc, char *argv[]) {
    /* Finish */
    printf("Finished analysis.\n\n");
    return EXIT_SUCCESS;
+
 }
 
 /***********/
