@@ -22,7 +22,16 @@
 void Filter(const gsl::vector &b, const gsl::vector &a, const gsl::vector &x, gsl::vector *y) {
 	int i,j;
 	double sum;
-	*y = gsl::vector(x.size(),true);
+
+	if(!y->is_set()) {
+		*y = gsl::vector(x.size(),true);
+	} else {
+		if(y->size() != x.size()) {
+			y->resize(x.size());
+      }
+      y->set_all(0.0);
+	}
+
 
 	/* Filter */
 	for (i=0;i<(int)x.size();i++){
@@ -220,5 +229,27 @@ void AllPassDelay(const double &lambda, gsl::vector *signal) {
 		(*signal)(i) = sum;
 	}
 }
+
+void ConcatenateFrames(const gsl::vector &frame1, const gsl::vector &frame2, gsl::vector *frame_result) {
+   size_t n1 = frame1.size();
+   size_t n2 = frame2.size();
+   if(!frame_result->is_set()) {
+		*frame_result = gsl::vector(n1+n2);
+	} else {
+		if(frame_result->size() != n1+n2) {
+			frame_result->resize(n1+n2);
+		}
+	}
+	size_t i;
+	for(i=0;i<n1;i++)
+      (*frame_result)(i) = frame1(i);
+
+   for(i=0;i<n2;i++)
+      (*frame_result)(i+n1) = frame2(i);
+}
+
+
+
+
 
 

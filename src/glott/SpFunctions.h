@@ -20,5 +20,5 @@ void ApplyWindowingFunction(const WindowingFunctionType &window_function, gsl::v
 void Autocorrelation(const gsl::vector &frame, const int &order, gsl::vector *r);
 void Levinson(const gsl::vector &r, gsl::vector *A);
 void AllPassDelay(const double &lambda, gsl::vector *signal);
-
+void ConcatenateFrames(const gsl::vector &frame1, const gsl::vector &frame2, gsl::vector *frame_result);
 #endif /* SRC_GLOTT_SPFUNCTIONS_H_ */
