@@ -17,7 +17,11 @@
 #include <gsl/gsl_spline.h>			/* GSL, Interpolation */
 #include <gslwrap/vector_double.h>
 #include <vector>
+#include <gsl/gsl_fft_real.h>
+#include <gsl/gsl_fft_halfcomplex.h>
+#include "ComplexVector.h"
 #include "definitions.h"
+#include "SpFunctions.h"
 
 void Filter(const gsl::vector &b, const gsl::vector &a, const gsl::vector &x, gsl::vector *y) {
 	int i,j;
@@ -230,6 +234,91 @@ void AllPassDelay(const double &lambda, gsl::vector *signal) {
 	}
 }
 
+
+void FFTRadix2(const gsl::vector &x, ComplexVector *X ) {
+   size_t i;
+   size_t N = x.size();
+   size_t nfft = NextPow2(2*N);
+
+   if(X == NULL) {
+      *X = ComplexVector(nfft/2+1);
+   } else {
+      X->resize(nfft/2+1);
+   }
+
+   /* Allocate space for FFT */
+   double *data = (double *)calloc(nfft,sizeof(double));
+
+   /* Calculate spectrum */
+   for (i=0; i<N; i++)
+      data[i] = x(i);
+   gsl_fft_real_radix2_transform(data, 1, nfft);
+   for(i=1; i<nfft/2; i++){
+      X->setReal(i, data[i]);
+      X->setImag(i, data[nfft-i]);
+   }
+   X->setReal(0, data[0]);
+   X->setReal(nfft/2, data[nfft/2]);
+
+   /* Free memory*/
+   free(data);
+}
+
+void IFFTRadix2(const ComplexVector &X, gsl::vector *x) {
+
+   size_t nfft = 2*(X.getSize()-1);
+
+   assert(IsPow2(nfft));
+
+   if(!(x->is_set()))
+      *x = gsl::vector(X.getSize());
+
+   size_t N = x->size();
+
+   double *data = (double*)calloc(nfft,sizeof(double)); /* complex, takes 2*nfft/2  values*/
+
+   /* Inverse transform  */
+   size_t i;
+   for(i=1; i<nfft/2; i++){
+      data[i] = X.getReal(i);
+      data[nfft-i] = X.getImag(i);
+   }
+   data[0] = X.getReal(0);
+   data[nfft/2] = X.getReal(nfft/2);
+   gsl_fft_halfcomplex_radix2_inverse(data, 1, nfft);
+
+   for (i=0;i<N;i++)
+   {
+      (*x)(i) = data[i];
+   }
+
+   /* Free memory*/
+   free(data);
+}
+
+/**
+ * Find the next integer that is a power of 2
+ * @param n
+ * @return
+ */
+int NextPow2(int n) {
+   int m = 1;
+   while (m < n)
+      m*=2;
+   return m;
+}
+
+bool IsPow2(int n) {
+   while (n > 2) {
+      if (n % 2 == 0)
+         n = n/2;
+      else
+         return false;
+   }
+   return true;
+}
+
+
 void ConcatenateFrames(const gsl::vector &frame1, const gsl::vector &frame2, gsl::vector *frame_result) {
    size_t n1 = frame1.size();
    size_t n2 = frame2.size();
@@ -247,6 +336,4 @@ void ConcatenateFrames(const gsl::vector &frame1, const gsl::vector &frame2, gsl
    for(i=0;i<n2;i++)
       (*frame_result)(i+n1) = frame2(i);
 }
-
-
 

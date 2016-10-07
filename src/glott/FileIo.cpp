@@ -31,7 +31,7 @@ void create_file (const char * fname, int format)
 	*/
 } /* create_file */
 
-void ReadFile (const char *fname, gsl::vector *signal, Param *params) {
+void ReadWavFile (const char *fname, gsl::vector *signal, Param *params) {
 	//static short buffer [BUFFER_LEN] ;
 
 	SndfileHandle file ;
@@ -50,13 +50,22 @@ void ReadFile (const char *fname, gsl::vector *signal, Param *params) {
 	double buffer[signal->size()];
 	file.read (buffer, signal->size()) ;
 
-	int i;
+	size_t i;
 	for (i=0;i<signal->size();i++) {
 		(*signal)(i) = buffer[i];
 	}
 
 	params->number_of_frames = ceil(signal->size()/params->frame_shift);
 	params->signal_length = signal->size();
+
+	/*
+   std::string str(fname);
+   size_t lastindex = str.find_last_of(".");
+   std::cout << lastindex << std::endl ;
+   params->basename = new char[lastindex+1];
+   strncpy(params->basename, fname, lastindex);
+   std::cout << params->basename << std::endl;
+*/
 
 	/* RAII takes care of destroying SndfileHandle object. */
 } /* read_file */
@@ -153,5 +162,22 @@ int ReadGslMatrix(const char *filename, const DataType format, const size_t n_ro
 	fclose(inputfile);
 
 	return EXIT_SUCCESS;
+}
+
+int WriteGslVector(const char *filename, const DataType &format, const gsl::vector &vector) {
+      FILE *fid = NULL;
+      fid = fopen(filename, "w");
+      if(fid==NULL){
+         std::cerr << "Error: could not create file " << filename << std::endl;
+         return EXIT_FAILURE;
+      }
+      if(format == ASCII) {
+         vector.fprintf(fid, "%.7f");
+      } else if(format == BINARY) {
+         vector.fwrite(fid);
+      }
+      fclose(fid);
+
+      return EXIT_SUCCESS;
 }
 

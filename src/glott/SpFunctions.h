@@ -8,6 +8,7 @@
 #ifndef SRC_GLOTT_SPFUNCTIONS_H_
 #define SRC_GLOTT_SPFUNCTIONS_H_
 #include <vector>
+#include "ComplexVector.h"
 #include "definitions.h"
 
 void InterpolateNearest(const gsl::vector &vector, const size_t interpolated_size, gsl::vector *i_vector);
@@ -21,4 +22,8 @@ void Autocorrelation(const gsl::vector &frame, const int &order, gsl::vector *r)
 void Levinson(const gsl::vector &r, gsl::vector *A);
 void AllPassDelay(const double &lambda, gsl::vector *signal);
 void ConcatenateFrames(const gsl::vector &frame1, const gsl::vector &frame2, gsl::vector *frame_result);
+int NextPow2(int n);
+bool IsPow2(int n);
+void FFTRadix2(const gsl::vector &x, ComplexVector *X);
+void IFFTRadix2(const ComplexVector &X, gsl::vector *x);
 #endif /* SRC_GLOTT_SPFUNCTIONS_H_ */
