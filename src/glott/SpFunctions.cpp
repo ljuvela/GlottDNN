@@ -250,6 +250,3 @@ void ConcatenateFrames(const gsl::vector &frame1, const gsl::vector &frame2, gsl
 
 
 
-
-
-
