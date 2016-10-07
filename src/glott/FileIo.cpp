@@ -58,13 +58,14 @@ void ReadWavFile (const char *fname, gsl::vector *signal, Param *params) {
 	params->number_of_frames = ceil(signal->size()/params->frame_shift);
 	params->signal_length = signal->size();
 
+	/*
    std::string str(fname);
    size_t lastindex = str.find_last_of(".");
    std::cout << lastindex << std::endl ;
    params->basename = new char[lastindex+1];
    strncpy(params->basename, fname, lastindex);
    std::cout << params->basename << std::endl;
-
+*/
 
 	/* RAII takes care of destroying SndfileHandle object. */
 } /* read_file */

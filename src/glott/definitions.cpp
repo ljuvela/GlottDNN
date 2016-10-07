@@ -9,6 +9,7 @@
 #include <iostream>
 
 
+
 Param::Param() {
 	external_f0_filename = NULL;
 	external_gci_filename = NULL;
@@ -17,11 +18,11 @@ Param::Param() {
 }
 
 Param::~Param() {
-	if (external_f0_filename != NULL)
+	if (external_f0_filename)
 		delete[] external_f0_filename;
-	if (external_gci_filename != NULL)
+	if (external_gci_filename)
 		delete[] external_gci_filename;
-	if (basename != NULL)
+	if (basename)
 	   delete[] basename;
 }
 

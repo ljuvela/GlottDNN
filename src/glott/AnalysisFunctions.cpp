@@ -118,9 +118,12 @@ int SpectralAnalysis(const Param &params, const AnalysisData &data, gsl::matrix 
 	gsl::vector pre_frame(params.lpc_order_vt);
 	gsl::vector lp_weight(params.frame_length + params.lpc_order_vt,true);
 	gsl::vector A(params.lpc_order_vt+1,true);
+	gsl::vector G(params.lpc_order_glot_iaif,true);
 	gsl::vector B(1);B(0) = 1.0;
    gsl::vector frame_pre_emph(params.frame_length);
    gsl::vector frame_full; // frame + preframe
+   gsl::vector residual_full; // residual with preframe
+
 	size_t frame_index;
 
 	std::cout << "Spectral analysis ...";
@@ -134,15 +137,23 @@ int SpectralAnalysis(const Param &params, const AnalysisData &data, gsl::matrix 
 				GetLpWeight(params,params.lp_weighting_function,data.gci_inds, frame, frame_index, &lp_weight);
 
 				// Pre-emphasis and windowing
-            Filter(std::vector<double>{1.0, params.gif_pre_emphasis_coefficient},std::vector<double>{1.0}, frame, &frame_pre_emph);
+            Filter(std::vector<double>{1.0, params.gif_pre_emphasis_coefficient},B, frame, &frame_pre_emph);
             ApplyWindowingFunction(params.default_windowing_function, &frame_pre_emph);
 
             // First-loop envelope
 				ArAnalysis(params.lpc_order_vt,params.warping_lambda_vt, params.lp_weighting_function, lp_weight, frame_pre_emph, &A);
 
+				// Second-loop envelope (if IAIF is used)
 				if(params.use_iterative_gif) {
-              // ConcatenateFrames(pre_frame, frame, &frame_full);
-               //Filter(A,)
+               ConcatenateFrames(pre_frame, frame, &frame_full);
+               Filter(A,B,frame_full,&residual_full);
+
+               ApplyWindowingFunction(params.default_windowing_function, &residual_full);
+               ArAnalysis(params.lpc_order_glot_iaif,0.0, NONE, lp_weight, residual_full.subvector(params.lpc_order_vt,params.frame_length), &G);
+
+               Filter(G,B,frame,&frame_pre_emph); // Iterated pre-emphasis
+               ApplyWindowingFunction(params.default_windowing_function, &frame_pre_emph);
+               ArAnalysis(params.lpc_order_vt,params.warping_lambda_vt, params.lp_weighting_function, lp_weight, frame_pre_emph, &A);
 				}
 
          /** Unvoiced analysis **/

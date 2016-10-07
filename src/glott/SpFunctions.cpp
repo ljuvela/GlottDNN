@@ -17,12 +17,25 @@
 #include <gsl/gsl_spline.h>			/* GSL, Interpolation */
 #include <gslwrap/vector_double.h>
 #include <vector>
+#include <gsl/gsl_fft_real.h>
+#include <gsl/gsl_fft_halfcomplex.h>
+#include "ComplexVector.h"
 #include "definitions.h"
+#include "SpFunctions.h"
 
 void Filter(const gsl::vector &b, const gsl::vector &a, const gsl::vector &x, gsl::vector *y) {
 	int i,j;
 	double sum;
-	*y = gsl::vector(x.size(),true);
+
+	if(!y->is_set()) {
+		*y = gsl::vector(x.size(),true);
+	} else {
+		if(y->size() != x.size()) {
+			y->resize(x.size());
+      }
+      y->set_all(0.0);
+	}
+
 
 	/* Filter */
 	for (i=0;i<(int)x.size();i++){
@@ -221,49 +234,112 @@ void AllPassDelay(const double &lambda, gsl::vector *signal) {
 	}
 }
 
-void FFT() {
 
+void FFTRadix2(const gsl::vector &x, ComplexVector *X ) {
+   size_t i;
+   size_t N = x.size();
+   size_t nfft = NextPow2(2*N);
+
+   if(X == NULL) {
+      *X = ComplexVector(nfft/2+1);
+   } else {
+      X->resize(nfft/2+1);
+   }
+
+   /* Allocate space for FFT */
+   double *data = (double *)calloc(nfft,sizeof(double));
+
+   /* Calculate spectrum */
+   for (i=0; i<N; i++)
+      data[i] = x(i);
+   gsl_fft_real_radix2_transform(data, 1, nfft);
+   for(i=1; i<nfft/2; i++){
+      X->setReal(i, data[i]);
+      X->setImag(i, data[nfft-i]);
+   }
+   X->setReal(0, data[0]);
+   X->setReal(nfft/2, data[nfft/2]);
+
+   /* Free memory*/
+   free(data);
 }
 
-/* Function AC_stabilize
- * Stabilize a polynomial by computing its autocorrelation and performing Levinson-Duribin recursion
- *  */
-void AC_stabilize(gsl_vector *a,int Nframe) {
-   int i;
-   size_t N = a->size;
-   size_t nfft = NextPow2(Nframe);
-      double *data = calloc(nfft,sizeof(double)); /* complex, takes 2*nfft/2  values*/
-      gsl_vector *X = gsl_vector_calloc(nfft/2+1);
+void IFFTRadix2(const ComplexVector &X, gsl::vector *x) {
 
-      /* Calculate power spectral density */
-      for (i=0; i<a->size; i++)
-         data[i] = gsl_vector_get(a,i);
-      gsl_fft_real_radix2_transform(data, 1, nfft);
-      for(i=1; i<nfft/2; i++){
-         gsl_vector_set(X, i, 1.0/(pow(data[i], 2) + pow(data[nfft-i], 2)));
-      }
-      gsl_vector_set(X, 0, 1.0/pow(data[0],2));
-      gsl_vector_set(X,nfft/2,1.0/pow(data[nfft/2],2));
+   size_t nfft = 2*(X.getSize()-1);
 
-       /* Inverse transform PSD for autocorrelation */
-       for (i=0;i<nfft/2+1;i++)
-           data[i] = gsl_vector_get(X,i);
-       for (i=nfft/2+1;i<nfft;i++)
-           data[i] = 0;
-       gsl_fft_halfcomplex_radix2_inverse(data, 1,nfft);
+   assert(IsPow2(nfft));
 
-       /* Set values symmetrically to AC vector */
-       gsl_vector *ac = gsl_vector_alloc(N);
+   if(!(x->is_set()))
+      *x = gsl::vector(X.getSize());
 
-       for(i=0;i<ac->size;i++)
-         gsl_vector_set(ac,i,data[i]);
-       /* Free memory*/
+   size_t N = x->size();
 
-       Levinson(ac, a);
-       free(data);
-      gsl_vector_free(ac);
-      gsl_vector_free(X);
+   double *data = (double*)calloc(nfft,sizeof(double)); /* complex, takes 2*nfft/2  values*/
 
+   /* Inverse transform  */
+   size_t i;
+   for(i=1; i<nfft/2; i++){
+      data[i] = X.getReal(i);
+      data[nfft-i] = X.getImag(i);
+   }
+   data[0] = X.getReal(0);
+   data[nfft/2] = X.getReal(nfft/2);
+   gsl_fft_halfcomplex_radix2_inverse(data, 1, nfft);
+
+   for (i=0;i<N;i++)
+   {
+      (*x)(i) = data[i];
+   }
+
+   /* Free memory*/
+   free(data);
 }
+
+/**
+ * Find the next integer that is a power of 2
+ * @param n
+ * @return
+ */
+int NextPow2(int n) {
+   int m = 1;
+   while (m < n)
+      m*=2;
+   return m;
+}
+
+bool IsPow2(int n) {
+   while (n > 2) {
+      if (n % 2 == 0)
+         n = n/2;
+      else
+         return false;
+   }
+   return true;
+}
+
+
+void ConcatenateFrames(const gsl::vector &frame1, const gsl::vector &frame2, gsl::vector *frame_result) {
+   size_t n1 = frame1.size();
+   size_t n2 = frame2.size();
+   if(!frame_result->is_set()) {
+		*frame_result = gsl::vector(n1+n2);
+	} else {
+		if(frame_result->size() != n1+n2) {
+			frame_result->resize(n1+n2);
+		}
+	}
+	size_t i;
+	for(i=0;i<n1;i++)
+      (*frame_result)(i) = frame1(i);
+
+   for(i=0;i<n2;i++)
+      (*frame_result)(i+n1) = frame2(i);
+}
+
+
+
+
+
 
 
