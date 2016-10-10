@@ -43,6 +43,16 @@ public:
 	int paf_pulse_length;
 	bool use_pulse_interpolation;
 	bool use_highpass_filtering;
+	bool use_waveforms_directly;
+	bool extract_f0 ;
+	bool extract_gain ;
+	bool extract_lsf_vt;
+	bool extract_lsf_glot;
+	bool extract_hnr;
+	bool extract_infofile;
+	bool extract_glottal_excitation;
+	bool extract_gci_signal;
+	bool extract_pulses_as_features;
 };
 
 

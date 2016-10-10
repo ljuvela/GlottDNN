@@ -38,6 +38,7 @@ int main(int argc, char *argv[]) {
    const char *default_config_filename = argv[2];
    const char *user_config_filename = argv[3];
 
+   /* Read configuration file */
    Param params;
    if (ReadConfig(default_config_filename, true, &params) == EXIT_FAILURE)
       return EXIT_FAILURE;
@@ -47,41 +48,47 @@ int main(int argc, char *argv[]) {
    }
 
    //create_file(fname, SF_FORMAT_WAV | SF_FORMAT_PCM_16) ;
+
    /* Read sound file and allocate data */
    AnalysisData data;
    ReadWavFile(wav_filename, &(data.signal), &params);
    data.AllocateData(params);
 
+   /* High-pass filter signal to eliminate low frequency "rumble" */
    HighPassFiltering(params, &(data.signal));
 
+   /* Read or estimate signal polarity */
    PolarityDetection(params, &(data.signal));
 
-   /* F0 Analysis */
+   /* Read or estimate fundamental frequency (F0)  */
    GetF0(params, data.signal, &(data.fundf));
 
+   /* Read or estimate glottal closure instants (GCIs)*/
    GetGci(params, data.signal, &(data.gci_inds));
 
+   /* Estimate frame log-energy (Gain) */
    GetGain(params, data.signal, &(data.frame_energy));
 
+   /* Spectral analysis for vocal tract transfer function*/
    SpectralAnalysis(params, data, &(data.poly_vocal_tract));
 
+   /* Convert vocal tract AR polynomials to LSF */
    Poly2Lsf(data.poly_vocal_tract, &(data.lsf_vocal_tract));
 
+   /* Perform glottal inverse filtering with the estimated VT AR polynomials */
    InverseFilter(params, data, &(data.poly_glott), &(data.source_signal));
 
-
+   /* Convert glottal source AR polynomials to LSF */
    Poly2Lsf(data.poly_glott, &(data.lsf_glott));
 
-   VPrint1(data.source_signal);
+   /* Extract pitch synchronous (excitation) waveforms at each frame */
+   if (params.use_waveforms_directly)
+      GetPulses(params, data.signal, data.gci_inds, data.fundf, &(data.excitation_pulses));
+   else
+      GetPulses(params, data.source_signal, data.gci_inds, data.fundf, &(data.excitation_pulses));
 
-
-   // Pulse extraction
-
-   GetPulses(params, data.signal, data.gci_inds, data.fundf, &(data.excitation_pulses));
-
-
+   /* Write analyzed features to files */
    data.SaveData(params);
-
 
    /* Finish */
    std::cout << "Finished analysis." << std::endl << std::endl;

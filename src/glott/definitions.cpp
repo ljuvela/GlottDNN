@@ -48,10 +48,15 @@ int AnalysisData::AllocateData(const Param &params) {
 
 int AnalysisData::SaveData(const Param &params) {
 
-   WriteGslMatrix(params.basename, ".LSF", params.data_type, lsf_vocal_tract);
-   WriteGslMatrix(params.basename, ".PLS", params.data_type, excitation_pulses);
-   WriteGslVector(params.basename, ".F0", params.data_type, fundf);
-
+   if (params.extract_lsf_vt)
+      WriteGslMatrix(params.basename, ".LSF", params.data_type, lsf_vocal_tract);
+   if (params.extract_pulses_as_features)
+      WriteGslMatrix(params.basename, ".PLS", params.data_type, excitation_pulses);
+   if (params.extract_f0)
+      WriteGslVector(params.basename, ".F0", params.data_type, fundf);
+   // TODO: allow write only as .wav
+   if (params.extract_glottal_excitation)
+      WriteGslVector(params.basename, ".GlottalExcitation", params.data_type, source_signal);
 
 
 
