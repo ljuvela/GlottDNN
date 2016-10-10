@@ -65,10 +65,11 @@ int main(int argc, char *argv[]) {
 
    // Process VT parameters?
 
+   InverseFilter(params, data, &(data.poly_glott), &(data.excitation_signal));
 
 
    /* Finish */
-   printf("Finished analysis.\n\n");
+   std::cout << "Finished analysis." << std::endl << std::endl;
    return EXIT_SUCCESS;
 
 }

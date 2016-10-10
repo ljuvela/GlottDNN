@@ -51,6 +51,7 @@ struct AnalysisData {
 	int SaveData(const Param &params);
 public:
 	gsl::vector signal;
+	gsl::vector excitation_signal;
 	gsl::vector fundf;
 	gsl::vector frame_energy;
 	gsl::vector_int gci_inds;

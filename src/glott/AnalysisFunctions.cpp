@@ -170,5 +170,10 @@ int SpectralAnalysis(const Param &params, const AnalysisData &data, gsl::matrix 
 }
 
 
+int InverseFilter(const Param &params, const AnalysisData &data, gsl::matrix *poly_glott, gsl::vector *excitation_signal) {
+
+   return EXIT_SUCCESS;
+}
+
 
 

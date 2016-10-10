@@ -33,6 +33,7 @@ AnalysisData::~AnalysisData() {}
 int AnalysisData::AllocateData(const Param &params) {
 	fundf = gsl::vector(params.number_of_frames,true);
 	frame_energy = gsl::vector(params.number_of_frames,true);
+	excitation_signal = gsl::vector(signal.size(), true);
 
 	poly_vocal_tract = gsl::matrix(params.lpc_order_vt+1,params.number_of_frames,true);
 	lsf_vocal_tract = gsl::matrix(params.lpc_order_vt,params.number_of_frames,true);

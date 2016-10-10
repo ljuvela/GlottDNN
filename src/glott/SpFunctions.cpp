@@ -337,3 +337,119 @@ void ConcatenateFrames(const gsl::vector &frame1, const gsl::vector &frame2, gsl
       (*frame_result)(i+n1) = frame2(i);
 }
 
+/**
+ * Function WFilter
+ *
+ * Warped FIR/IIR filter.
+ *
+ * This function is more or less adapted from WarpTB (MATLAB toolbox for frequency-warped signal processing)
+ * authored by Aki H\E4rm\E4 and Matti Karjalainen.
+ *
+ * @param signal signal vector with preframe
+ * @param A filter numerator
+ * @param B filter denominator
+ * @param lambda warping parameter
+ *
+ */
+void WFilter(const gsl::vector &A, const gsl::vector &B,const gsl::vector &signal,const double &lambda, gsl::vector *result) {
+
+	int i,q,mlen;
+    size_t o;
+    double xr,x,ffr,tmpr,Bb;
+
+    size_t len = signal.size();
+    int adim = (int)A.size();
+    int bdim = (int)B.size();
+
+
+   if(!result->is_set())
+		*result = gsl::vector(len);
+
+
+
+    double *Ar = (double *)calloc(adim,sizeof(double));
+    double *Br = (double *)calloc(bdim,sizeof(double));
+    double *ynr = (double *)calloc(signal.size(),sizeof(double));
+    double *rsignal = (double *)calloc(signal.size(),sizeof(double));
+    double *rmem = (double *)calloc(GSL_MAX(adim,bdim)+2,sizeof(double));
+   double *sigma = (double *)calloc(sizeof(double),bdim+2);;
+    /* Set signal to array */
+    for(i=0;i<(int)len;i++) {
+		rsignal[i] = signal(i);
+	}
+
+    /* Set A and B to arrays */
+	for(i=0;i<adim;i++) {
+		Ar[i] = A(i);
+	}
+	for(i=0;i<bdim;i++) {
+		Br[i] = B(i);
+	}
+
+    /* Initialize */
+    WarpingAlphas2Sigmas(Br,sigma,lambda,bdim-1);
+    if(adim >= bdim)
+    	mlen = adim;
+    else
+    	mlen = bdim + 1;
+    Bb = 1/Br[0];
+
+    /* Warped filtering */
+    for(o=0;o<len;o++) {
+
+    	xr = rsignal[o]*Bb;
+
+    	/* Update feedbackward sum */
+    	for(q=0;q<bdim;q++) {
+    		xr -= sigma[q]*rmem[q];
+    	}
+    	xr = xr/sigma[bdim];
+    	x = xr*Ar[0];
+
+    	/* Update inner states */
+    	for(q=0;q<mlen;q++) {
+    		tmpr = rmem[q] + lambda*(rmem[q+1] - xr);
+    		rmem[q] = xr;
+    		xr = tmpr;
+    	}
+
+    	/* Update feedforward sum */
+    	for(q=0,ffr=0.0;q<adim-1;q++) {
+    		ffr += Ar[q+1]*rmem[q+1];
+    	}
+
+       /* Update output */
+       ynr[o] = x + ffr;
+	}
+
+    /* Set output to result */
+    int order = (int)signal.size()-(int)result->size();
+    for(i=order;i<(int)signal.size();i++) {
+    	(*result)(i-order) = ynr[i];
+    }
+
+    /* Free memory */
+	free(ynr);
+	free(rsignal);
+	free(Ar);
+	free(Br);
+	free(rmem);
+	free(sigma);
+}
+
+void WarpingAlphas2Sigmas(double *alp, double *sigm, double lambda, int dim) {
+
+	int q;
+	double S=0,Sp;
+
+	sigm[dim] = lambda*alp[dim]/alp[0];
+	Sp = alp[dim]/alp[0];
+	for(q=dim;q>1;q--) {
+		S = alp[q-1]/alp[0] - lambda*Sp;
+		sigm[q-1] = lambda*S + Sp;
+		Sp = S;
+	}
+	sigm[0] = S;
+	sigm[dim+1] = 1 - lambda*S;
+}
+
