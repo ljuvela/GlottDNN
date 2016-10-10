@@ -4,9 +4,10 @@
  *  Created on: 30 Sep 2016
  *      Author: ljuvela
  */
-
-#include "definitions.h"
 #include <iostream>
+#include "FileIo.h"
+#include "definitions.h"
+
 
 
 
@@ -33,17 +34,27 @@ AnalysisData::~AnalysisData() {}
 int AnalysisData::AllocateData(const Param &params) {
 	fundf = gsl::vector(params.number_of_frames,true);
 	frame_energy = gsl::vector(params.number_of_frames,true);
-	excitation_signal = gsl::vector(signal.size(), true);
+	source_signal = gsl::vector(params.signal_length, true);
 
 	poly_vocal_tract = gsl::matrix(params.lpc_order_vt+1,params.number_of_frames,true);
 	lsf_vocal_tract = gsl::matrix(params.lpc_order_vt,params.number_of_frames,true);
 	poly_glott = gsl::matrix(params.lpc_order_glot+1,params.number_of_frames,true);
 	lsf_glott = gsl::matrix(params.lpc_order_glot,params.number_of_frames,true);
 
+	excitation_pulses = gsl::matrix(params.paf_pulse_length, params.number_of_frames, true);
+
 	return EXIT_SUCCESS;
 }
 
 int AnalysisData::SaveData(const Param &params) {
+
+   WriteGslMatrix(params.basename, ".LSF", params.data_type, lsf_vocal_tract);
+   WriteGslMatrix(params.basename, ".PLS", params.data_type, excitation_pulses);
+   WriteGslVector(params.basename, ".F0", params.data_type, fundf);
+
+
+
+
 
    return EXIT_SUCCESS;
 }

@@ -25,7 +25,7 @@ int GetF0(const Param &params, const gsl::vector &signal, gsl::vector *fundf) {
 		ReadGslVector(params.external_f0_filename, params.data_type, &fundf_ext);
 		if(fundf_ext.size() != (size_t)params.number_of_frames) {
 			std::cout << "Warning: External F0 file length differs from number of frames. Interpolating external "
-						  "F0 length to match numbder of frames. F0 length: " \
+						  "F0 length to match number of frames. F0 length: " \
 					<< fundf_ext.size() << ", Number of frames: " << params.number_of_frames << std::endl;
 			InterpolateNearest(fundf_ext,params.number_of_frames,fundf);
 		} else {
@@ -124,26 +124,25 @@ int SpectralAnalysis(const Param &params, const AnalysisData &data, gsl::matrix 
    gsl::vector frame_full; // frame + preframe
    gsl::vector residual_full; // residual with preframe
 
-	size_t frame_index;
-
 	std::cout << "Spectral analysis ...";
 
-
+   size_t frame_index;
 	for(frame_index=0;frame_index<(size_t)params.number_of_frames;frame_index++) {
 			GetFrame(params, data.signal, frame_index, &frame, &pre_frame);
 			/** Voiced analysis **/
 			if(data.fundf(frame_index) != 0) {
 
+			   /* Estimate Weighted Linear Prediction weight */
 				GetLpWeight(params,params.lp_weighting_function,data.gci_inds, frame, frame_index, &lp_weight);
 
-				// Pre-emphasis and windowing
+				/* Pre-emphasis and windowing */
             Filter(std::vector<double>{1.0, params.gif_pre_emphasis_coefficient},B, frame, &frame_pre_emph);
             ApplyWindowingFunction(params.default_windowing_function, &frame_pre_emph);
 
-            // First-loop envelope
+            /* First-loop envelope */
 				ArAnalysis(params.lpc_order_vt,params.warping_lambda_vt, params.lp_weighting_function, lp_weight, frame_pre_emph, &A);
 
-				// Second-loop envelope (if IAIF is used)
+				/* Second-loop envelope (if IAIF is used) */
 				if(params.use_iterative_gif) {
                ConcatenateFrames(pre_frame, frame, &frame_full);
                Filter(A,B,frame_full,&residual_full);
@@ -169,11 +168,109 @@ int SpectralAnalysis(const Param &params, const AnalysisData &data, gsl::matrix 
 	return EXIT_SUCCESS;
 }
 
-
 int InverseFilter(const Param &params, const AnalysisData &data, gsl::matrix *poly_glott, gsl::vector *excitation_signal) {
 
    return EXIT_SUCCESS;
 }
 
+int Find_nearest_pulse_index(const int &sample_index, const gsl::vector &gci_inds, const Param &params, const double &f0){
+
+   int i,j,k;
+   int pulse_index = -1; // Return value initialization
+
+   int dist, min_dist, ppos;
+   min_dist = INT_MAX;
+   /* Find the shortest distance between sample index and gcis */
+   for(j=1;j<gci_inds.size()-1;j++){
+      ppos = gci_inds(j);
+      dist = abs(sample_index-ppos);
+      if (dist > min_dist){
+         break;
+      }
+      min_dist = dist;
+      pulse_index=j;
+   }
+
+   /* Return the closest GCI if unvoiced */
+   if (f0 == 0)
+      return pulse_index;
+
+   double pulselen, targetlen;
+   targetlen = 2.0*params.fs/f0;
+   pulselen = round(gci_inds(pulse_index+1)-gci_inds(pulse_index-1))+1;
+
+   int new_pulse_index;
+   int prev_index = pulse_index-1;
+   int next_index = pulse_index+1;
+   int prev_gci, next_gci;
+
+   /* Choose next closest while pulse length deviates too much from f0 */
+   while ((fabs(pulselen-targetlen)/targetlen) > params.max_pulse_len_diff){
+
+      /* Prevent illegal reads*/
+      if (prev_index < 0)
+         prev_index = 0;
+      if (next_index > gci_inds.size()-1)
+         next_index = gci_inds.size()-1;
+
+      prev_gci = gci_inds(prev_index);
+      next_gci = gci_inds(next_index);
+
+      /* choose closest below or above, increment for next iteration */
+      if (abs(sample_index - next_gci) < abs(sample_index - prev_gci)) {
+         new_pulse_index = next_index;
+         next_index++;
+      } else {
+         new_pulse_index = prev_index;
+         prev_index++;
+      }
+
+      /* break if out of range */
+      if (new_pulse_index-1 < 0 || new_pulse_index+1 > gci_inds.size()-1) {
+         break;
+      } else {
+         pulse_index = new_pulse_index;
+      }
+
+      /* calculate new pulse length */
+      pulselen = round(gci_inds(pulse_index+1)-gci_inds(pulse_index-1))+1;
+   }
+
+   return pulse_index;
+
+}
+
+void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl::vector_int &gci_inds, gsl::vector &fundf, gsl::matrix *pulses_mat) {
+
+   size_t frame_index;
+   for(frame_index=0;frame_index<params.number_of_frames;frame_index++) {
+      size_t sample_index = frame_index*params.frame_shift;
+      size_t pulse_index = Find_nearest_pulse_index(sample_index, gci_inds, params, fundf(frame_index));
+
+      size_t pulselen;
+      pulselen = round(gci_inds(pulse_index+1)-gci_inds(pulse_index-1))+1;
+      size_t j;
+
+      gsl::vector paf_pulse(params.paf_pulse_length);
+      if (params.use_pulse_interpolation == true){
+         gsl::vector pulse_orig(pulselen);
+         for(j=0;j<pulselen;j++) {
+            pulse_orig(j) = source_signal(gci_inds(pulse_index-1)+j);
+         }
+         /* Interpolation on windowed signal prevents Gibbs at edges */
+         ApplyWindowingFunction(COSINE, &paf_pulse);
+         InterpolateSpline(pulse_orig, pulselen, &paf_pulse);
+      } else{
+         /* No windowing, just center at mid gci */
+         for(j=0;j<paf_pulse.size();j++) {
+            int i = gci_inds(pulse_index) - round(paf_pulse.size()/2) + j;
+            if (i >= 0 && i < (int)source_signal.size())
+               paf_pulse(j) = source_signal(i);
+         }
+      }
+      pulses_mat->set_col_vec(frame_index, paf_pulse);
+
+   }
+}
 
 

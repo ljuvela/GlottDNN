@@ -2,6 +2,9 @@
 
 #include <sndfile.hh>
 #include <cstring>
+#include <string>
+#include <cstdio>
+#include <stdio.h>
 #include <gslwrap/vector_double.h>
 #include <gslwrap/matrix_double.h>
 #include "definitions.h"
@@ -32,43 +35,40 @@ void create_file (const char * fname, int format)
 } /* create_file */
 
 void ReadWavFile (const char *fname, gsl::vector *signal, Param *params) {
-	//static short buffer [BUFFER_LEN] ;
 
 	SndfileHandle file ;
 	file = SndfileHandle(fname) ;
 
-	printf ("Opened file '%s'\n", fname) ;
+	printf ("Reading file '%s'\n", fname) ;
 	printf ("    Sample rate : %d\n", file.samplerate ()) ;
 	printf ("    Channels    : %d\n", file.channels ()) ;
-
 	if (file.samplerate() != params->fs) {
 		std::cerr << "Sample rate does not match with config" << std::endl;
 		return;
 	}
 
+	/* define buffer for sndfile and read */
 	*(signal) = gsl::vector(static_cast <size_t> (file.frames()));
 	double buffer[signal->size()];
-	file.read (buffer, signal->size()) ;
+	file.read(buffer, signal->size()) ;
 
+	/* copy read buffer to signal */
 	size_t i;
-	for (i=0;i<signal->size();i++) {
+	for (i=0;i<signal->size();i++)
 		(*signal)(i) = buffer[i];
-	}
 
+	/* set file parameters */
 	params->number_of_frames = ceil(signal->size()/params->frame_shift);
 	params->signal_length = signal->size();
 
-	/*
+	/* Get basename (without extension) for saving parameters later*/
    std::string str(fname);
    size_t lastindex = str.find_last_of(".");
-   std::cout << lastindex << std::endl ;
-   params->basename = new char[lastindex+1];
+   params->basename = new char[lastindex+1]();
    strncpy(params->basename, fname, lastindex);
-   std::cout << params->basename << std::endl;
-*/
 
-	/* RAII takes care of destroying SndfileHandle object. */
-} /* read_file */
+
+}
 
 
 /**
@@ -114,7 +114,10 @@ int ReadGslVector(const char *filename, const DataType format, gsl::vector *vect
 		return EXIT_FAILURE;
 
 	/* Allocate vector */
-	*(vector_ptr) = gsl::vector(size);
+	if (vector_ptr == NULL)
+	   *(vector_ptr) = gsl::vector(size);
+	else
+	   vector_ptr->resize(size);
 
 	FILE *inputfile = NULL;
 	inputfile = fopen(filename, "r");
@@ -164,20 +167,61 @@ int ReadGslMatrix(const char *filename, const DataType format, const size_t n_ro
 	return EXIT_SUCCESS;
 }
 
-int WriteGslVector(const char *filename, const DataType &format, const gsl::vector &vector) {
-      FILE *fid = NULL;
-      fid = fopen(filename, "w");
-      if(fid==NULL){
-         std::cerr << "Error: could not create file " << filename << std::endl;
-         return EXIT_FAILURE;
-      }
-      if(format == ASCII) {
-         vector.fprintf(fid, "%.7f");
-      } else if(format == BINARY) {
-         vector.fwrite(fid);
-      }
-      fclose(fid);
+int WriteGslVector(const char *basename, const char *extension, const DataType &format, const gsl::vector &vector) {
+   std::string filename;
+   filename += basename;
+   filename += extension;
+   FILE *fid = NULL;
+   fid = fopen(filename.c_str(), "w");
+   if(fid==NULL){
+      std::cerr << "Error: could not create file " << filename << std::endl;
+      return EXIT_FAILURE;
+   }
+   switch (format) {
+   case ASCII:
+      vector.fprintf(fid, "%.7f");
+      break;
+   case BINARY:
+      vector.fwrite(fid);
+      break;
+   }
 
-      return EXIT_SUCCESS;
+   fclose(fid);
+   return EXIT_SUCCESS;
+}
+
+int WriteGslMatrix(const char *basename, const char *extension, const DataType &format, const gsl::matrix &mat) {
+
+   std::string filename;
+   filename += basename;
+   filename += extension;
+   FILE *fid = NULL;
+   fid = fopen(filename.c_str(), "w");
+   if(fid==NULL){
+      std::cerr << "Error: could not create file " << filename << std::endl;
+      return EXIT_FAILURE;
+   }
+
+   // TODO: make custom write functions to avoid transpose (and related allocation)
+   gsl::matrix mat_trans = mat.transpose();
+   size_t i,j;
+   switch (format) {
+   case ASCII:
+      //mat_trans.fprintf(fid, "%.7f");
+      for(j=0;j<mat.size2();j++)
+         for(i=0;i<mat.size1();i++)
+            fprintf(fid,"%.7f\n", mat(i,j));
+      break;
+   case BINARY:
+      mat_trans.fwrite(fid);
+      //for(i=0;i<mat.size1();i++)
+      //for(j=0;j<mat.size2();j++)
+      //fwrite( mat(i,j), sizeof(double), 1, fid);
+      break;
+   }
+
+   fclose(fid);
+
+   return EXIT_SUCCESS;
 }
 

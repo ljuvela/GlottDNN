@@ -118,6 +118,15 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
 	if (ConfigLookupBool("QMF_SUBBAND_ANALYSIS", cfg, default_config, &(params->qmf_subband_analysis)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 
+   if (ConfigLookupDouble("MAX_PULSE_LEN_DIFF", cfg, default_config, &(params->max_pulse_len_diff)) == EXIT_FAILURE)
+         return EXIT_FAILURE;
+
+   if (ConfigLookupInt("PAF_PULSE_LENGTH", cfg, default_config, &(params->paf_pulse_length)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
+   if (ConfigLookupBool("USE_PULSE_INTERPOLATION", cfg, default_config, &(params->use_pulse_interpolation)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
 
 
 

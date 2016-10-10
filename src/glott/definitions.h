@@ -39,6 +39,9 @@ public:
 	double ame_position_quotient;
 	WindowingFunctionType default_windowing_function;
 	char *basename;
+	double max_pulse_len_diff;
+	int paf_pulse_length;
+	bool use_pulse_interpolation;
 };
 
 
@@ -55,11 +58,13 @@ public:
 	gsl::vector fundf;
 	gsl::vector frame_energy;
 	gsl::vector_int gci_inds;
+	gsl::vector source_signal;
 
 	gsl::matrix poly_vocal_tract;
 	gsl::matrix lsf_vocal_tract;
 	gsl::matrix poly_glott;
 	gsl::matrix lsf_glott;
+	gsl::matrix excitation_pulses;
 
 };
 

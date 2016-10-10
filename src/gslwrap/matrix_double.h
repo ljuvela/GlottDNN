@@ -127,6 +127,7 @@ double       &operator()( size_t row, size_t col )       {return *gsl_matrix_ptr
 	friend ostream& operator<< ( ostream& os, const matrix& m );
 	//This function writes the elements of the matrix m to the stream stream in binary format. The return value is 0 for success and GSL_EFAILED if there was a problem writing to the file. Since the data is written in the native binary format it may not be portable between different architectures.
 	int fwrite (FILE * stream) const {return gsl_matrix_fwrite (stream, m);}
+	int fprintf (FILE *stream, const char *format) const {return gsl_matrix_fprintf(stream, m, format);}
 
 //This function reads into the matrix m from the open stream stream in binary format. The matrix m must be preallocated with the correct dimensions since the function uses the size of m to determine how many bytes to read. The return value is 0 for success and GSL_EFAILED if there was a problem reading from the file. The data is assumed to have been written in the native binary format on the same architecture. 
 	int fread (FILE * stream) {return gsl_matrix_fread (stream, m);}

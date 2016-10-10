@@ -63,9 +63,16 @@ int main(int argc, char *argv[]) {
 
    SpectralAnalysis(params, data, &(data.poly_vocal_tract));
 
-   // Process VT parameters?
+   Poly2Lsf(data.poly_vocal_tract, &(data.lsf_vocal_tract));
 
    InverseFilter(params, data, &(data.poly_glott), &(data.excitation_signal));
+
+   // Pulse extraction
+
+   GetPulses(params, data.signal, data.gci_inds, data.fundf, &(data.excitation_pulses));
+
+
+   data.SaveData(params);
 
 
    /* Finish */

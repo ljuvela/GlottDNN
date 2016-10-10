@@ -15,10 +15,16 @@
  */
 
 #include <gsl/gsl_spline.h>			/* GSL, Interpolation */
-#include <gslwrap/vector_double.h>
-#include <vector>
 #include <gsl/gsl_fft_real.h>
 #include <gsl/gsl_fft_halfcomplex.h>
+#include <gsl/gsl_errno.h>       /* GSL, Error handling */
+#include <gsl/gsl_poly.h>        /* GSL, Polynomials */
+#include <gsl/gsl_sort_double.h> /* GSL, Sort double */
+#include <gsl/gsl_sort_vector.h> /* GSL, Sort vector */
+#include <gsl/gsl_complex.h>     /* GSL, Complex numbers */
+#include <gsl/gsl_complex_math.h>   /* GSL, Arithmetic operations for complex numbers */
+#include <gslwrap/vector_double.h>
+#include <vector>
 #include "ComplexVector.h"
 #include "definitions.h"
 #include "SpFunctions.h"
@@ -117,6 +123,42 @@ void InterpolateLinear(const gsl::vector &vector, const size_t interpolated_size
     /* Free memory */
     gsl_spline_free(spline);
 	gsl_interp_accel_free(acc);
+}
+
+
+void InterpolateSpline(const gsl::vector &vector, const size_t interpolated_size, gsl::vector *i_vector) {
+
+   size_t len = vector.size();
+   if (i_vector->size() != len)
+      i_vector->resize(len);
+   //*i_vector = gsl::vector(interpolated_size);
+
+   /* Read values to array */
+   double x[len];
+   double y[len];
+   size_t i;
+   for(i=0; i<len; i++) {
+      x[i] = i;
+      y[i] = vector(i);
+   }
+   gsl_interp_accel *acc = gsl_interp_accel_alloc();
+   gsl_spline *spline = gsl_spline_alloc(gsl_interp_cspline,len);
+   gsl_spline_init(spline, x, y, len);
+   double xi;
+   i = 0;
+
+   xi = x[0];
+   while(i<len) {
+      (*i_vector)(i) = gsl_spline_eval(spline, xi, acc);
+      xi += (len-1)/(double)(len-1);
+      if(xi > len-1)
+         xi = len-1;
+      i++;
+   }
+
+   /* Free memory */
+   gsl_spline_free(spline);
+   gsl_interp_accel_free(acc);
 }
 
 void InterpolateNearest(const gsl::vector &vector, const size_t interpolated_size, gsl::vector *i_vector) {
@@ -451,5 +493,166 @@ void WarpingAlphas2Sigmas(double *alp, double *sigm, double lambda, int dim) {
 	}
 	sigm[0] = S;
 	sigm[dim+1] = 1 - lambda*S;
+}
+
+void Roots(const gsl::vector &x, const size_t ncoef, ComplexVector *r) {
+
+   if (r == NULL) {
+      *r = ComplexVector(x.size());
+   } else {
+      r->resize(x.size());
+   }
+
+   /* Initialize root arrays */
+    //size_t ncoef = x.size()-1; // no minus one?
+    size_t nroots = ncoef-1;
+    double coeffs[ncoef];
+
+    /* Complex values require 2 x space*/
+    double roots[2*nroots];
+
+    /* Copy coefficients to arrays */
+    /* Copy coefficients to arrays */
+    size_t i;
+    for(i=0; i<ncoef; i++) {
+       coeffs[i] = x(i);
+    }
+
+    /* Solve roots */
+    gsl_poly_complex_workspace *w = gsl_poly_complex_workspace_alloc(ncoef);
+    gsl_poly_complex_solve(coeffs, ncoef, w, roots);
+
+    /* Roots are in complex conjugate pairs: [Re=x,Im=y,Re=x,Im=-y] */
+    size_t stride = 2;
+    size_t ind;
+    for(i=0, ind=0; i<2*nroots; i+=stride, ind++) {
+       r->setReal(ind, roots[i]);
+       r->setImag(ind, roots[i+1]);
+    }
+
+    gsl_poly_complex_workspace_free(w);
+
+}
+
+void Roots(const gsl::vector &x, ComplexVector *r) {
+   Roots(x, x.size(), r);
+}
+
+void Poly2Lsf(const gsl::vector &a, gsl::vector *lsf) {
+
+
+   /* by ljuvela, based on traitio and matlab implementation of poly2lsf */
+   size_t i,n;
+
+   /* Count the number of nonzero elements in "a" */
+   n = 0;
+   for(i=0; i<a.size(); i++) {
+      if(a(i) != 0.0) {
+         n++;
+      }
+   }
+
+   /* In case of only one non-zero element */
+   if(n == 1) {
+      for(i=0; i<lsf->size(); i++)
+         (*lsf)(i) = (i+1)*M_PI/(double)(lsf->size()+1);
+      return;
+   }
+
+   gsl::vector aa = gsl::vector(n+1,true);
+   gsl::vector flip_aa = gsl::vector(n+1,true);
+   gsl::vector p = gsl::vector(n+1,true);
+   gsl::vector q = gsl::vector(n+1,true);
+
+   /* Construct vectors aa=[a 0] and flip_aa=[0 flip(a)] */
+   for(i=0; i<n; i++) {
+      aa(i) = a(i);
+      flip_aa(flip_aa.size()-1-i) = a(i);
+   }
+
+   /* Construct vectors p and q */
+   for(i=0; i<n+1; i++) {
+      p(i) = aa(i) + flip_aa(i);
+      q(i) = aa(i) - flip_aa(i);
+   }
+
+   /* ljuvela: NOTE deconvolution of a with b is the same as filtering with: Filter(a,b) */
+   /* Remove trivial roots */
+   if((n+1)%2 == 0) {
+      double y;
+      /* Deconvolve p with [1 1] */
+      y = 0;
+      for(i=0; i<p.size(); i++) {
+         p(i) = p(i)-y;
+         y = p(i);
+      }
+      p(p.size()-1) = 0;
+      /* Deconvolve q with [1 -1] */
+      y = 0;
+      for(i=0; i<q.size(); i++) {
+         q(i) = q(i)+y;
+         y = q(i);
+      }
+      q(q.size()-1) = 0;
+   } else {
+      double y;
+      /* Deconvolve q with [1 1] */
+      y = 0;
+      for(i=0; i<q.size(); i++) {
+         q(i) = q(i)-y;
+         y = q(i);
+      }
+      /* Deconvolve q with [1 -1] */
+      y = 0;
+      for(i=0; i<q.size(); i++) {
+         q(i) = q(i)+y;
+         y = q(i);
+      }
+      q(q.size()-1) = 0.0;
+      q(q.size()-2) = 0.0;
+   }
+
+   /* NOTE deconvolution leaves a trailing zero to vector */
+   size_t nroots_p = p.size()-2;
+   size_t nroots_q = q.size()-2;
+   size_t lsf_size = (nroots_p+nroots_p)/2;
+   size_t ind=0;
+   double lsf_double[lsf_size];
+
+   /* Solve roots of P and convert to angle */
+   ComplexVector r_p;
+   Roots(p, p.size()-1, &r_p); // ignore last coefficient (zero)
+   /* skip odd roots (complex conjugates) */
+   for(i=0; i<nroots_p; i+=2, ind++)
+      lsf_double[ind] = r_p.getAng(i);
+
+   /* Solve roots of Q and convert to angle */
+   ComplexVector r_q;
+   Roots(q, q.size()-1, &r_q); // ignore last coefficient (zero)
+   for(i=0; i<nroots_q; i+=2, ind++)
+      lsf_double[ind] = r_q.getAng(i);
+
+   /* Sort and copy LSFs to gsl::vector LSF */
+   gsl_sort(lsf_double, 1, (nroots_p+nroots_q)/2);
+   for(i=0; i<lsf_size; i++)
+      (*lsf)(i) = lsf_double[i];
+
+}
+
+void Poly2Lsf(const gsl::matrix &a_mat, gsl::matrix *lsf_mat) {
+
+   if (lsf_mat == NULL) {
+      *lsf_mat = gsl::matrix(a_mat.size1()-1, a_mat.size2());
+   } else {
+      // TODO: resize (not urgent, lsf_mat is correctly allocated)
+   }
+
+   size_t i;
+   gsl::vector lsf(a_mat.size1()-1);
+   for(i=0;i<a_mat.size2();i++) {
+      Poly2Lsf(a_mat.get_col_vec(i), &lsf);
+      lsf_mat->set_col_vec(i, lsf);
+      //std::cout << lsf_mat->get_col_vec(i) << std::endl;
+   }
 }
 
