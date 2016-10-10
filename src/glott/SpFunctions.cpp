@@ -33,16 +33,21 @@ void Filter(const gsl::vector &b, const gsl::vector &a, const gsl::vector &x, gs
 	int i,j;
 	double sum;
 
+	int order = 0;
+
 	if(!y->is_set()) {
 		*y = gsl::vector(x.size(),true);
 	} else {
-		if(y->size() != x.size()) {
+		if(y->size() > x.size()) {
 			y->resize(x.size());
+      } else {
+         order = x.size()-y->size();
       }
       y->set_all(0.0);
 	}
 
 
+	gsl::vector result(x.size(),true);
 	/* Filter */
 	for (i=0;i<(int)x.size();i++){
 		sum = 0.0;
@@ -53,11 +58,14 @@ void Filter(const gsl::vector &b, const gsl::vector &a, const gsl::vector &x, gs
 		}
 		for(j=1;j<(int)a.size();j++) { /* Loop for IIR filter */
 			if ((i-j) >= 0) {
-				sum -= (*y)(i-j)*a(j);
+				sum -= result(i-j)*a(j);
 			}
 		}
-		(*y)(i) = sum;
+		result(i) = sum;
 	}
+
+	for(i=0;i<(int)y->size();i++)
+      (*y)(i) = result(i+order);
 }
 
 void Filter(const std::vector<double> &b, const std::vector<double> &a, const gsl::vector &x, gsl::vector *y) {
@@ -655,4 +663,47 @@ void Poly2Lsf(const gsl::matrix &a_mat, gsl::matrix *lsf_mat) {
       //std::cout << lsf_mat->get_col_vec(i) << std::endl;
    }
 }
+
+void OverlapAdd(const gsl::vector &frame, const size_t center_index, gsl::vector *target) {
+   //center index = frame_index*params.frame_shift , start_ind = frame_index*params.frame_shift - ((int)frame->size())/2 + i;
+   // Frame must be HANN windowed beforehand!
+   int start_ind = (int)center_index - ((int)frame.size())/2;
+   int stop_ind = start_ind+frame.size()-1;
+
+   if(start_ind < 0)
+      start_ind = 0;
+
+   if(stop_ind > (int)target->size())
+      stop_ind = (int)target->size();
+
+   int i;
+   for(i=start_ind;i<stop_ind;i++) {
+      (*target)(i) += frame(i-start_ind);
+   }
+}
+
+
+double getMean(const gsl::vector &vec) {
+   size_t i;
+   double sum = 0.0;
+   for(i=0;i<vec.size();i++)
+      sum += vec(i);
+
+   return sum/(double)vec.size();
+}
+
+double getEnergy(const gsl::vector &vec) {
+   double mean = getMean(vec);
+   double sum = 0.0;
+   size_t i;
+   for(i=0;i<vec.size();i++)
+      sum += (vec(i)-mean)*(vec(i)-mean);
+
+   return sqrt(sum);
+}
+
+double LogEnergy2FrameEnergy(const double &log_energy, const size_t frame_size) {
+   return (double)pow(10,log_energy/20.0)*(double)frame_size;
+}
+
 

@@ -127,7 +127,8 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
    if (ConfigLookupBool("USE_PULSE_INTERPOLATION", cfg, default_config, &(params->use_pulse_interpolation)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-
+   if (ConfigLookupBool("HP_FILTERING", cfg, default_config, &(params->use_highpass_filtering)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
 
 
 

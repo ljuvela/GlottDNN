@@ -33,6 +33,9 @@ void FFTRadix2(const gsl::vector &x, ComplexVector *X);
 void IFFTRadix2(const ComplexVector &X, gsl::vector *x);
 void WFilter(const gsl::vector &A, const gsl::vector &B,const gsl::vector &signal,const double &lambda, gsl::vector *result);
 void WarpingAlphas2Sigmas(double *alp, double *sigm, double lambda, int dim);
-
+void OverlapAdd(const gsl::vector &frame, const size_t center_index, gsl::vector *target);
+double getMean(const gsl::vector &vec);
+double getEnergy(const gsl::vector &vec);
+double LogEnergy2FrameEnergy(const double &log_energy, const size_t frame_size);
 
 #endif /* SRC_GLOTT_SPFUNCTIONS_H_ */

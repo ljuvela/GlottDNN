@@ -46,13 +46,15 @@ int main(int argc, char *argv[]) {
          return EXIT_FAILURE;
    }
 
-
    //create_file(fname, SF_FORMAT_WAV | SF_FORMAT_PCM_16) ;
    /* Read sound file and allocate data */
    AnalysisData data;
    ReadWavFile(wav_filename, &(data.signal), &params);
    data.AllocateData(params);
 
+   HighPassFiltering(params, &(data.signal));
+
+   PolarityDetection(params, &(data.signal));
 
    /* F0 Analysis */
    GetF0(params, data.signal, &(data.fundf));
@@ -65,7 +67,13 @@ int main(int argc, char *argv[]) {
 
    Poly2Lsf(data.poly_vocal_tract, &(data.lsf_vocal_tract));
 
-   InverseFilter(params, data, &(data.poly_glott), &(data.excitation_signal));
+   InverseFilter(params, data, &(data.poly_glott), &(data.source_signal));
+
+
+   Poly2Lsf(data.poly_glott, &(data.lsf_glott));
+
+   VPrint1(data.source_signal);
+
 
    // Pulse extraction
 

@@ -8,6 +8,28 @@
 #include "FileIo.h"
 #include "InverseFiltering.h"
 #include "AnalysisFunctions.h"
+#include "DebugUtils.h"
+#include "Filters.h"
+
+
+int PolarityDetection(const Param &params, gsl::vector *signal) {
+   switch(params.signal_polarity) {
+   case POLARITY_DEFAULT :
+      return EXIT_SUCCESS;
+
+   case POLARITY_INVERT :
+      (*signal) *= (double)-1.0;
+      return EXIT_SUCCESS;
+
+   case POLARITY_DETECT :
+      // TODO: implement polarity detection
+      return EXIT_SUCCESS;
+   }
+
+   return EXIT_FAILURE;
+
+}
+
 
 
 /**
@@ -67,15 +89,17 @@ int GetGain(const Param &params, const gsl::vector &signal, gsl::vector *gain_pt
 		GetFrame(params, signal, frame_index, &frame, NULL);
 
 		/* Evaluate gain of frame, normalize energy per sample basis */
-		double sum = 0.0;
+	/*	double sum = 0.0;
+		double mean = getMean(frame);
 		size_t i;
 		for(i=0;i<frame.size();i++) {
-			sum =+ frame(i)*frame(i);
+			sum =+ (frame(i)-mean)*(frame(i)-mean);
 		}
 		if(sum == 0.0)
 			sum =+ DBL_MIN;
 
-		gain(frame_index) = 10.0*log10(sum/((double)(frame.size() * frame.size()))); // energy per sample (not power)
+		gain(frame_index) = 10.0*log10(sum/((double)(frame.size() * frame.size()))); // energy per sample (not power)*/
+		gain(frame_index) = (double)20.0*log10(getEnergy(frame)/((double)frame.size()));
 	}
 	*gain_ptr = gain;
 	return EXIT_SUCCESS;
@@ -96,12 +120,13 @@ int GetFrame(const Param &params, const gsl::vector &signal, const int frame_ind
 	}
 
 	/* Get pre-frame samples for smooth filtering */
-	if (pre_frame != NULL){
+	if (pre_frame){
 		for(i=0; i<params.lpc_order_vt; i++) {
 			ind = frame_index*params.frame_shift - (int)frame->size()/2+ i - params.lpc_order_vt; // SPTK compatible, ljuvela
 			if(ind >= 0 && ind < (int)signal.size())
-				(*pre_frame)(i) = (int)signal(ind);
-		}
+				(*pre_frame)(i) = signal(ind);
+
+  		}
 	}
 
 	return EXIT_SUCCESS;
@@ -115,11 +140,12 @@ int GetFrame(const Param &params, const gsl::vector &signal, const int frame_ind
 int SpectralAnalysis(const Param &params, const AnalysisData &data, gsl::matrix *poly_vocal_tract) {
 
 	gsl::vector frame(params.frame_length);
-	gsl::vector pre_frame(params.lpc_order_vt);
+	gsl::vector pre_frame(params.lpc_order_vt,true);
 	gsl::vector lp_weight(params.frame_length + params.lpc_order_vt,true);
 	gsl::vector A(params.lpc_order_vt+1,true);
 	gsl::vector G(params.lpc_order_glot_iaif,true);
 	gsl::vector B(1);B(0) = 1.0;
+	//gsl::vector lip_radiation(2);lip_radiation(0) = 1.0; lip_radiation(1) = 0.99;
    gsl::vector frame_pre_emph(params.frame_length);
    gsl::vector frame_full; // frame + preframe
    gsl::vector residual_full; // residual with preframe
@@ -136,7 +162,7 @@ int SpectralAnalysis(const Param &params, const AnalysisData &data, gsl::matrix 
 				GetLpWeight(params,params.lp_weighting_function,data.gci_inds, frame, frame_index, &lp_weight);
 
 				/* Pre-emphasis and windowing */
-            Filter(std::vector<double>{1.0, params.gif_pre_emphasis_coefficient},B, frame, &frame_pre_emph);
+            Filter(std::vector<double>{1.0, -params.gif_pre_emphasis_coefficient},B, frame, &frame_pre_emph);
             ApplyWindowingFunction(params.default_windowing_function, &frame_pre_emph);
 
             /* First-loop envelope */
@@ -168,7 +194,42 @@ int SpectralAnalysis(const Param &params, const AnalysisData &data, gsl::matrix 
 	return EXIT_SUCCESS;
 }
 
-int InverseFilter(const Param &params, const AnalysisData &data, gsl::matrix *poly_glott, gsl::vector *excitation_signal) {
+int InverseFilter(const Param &params, const AnalysisData &data, gsl::matrix *poly_glott, gsl::vector *source_signal) {
+   size_t frame_index;
+	gsl::vector frame(params.frame_length,true);
+	gsl::vector pre_frame(params.lpc_order_vt,true);
+   gsl::vector frame_full(params.frame_length+params.lpc_order_vt); // Pre-frame + frame
+   gsl::vector frame_residual(params.frame_length); // Pre-frame + frame
+   gsl::vector a_glott(params.lpc_order_glot+1);
+   gsl::vector b(1);b(0) = 1.0;
+
+	for(frame_index=0;frame_index<(size_t)params.number_of_frames;frame_index++) {
+      GetFrame(params, data.signal, frame_index, &frame, &pre_frame);
+      ConcatenateFrames(pre_frame, frame, &frame_full);
+      if(params.warping_lambda_vt == 0.0) {
+         Filter(data.poly_vocal_tract.get_col_vec(frame_index),b,frame_full,&frame_residual);
+      } else {
+         WFilter(data.poly_vocal_tract.get_col_vec(frame_index),b,frame_full,params.warping_lambda_vt,&frame_residual);
+         if( (data.fundf(frame_index) != 0.0) && (frame_residual.max() > -1.0*frame_residual.min()) ) { // Warped residual seems to be switching the polarity on occasion
+            frame_residual *= -1.0;
+         }
+      }
+
+
+
+
+      double ola_gain = (double)params.frame_length/((double)params.frame_shift*2.0);
+      frame_residual *= LogEnergy2FrameEnergy(data.frame_energy(frame_index),frame_residual.size())/getEnergy(frame_residual)/ola_gain;
+      ApplyWindowingFunction(HANN, &frame_residual);
+
+      LPC(frame_residual,params.lpc_order_glot,&a_glott);
+
+      poly_glott->set_col_vec(frame_index, a_glott);
+
+      OverlapAdd(frame_residual, frame_index*params.frame_shift, source_signal); // center index = frame_index*params.frame_shift
+
+   }
+
 
    return EXIT_SUCCESS;
 }
@@ -273,4 +334,28 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
    }
 }
 
+void HighPassFiltering(const Param &params, gsl::vector *signal) {
+      if(!params.use_highpass_filtering)
+         return;
+
+      std::cout << "High-pass filtering input signal with a cutoff frequency of 50Hz." << std::endl;
+
+      gsl::vector signal_cpy(signal->size());
+      signal_cpy.copy(*signal);
+
+      if(params.fs < 40000) {
+         Filter(k16HPCUTOFF50HZ,std::vector<double>{1},signal_cpy,signal);
+         signal_cpy.copy(*signal);
+         signal_cpy.reverse();
+         Filter(k16HPCUTOFF50HZ,std::vector<double>{1},signal_cpy,signal);
+         (*signal).reverse();
+      } else {
+         Filter(k44HPCUTOFF50HZ,std::vector<double>{1},signal_cpy,signal);
+         signal_cpy.copy(*signal);
+         signal_cpy.reverse();
+         Filter(k16HPCUTOFF50HZ,std::vector<double>{1},signal_cpy,signal);
+         (*signal).reverse();
+      }
+
+}
 

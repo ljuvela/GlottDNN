@@ -42,6 +42,7 @@ public:
 	double max_pulse_len_diff;
 	int paf_pulse_length;
 	bool use_pulse_interpolation;
+	bool use_highpass_filtering;
 };
 
 
@@ -54,7 +55,6 @@ struct AnalysisData {
 	int SaveData(const Param &params);
 public:
 	gsl::vector signal;
-	gsl::vector excitation_signal;
 	gsl::vector fundf;
 	gsl::vector frame_energy;
 	gsl::vector_int gci_inds;
