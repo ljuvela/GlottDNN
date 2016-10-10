@@ -379,7 +379,6 @@ void ConcatenateFrames(const gsl::vector &frame1, const gsl::vector &frame2, gsl
       (*frame_result)(i+n1) = frame2(i);
 }
 
-
 void Roots(const gsl::vector &x, const size_t ncoef, ComplexVector *r) {
 
    if (r == NULL) {
@@ -540,6 +539,4 @@ void Poly2Lsf(const gsl::matrix &a_mat, gsl::matrix *lsf_mat) {
       //std::cout << lsf_mat->get_col_vec(i) << std::endl;
    }
 }
-
-
 
