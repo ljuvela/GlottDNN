@@ -302,7 +302,7 @@ matrix_int &matrix_int::operator/=( const int &f )
 
 matrix_int matrix_int::transpose() const 
 {
-   int i, j;
+   size_t i, j;
    matrix_int result( get_cols(), get_rows() );
 
    for ( i = 0; i < get_rows(); i++ ) {
@@ -332,7 +332,6 @@ matrix_int matrix_int::LU_decomp(gsl::permutation *perm,int *psign) const
 
 matrix_int matrix_int::LU_invert() const
 {
-   int i, j;
    permutation p;
    matrix a=*this;
    a=a.LU_decomp(&p);
@@ -345,7 +344,7 @@ matrix_int matrix_int::LU_invert() const
 // returns sum of all the elements.
 int matrix_int::sum() const 
 {
-	int i, j;
+	size_t i, j;
 	int sum = 0;
 
 	for ( i = 0; i < get_rows(); i++ ) {
@@ -449,7 +448,7 @@ matrix_int matrix_int::get_col( size_t colindex ) const
 	
 	gsl_matrix_int_get_col( tempvector, m, colindex );
 	gsl_matrix_int_set_col( columnmatrix.m, 0, tempvector );
-	for ( int i = 0; i < get_rows(); i++ )
+	for ( size_t i = 0; i < get_rows(); i++ )
 		cout << gsl_vector_int_get( tempvector, i ) << endl;
 
 	// tidy up
@@ -461,7 +460,7 @@ matrix_int matrix_int::get_col( size_t colindex ) const
 /** calculates sum of rows returned as a column matrix. */
 matrix_int matrix_int::row_sum() const 
 {
-	int	i;
+	size_t	i;
 	matrix_int sum( get_rows(), 1 );
 	
 	sum.set_zero();
@@ -475,7 +474,7 @@ matrix_int matrix_int::row_sum() const
 /** calculates sum of columns returned as a row matrix. */
 matrix_int matrix_int::column_sum() const 
 {
-	int	i;
+	size_t	i;
 	matrix_int sum( 1, get_cols() );
 	
 	sum.set_zero( );
@@ -489,7 +488,7 @@ matrix_int matrix_int::column_sum() const
 /** returns trace (diagonal sum) of a square matrix. */
 double matrix_int::trace() const 
 {
-	int	i;
+	size_t	i;
 	double sum = 0.0;
 	
 	assert (get_rows() == get_cols() );
@@ -511,7 +510,6 @@ double matrix_int::trace() const
 // don't forget to de-allocate a, which is allocated in this method.
 int matrix_int::cholesky_decomp( matrix_int &a ) const 
 {
-	int i, j;
 	int error;
 	matrix result=*this;
 	// do decomposition with call to g_s_l
@@ -540,10 +538,10 @@ void matrix_int::identity( size_t k )
 }
 
 /** set diagonal elements of a square matrix_int to f. */
-void matrix_int::set_diagonal( int f ) 
+void matrix_int::set_diagonal( int f )
 {
 	size_t i;
-	int mn=(get_rows()<get_cols() ? get_rows() : get_cols());
+	size_t mn=(get_rows()<get_cols() ? get_rows() : get_cols());
 	for ( i = 0; i < mn; i++ )
 			set_element( i, i, f );
 }
@@ -559,7 +557,7 @@ bool matrix_int::is_square() const
 /** returns sum of nth power of all elements. */
 double matrix_int::norm( double n ) const 
 {
-	int i, j;
+	size_t i, j;
 	double sum = 0.0;
 	
 	for ( i = 0; i < get_rows(); i++ ) {
