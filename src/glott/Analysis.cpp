@@ -51,7 +51,10 @@ int main(int argc, char *argv[]) {
 
    /* Read sound file and allocate data */
    AnalysisData data;
-   ReadWavFile(wav_filename, &(data.signal), &params);
+
+   if(ReadWavFile(wav_filename, &(data.signal), &params) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
    data.AllocateData(params);
 
    /* High-pass filter signal to eliminate low frequency "rumble" */

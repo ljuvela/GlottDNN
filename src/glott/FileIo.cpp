@@ -34,17 +34,24 @@ void create_file (const char * fname, int format)
 	*/
 } /* create_file */
 
-void ReadWavFile (const char *fname, gsl::vector *signal, Param *params) {
+int ReadWavFile (const char *fname, gsl::vector *signal, Param *params) {
 
 	SndfileHandle file ;
+
 	file = SndfileHandle(fname) ;
+
+	if(file.error()) {
+      std::cerr << "Error: Failed to open file: " << fname << std::endl;
+      return EXIT_FAILURE;
+   }
+
 
 	printf ("Reading file '%s'\n", fname) ;
 	printf ("    Sample rate : %d\n", file.samplerate ()) ;
 	printf ("    Channels    : %d\n", file.channels ()) ;
 	if (file.samplerate() != params->fs) {
-		std::cerr << "Sample rate does not match with config" << std::endl;
-		return;
+		std::cerr << "Error: Sample rate does not match with config" << std::endl;
+		return EXIT_FAILURE;
 	}
 
 	/* define buffer for sndfile and read */
@@ -67,7 +74,7 @@ void ReadWavFile (const char *fname, gsl::vector *signal, Param *params) {
    params->basename = new char[lastindex+1]();
    strncpy(params->basename, fname, lastindex);
 
-
+   return EXIT_SUCCESS;
 }
 
 
