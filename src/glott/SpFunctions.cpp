@@ -707,7 +707,6 @@ double LogEnergy2FrameEnergy(const double &log_energy, const size_t frame_size) 
 }
 
 double Skewness(const gsl::vector &data) {
-
 	int i;
 	int N = (int)data.size();
 	double mu=getMean(data);
@@ -725,4 +724,67 @@ double Skewness(const gsl::vector &data) {
 
 	return m3/s3;
 }
+
+double getMeanF0(const gsl::vector &fundf) {
+   size_t i;
+   int n = 0;
+   double sum = 0.0;
+
+   for(i=0;i<fundf.size();i++) {
+      if(fundf(i) != 0.0) {
+         sum += fundf(i);
+         n++;
+      }
+   }
+   return sum/(double)n;
+}
+
+int FindPeaks(const gsl::vector &vec, const double &threshold, gsl::vector_int *index, gsl::vector *value) {
+
+   int i,ii;
+   gsl::vector_int idxtemp(vec.size());
+   gsl::vector valtemp(vec.size());
+    /* find maximum of abs x */
+   int maxidx = 0;
+   double xmax = 0.0;
+    for(i=0;i<(int)vec.size();i++){
+      if (vec(i) > xmax){
+         xmax = vec(i);
+         maxidx = i;
+      }
+      if (vec(i) < -1*xmax){
+         xmax = -1*vec(i);
+         maxidx = i;
+      }
+    }
+
+    /* copy and differentiate */
+   gsl::vector vec_diff(vec.size(),true);
+   Filter(std::vector<double>{1.0, -1.0}, std::vector<double>{1.0},vec,&vec_diff);
+
+   /* find peaks at diff zero crossings */
+   for (i=1,ii=0;i<vec_diff.size();i++){
+      if (vec_diff(i)*vec_diff(i-1)<0 &&
+            (vec(i) > threshold*xmax || vec(i) < -1.0*threshold*xmax)){
+         idxtemp(ii) = i;
+         valtemp(ii) = vec(i);
+         ii++;
+      }
+   }
+
+   if (ii){
+      *(index) = gsl::vector_int(ii);
+      *(value) = gsl::vector(ii);
+
+      for(i=0;i<ii;i++) {
+         (*index)(i) = idxtemp(i);
+         (*value)(i) = valtemp(i);
+      }
+   } else {
+      (*index) = gsl::vector_int();
+      (*value) = gsl::vector();
+   }
+   return ii;
+}
+
 

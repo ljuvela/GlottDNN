@@ -67,7 +67,8 @@ int main(int argc, char *argv[]) {
    GetF0(params, data.signal, &(data.fundf), &(data.source_signal_iaif));
 
    /* Read or estimate glottal closure instants (GCIs)*/
-   GetGci(params, data.signal, &(data.gci_inds), &(data.source_signal_iaif));
+   if(GetGci(params, data.signal, data.fundf, &(data.gci_inds), &(data.source_signal_iaif)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
 
    /* Estimate frame log-energy (Gain) */
    GetGain(params, data.signal, &(data.frame_energy));

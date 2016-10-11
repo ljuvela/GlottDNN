@@ -23,4 +23,9 @@ void WWLP(const gsl::vector &weight_function, const double &warping_lambda, cons
 
 void LPC(const gsl::vector &frame, const int &lpc_order, gsl::vector *A);
 
+void MeanBasedSignal(const gsl::vector &signal, const int &fs, const double &mean_f0, gsl::vector *mean_based_signal);
+
+void SedreamsGciDetection(const gsl::vector &residual, const gsl::vector &mean_based_signal, gsl::vector_int *gci_inds);
+
+
 #endif /* SRC_GLOTT_INVERSEFILTERING_H_ */
