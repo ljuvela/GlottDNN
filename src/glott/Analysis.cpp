@@ -72,8 +72,6 @@ int main(int argc, char *argv[]) {
 
    Poly2Lsf(data.poly_glott, &(data.lsf_glott));
 
-   VPrint1(data.source_signal);
-
 
    // Pulse extraction
 
