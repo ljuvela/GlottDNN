@@ -1,7 +1,7 @@
 #include <gslwrap/vector_double.h>
 #include <gslwrap/vector_int.h>
 #include <cmath>
-#include <float.h>
+#include <cfloat>
 
 #include "definitions.h"
 #include "SpFunctions.h"

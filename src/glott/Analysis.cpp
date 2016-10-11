@@ -2,29 +2,25 @@
 /*                 INCLUDE                     */
 /***********************************************/
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <time.h>
-#include <string.h>
-#include <vector>
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
+#include <ctime>
+#include <cstring>
 
 #include <iostream>
 #include <iomanip>
-#include <cstdlib>
 
-#include	<cstdio>
-#include	<cstring>
-
+#include <vector>
 #include <gslwrap/vector_double.h>
 
 #include "Filters.h"
 #include "definitions.h"
 #include "FileIo.h"
 #include "ReadConfig.h"
+#include "SpFunctions.h"
 #include "AnalysisFunctions.h"
 
-#include "SpFunctions.h"
 #include "DebugUtils.h"
 
 
