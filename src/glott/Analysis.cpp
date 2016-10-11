@@ -61,13 +61,13 @@ int main(int argc, char *argv[]) {
    HighPassFiltering(params, &(data.signal));
 
    /* Read or estimate signal polarity */
-   PolarityDetection(params, &(data.signal));
+   PolarityDetection(params, &(data.signal), &(data.source_signal_iaif));
 
    /* Read or estimate fundamental frequency (F0)  */
-   GetF0(params, data.signal, &(data.fundf));
+   GetF0(params, data.signal, &(data.fundf), &(data.source_signal_iaif));
 
    /* Read or estimate glottal closure instants (GCIs)*/
-   GetGci(params, data.signal, &(data.gci_inds));
+   GetGci(params, data.signal, &(data.gci_inds), &(data.source_signal_iaif));
 
    /* Estimate frame log-energy (Gain) */
    GetGain(params, data.signal, &(data.frame_energy));

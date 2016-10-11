@@ -69,6 +69,7 @@ public:
 	gsl::vector frame_energy;
 	gsl::vector_int gci_inds;
 	gsl::vector source_signal;
+   gsl::vector source_signal_iaif;
 
 	gsl::matrix poly_vocal_tract;
 	gsl::matrix lsf_vocal_tract;

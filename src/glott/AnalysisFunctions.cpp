@@ -12,17 +12,31 @@
 #include "Filters.h"
 
 
-int PolarityDetection(const Param &params, gsl::vector *signal) {
+int PolarityDetection(const Param &params, gsl::vector *signal, gsl::vector *source_signal_iaif) {
    switch(params.signal_polarity) {
    case POLARITY_DEFAULT :
       return EXIT_SUCCESS;
 
    case POLARITY_INVERT :
+      std::cout << ' -- Inverting polarity (SIGNAL_POLARITY = "INVERT")' << std::endl;
       (*signal) *= (double)-1.0;
       return EXIT_SUCCESS;
 
    case POLARITY_DETECT :
-      // TODO: implement polarity detection
+      std::cout << "Using automatic polarity detection ...";
+      if(!source_signal_iaif->is_set()) {
+          *source_signal_iaif = gsl::vector(signal->size());
+         GetIaifResidual(params, *signal, source_signal_iaif);
+      }
+
+      if(Skewness(*source_signal_iaif) > 0) {
+         std::cout << "... Detected negative polarity. Inverting signal." << std::endl;
+         (*signal) *= (double)-1.0;
+         (*source_signal_iaif) *= (double)-1.0;
+      } else {
+         std::cout << "... Detected positive polarity." << std::endl;
+      }
+
       return EXIT_SUCCESS;
    }
 
@@ -38,7 +52,7 @@ int PolarityDetection(const Param &params, gsl::vector *signal) {
  * output: fundf: Obtained F0 vector.
  *
  */
-int GetF0(const Param &params, const gsl::vector &signal, gsl::vector *fundf) {
+int GetF0(const Param &params, const gsl::vector &signal, gsl::vector *fundf, gsl::vector *source_signal_iaif) {
 
 	std::cout << "F0 analysis ";
 	if(params.use_external_f0) {
@@ -64,7 +78,7 @@ int GetF0(const Param &params, const gsl::vector &signal, gsl::vector *fundf) {
  * output: gci_signal: Sparse signal-length representation of gcis as ones and otherwise zeros
  *
  */
-int GetGci(const Param &params, const gsl::vector &signal, gsl::vector_int *gci_inds) {
+int GetGci(const Param &params, const gsl::vector &signal, gsl::vector_int *gci_inds, gsl::vector *source_signal_iaif) {
 
 	if(params.use_external_gci) {
 		std::cout << "Reading GCI information from external file: " << params.external_gci_filename << " ...";
@@ -362,3 +376,48 @@ void HighPassFiltering(const Param &params, gsl::vector *signal) {
 
 }
 
+
+void GetIaifResidual(const Param &params, const gsl::vector &signal, gsl::vector *residual) {
+   gsl::vector frame(params.frame_length,true);
+   gsl::vector frame_residual(params.frame_length,true);
+   gsl::vector frame_pre_emph(params.frame_length,true);
+   gsl::vector pre_frame(params.lpc_order_vt,true);
+   gsl::vector frame_full(params.lpc_order_vt+params.frame_length,true);
+   gsl::vector A(params.lpc_order_vt+1,true);
+   gsl::vector B(1);B(0) = 1.0;
+   gsl::vector G(params.lpc_order_glot_iaif+1,true);
+   gsl::vector weight_fn;
+
+
+
+   size_t frame_index;
+   for(frame_index=0;frame_index<(size_t)params.number_of_frames;frame_index++) {
+      GetFrame(params, signal, frame_index, &frame, &pre_frame);
+
+
+      Filter(std::vector<double>{1.0, -params.gif_pre_emphasis_coefficient},B, frame, &frame_pre_emph);
+      ApplyWindowingFunction(params.default_windowing_function, &frame_pre_emph);
+
+      ArAnalysis(params.lpc_order_vt,0.0, NONE, weight_fn, frame_pre_emph, &A);
+      ConcatenateFrames(pre_frame, frame, &frame_full);
+
+      Filter(A,B,frame_full,&frame_residual);
+
+      ApplyWindowingFunction(params.default_windowing_function, &frame_residual);
+      ArAnalysis(params.lpc_order_glot_iaif,0.0, NONE, weight_fn, frame_residual, &G);
+
+      Filter(G,B,frame,&frame_pre_emph); // Iterated pre-emphasis
+      ApplyWindowingFunction(params.default_windowing_function, &frame_pre_emph);
+
+      ArAnalysis(params.lpc_order_vt,0.0, NONE, weight_fn, frame_pre_emph, &A);
+
+      Filter(A,B,frame_full,&frame_residual);
+
+      double ola_gain = (double)params.frame_length/((double)params.frame_shift*2.0);
+      frame_residual *= getEnergy(frame)/getEnergy(frame_residual)/ola_gain; // Set energy of residual euqual to energy of frame
+
+      ApplyWindowingFunction(HANN, &frame_residual);
+
+      OverlapAdd(frame_residual, frame_index*params.frame_shift, residual);
+   }
+}
