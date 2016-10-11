@@ -303,8 +303,11 @@ int Find_nearest_pulse_index(const int &sample_index, const gsl::vector &gci_ind
 
 void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl::vector_int &gci_inds, gsl::vector &fundf, gsl::matrix *pulses_mat) {
 
+   if (params.extract_pulses_as_features == false)
+      return;
+
    size_t frame_index;
-   for(frame_index=0;frame_index<params.number_of_frames;frame_index++) {
+   for(frame_index=0;frame_index<(size_t)params.number_of_frames;frame_index++) {
       size_t sample_index = frame_index*params.frame_shift;
       size_t pulse_index = Find_nearest_pulse_index(sample_index, gci_inds, params, fundf(frame_index));
 

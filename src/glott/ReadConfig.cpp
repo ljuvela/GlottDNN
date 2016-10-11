@@ -130,6 +130,35 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
    if (ConfigLookupBool("HP_FILTERING", cfg, default_config, &(params->use_highpass_filtering)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
+   if (ConfigLookupBool("USE_WAVEFORMS_DIRECTLY", cfg, default_config, &(params->use_waveforms_directly)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
+   if (ConfigLookupBool("EXTRACT_F0", cfg, default_config, &(params->extract_f0)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
+   if (ConfigLookupBool("EXTRACT_GAIN", cfg, default_config, &(params->extract_gain)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
+   if (ConfigLookupBool("EXTRACT_LSF_VT", cfg, default_config, &(params->extract_lsf_vt)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
+   if (ConfigLookupBool("EXTRACT_LSF_GLOT", cfg, default_config, &(params->extract_lsf_glot)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
+   if (ConfigLookupBool("EXTRACT_HNR", cfg, default_config, &(params->extract_hnr)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
+   if (ConfigLookupBool("EXTRACT_INFOFILE", cfg, default_config, &(params->extract_infofile)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
+   if (ConfigLookupBool("EXTRACT_GLOTTAL_EXCITATION", cfg, default_config, &(params->extract_glottal_excitation)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
+   if (ConfigLookupBool("EXTRACT_GCI_SIGNAL", cfg, default_config, &(params->extract_gci_signal)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
+   if (ConfigLookupBool("EXTRACT_PULSES_AS_FEATURES", cfg, default_config, &(params->extract_pulses_as_features)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
 
 
 	/* Read enum style configurations */
