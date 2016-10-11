@@ -37,5 +37,7 @@ void OverlapAdd(const gsl::vector &frame, const size_t center_index, gsl::vector
 double getMean(const gsl::vector &vec);
 double getEnergy(const gsl::vector &vec);
 double LogEnergy2FrameEnergy(const double &log_energy, const size_t frame_size);
+double Skewness(const gsl::vector &data);
+
 
 #endif /* SRC_GLOTT_SPFUNCTIONS_H_ */

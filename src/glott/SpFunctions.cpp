@@ -706,4 +706,23 @@ double LogEnergy2FrameEnergy(const double &log_energy, const size_t frame_size) 
    return (double)pow(10,log_energy/20.0)*(double)frame_size;
 }
 
+double Skewness(const gsl::vector &data) {
+
+	int i;
+	int N = (int)data.size();
+	double mu=getMean(data);
+
+	double m3=0.0;
+	for (i=0;i<N;i++)
+		m3 += pow(data(i)-mu,3);
+	m3 = m3/(double)N;
+
+	double s3 = 0.0;
+	for (i=0;i<N;i++)
+		s3 += pow(data(i)-mu,2);
+	s3 = s3/(double)(N-1);
+	s3 = pow(s3,1.5);
+
+	return m3/s3;
+}
 
