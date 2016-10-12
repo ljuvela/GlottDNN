@@ -1,6 +1,5 @@
 .DS_Store
 src/.DS_Store
-configure
 .cproject
 .project
 Makefile
