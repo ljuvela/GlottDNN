@@ -105,7 +105,8 @@ int main(int argc, char *argv[]) {
    PolarityDetection(params, &(data.signal), &(data.source_signal_iaif));
 
    /* Read or estimate fundamental frequency (F0)  */
-   GetF0(params, data.signal, &(data.fundf), &(data.source_signal_iaif));
+   if(GetF0(params, data.signal, &(data.fundf), &(data.source_signal_iaif)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
 
    /* Read or estimate glottal closure instants (GCIs)*/
    if(GetGci(params, data.signal, data.fundf, &(data.gci_inds), &(data.source_signal_iaif)) == EXIT_FAILURE)

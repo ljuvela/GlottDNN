@@ -59,7 +59,9 @@ int GetF0(const Param &params, const gsl::vector &signal, gsl::vector *fundf, gs
 	if(params.use_external_f0) {
 		std::cout << "using external F0 file: " << params.external_f0_filename << " ...";
 		gsl::vector fundf_ext;
-		ReadGslVector(params.external_f0_filename, params.data_type, &fundf_ext);
+		if(ReadGslVector(params.external_f0_filename, params.data_type, &fundf_ext) == EXIT_FAILURE)
+         return EXIT_FAILURE;
+
 		if(fundf_ext.size() != (size_t)params.number_of_frames) {
 			std::cout << "Warning: External F0 file length differs from number of frames. Interpolating external "
 						  "F0 length to match number of frames. F0 length: " \
