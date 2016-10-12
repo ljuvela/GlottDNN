@@ -125,17 +125,6 @@ ostream& operator<< ( ostream& os, const matrix_int & m )
 }
 
 
-
-void matrix_int::load_binary( const char *filename )
-{
-   ;
-}
-
-void matrix_int::save_binary( const char *filename ) const
-{
-   ;
-}
-
 bool matrix_int::operator==( const matrix_int &other ) const
 {
    size_t i, j;

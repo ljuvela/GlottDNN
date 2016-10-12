@@ -35,7 +35,7 @@ gsl::vector_int GetFrameGcis(const Param &params, const int frame_index, const g
 
 	/* Set frame gcis*/
 	size_t i;
-	for(i=0;i<n_gci_inds;i++)
+	for(i=0;i<(size_t)n_gci_inds;i++)
 		frame_gci_inds(i) = gci_inds(min_gci_ind+i) - minind;
 
 	return frame_gci_inds;
@@ -266,7 +266,7 @@ void MeanBasedSignal(const gsl::vector &signal, const int &fs, const double &mea
 		sum = 0.0;
 		i = 0;
 		for(m=-N;m<=N;m++) {
-			if((n+m>=0) && (n+m<signal.size())){
+			if((n+m>=0) && (n+m<(int)signal.size())){
 				sum += signal(n+m)*win(i);
 				i++;
 			}

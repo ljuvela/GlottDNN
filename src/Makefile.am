@@ -1,5 +1,5 @@
 AUTOMAKE_OPTIONS = subdir-objects
-AM_CXXFLAGS = -std=c++11 -Wall -Wextra
+AM_CXXFLAGS = -std=c++11 -Wall -Wextra -pedantic
 
 noinst_LIBRARIES = libgslwrap.a
 libgslwrap_a_SOURCES = gslwrap/matrix_float.h gslwrap/matrix_double.h gslwrap/matrix_int.h \

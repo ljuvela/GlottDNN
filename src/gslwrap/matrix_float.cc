@@ -126,16 +126,6 @@ ostream& operator<< ( ostream& os, const matrix_float & m )
 
 
 
-void matrix_float::load_binary( const char *filename )
-{
-   ;
-}
-
-void matrix_float::save_binary( const char *filename ) const
-{
-   ;
-}
-
 bool matrix_float::operator==( const matrix_float &other ) const
 {
    size_t i, j;
@@ -302,7 +292,7 @@ matrix_float &matrix_float::operator/=( const float &f )
 
 matrix_float matrix_float::transpose() const 
 {
-   int i, j;
+   size_t i, j;
    matrix_float result( get_cols(), get_rows() );
 
    for ( i = 0; i < get_rows(); i++ ) {
@@ -332,7 +322,6 @@ matrix_float matrix_float::LU_decomp(gsl::permutation *perm,int *psign) const
 
 matrix_float matrix_float::LU_invert() const
 {
-   int i, j;
    permutation p;
    matrix a=*this;
    a=a.LU_decomp(&p);
@@ -345,7 +334,7 @@ matrix_float matrix_float::LU_invert() const
 // returns sum of all the elements.
 float matrix_float::sum() const 
 {
-	int i, j;
+   size_t i, j;
 	float sum = 0;
 
 	for ( i = 0; i < get_rows(); i++ ) {
@@ -449,7 +438,7 @@ matrix_float matrix_float::get_col( size_t colindex ) const
 	
 	gsl_matrix_float_get_col( tempvector, m, colindex );
 	gsl_matrix_float_set_col( columnmatrix.m, 0, tempvector );
-	for ( int i = 0; i < get_rows(); i++ )
+	for ( size_t i = 0; i < get_rows(); i++ )
 		cout << gsl_vector_float_get( tempvector, i ) << endl;
 
 	// tidy up
@@ -461,7 +450,7 @@ matrix_float matrix_float::get_col( size_t colindex ) const
 /** calculates sum of rows returned as a column matrix. */
 matrix_float matrix_float::row_sum() const 
 {
-	int	i;
+   size_t	i;
 	matrix_float sum( get_rows(), 1 );
 	
 	sum.set_zero();
@@ -475,7 +464,7 @@ matrix_float matrix_float::row_sum() const
 /** calculates sum of columns returned as a row matrix. */
 matrix_float matrix_float::column_sum() const 
 {
-	int	i;
+	size_t	i;
 	matrix_float sum( 1, get_cols() );
 	
 	sum.set_zero( );
@@ -489,7 +478,7 @@ matrix_float matrix_float::column_sum() const
 /** returns trace (diagonal sum) of a square matrix. */
 double matrix_float::trace() const 
 {
-	int	i;
+	size_t	i;
 	double sum = 0.0;
 	
 	assert (get_rows() == get_cols() );
@@ -511,7 +500,7 @@ double matrix_float::trace() const
 // don't forget to de-allocate a, which is allocated in this method.
 int matrix_float::cholesky_decomp( matrix_float &a ) const 
 {
-	int i, j;
+	//int i, j;
 	int error;
 	matrix result=*this;
 	// do decomposition with call to g_s_l
@@ -543,7 +532,7 @@ void matrix_float::identity( size_t k )
 void matrix_float::set_diagonal( float f ) 
 {
 	size_t i;
-	int mn=(get_rows()<get_cols() ? get_rows() : get_cols());
+	size_t mn=(get_rows()<get_cols() ? get_rows() : get_cols());
 	for ( i = 0; i < mn; i++ )
 			set_element( i, i, f );
 }
@@ -559,7 +548,7 @@ bool matrix_float::is_square() const
 /** returns sum of nth power of all elements. */
 double matrix_float::norm( double n ) const 
 {
-	int i, j;
+	size_t i, j;
 	double sum = 0.0;
 	
 	for ( i = 0; i < get_rows(); i++ ) {

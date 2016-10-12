@@ -60,11 +60,13 @@ public:
 	~vector(){free();}
 	vector(const size_t& n,bool clear=true)
 	{
+	   gsldata=NULL;
 		if(clear){this->calloc(n);}
 		else     {this->alloc(n);}
 	}
 	vector(const int& n,bool clear=true)
 	{
+	   gsldata=NULL;
 		if(clear){this->calloc(n);}
 		else     {this->alloc(n);}
 	}

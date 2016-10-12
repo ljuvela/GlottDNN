@@ -80,7 +80,7 @@ vector_float::operator==(const vector_float& other) const
 {
 	if (size() != other.size())
 		return false;
-	for (int i=0;i<size(); i++)
+	for (size_t i=0;i<size(); i++)
 	{
 		if (this->operator[](i) != other[i])
 			return false;
@@ -106,7 +106,7 @@ vector_float::subvector (size_t offset, size_t n) const
 // returns sum of all the elements.
 float vector_float::sum() const 
 {
-	int i;
+   size_t i;
 	float sum = 0;
 
 	for ( i = 0; i < size(); i++ ) 
@@ -151,7 +151,7 @@ ostream&
 operator<< ( ostream& os, const vector_float & vect )
 {
 	os.setf( ios::fixed);
-	for (int i=0;i<vect.size();i++)
+	for (size_t i=0;i<vect.size();i++)
 	{
 		os << vect[i] << endl;
 	}

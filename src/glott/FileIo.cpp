@@ -56,7 +56,8 @@ int ReadWavFile (const char *fname, gsl::vector *signal, Param *params) {
 
 	/* define buffer for sndfile and read */
 	*(signal) = gsl::vector(static_cast <size_t> (file.frames()));
-	double buffer[signal->size()];
+	// double buffer[signal->size()];
+	double *buffer = (double*)malloc(signal->size() * sizeof(double));
 	file.read(buffer, signal->size()) ;
 
 	/* copy read buffer to signal */
@@ -73,6 +74,8 @@ int ReadWavFile (const char *fname, gsl::vector *signal, Param *params) {
    size_t lastindex = str.find_last_of(".");
    params->basename = new char[lastindex+1]();
    strncpy(params->basename, fname, lastindex);
+
+   free(buffer);
 
    return EXIT_SUCCESS;
 }

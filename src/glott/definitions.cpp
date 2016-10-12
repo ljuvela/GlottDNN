@@ -12,10 +12,56 @@
 
 
 Param::Param() {
+   /* String parameters */
 	external_f0_filename = NULL;
 	external_gci_filename = NULL;
 	basename = NULL;
+	/* Enum parameters */
 	default_windowing_function = HANN;
+	signal_polarity = POLARITY_DEFAULT;
+   lp_weighting_function = AME;
+   /* Other parameters */
+	fs = 16000;
+	frame_length = 400;
+	frame_length_long = 800;
+	frame_shift = 80;
+	number_of_frames = 0 ;
+	signal_length = 0;
+	lpc_order_vt = 30;
+	lpc_order_glot = 10;
+	hnr_order = 5;
+	use_external_f0 = false;
+	use_external_gci = false;
+	data_type = ASCII;
+	qmf_subband_analysis = false;
+	gif_pre_emphasis_coefficient = 0.97;
+	use_iterative_gif = false;
+	lpc_order_glot_iaif = 8;
+	warping_lambda_vt = 0.0;
+	ame_duration_quotient = 0.7;
+	ame_position_quotient = 0.1;
+	max_pulse_len_diff = 0.10;
+	paf_pulse_length = 400;
+	use_pulse_interpolation = true;
+	use_highpass_filtering = true;
+	use_waveforms_directly = false;
+	extract_f0 = true;
+	extract_gain = true;
+	extract_lsf_vt = true;
+	extract_lsf_glot = true;
+	extract_hnr = true;
+	extract_infofile = false;
+	extract_glottal_excitation = false;
+	extract_gci_signal = false;
+	extract_pulses_as_features = false;
+	lpc_order_vt_qmf1 = 48;
+	lpc_order_vt_qmf2 = 12;
+	f0_max = 500;
+	f0_min = 50;
+	voicing_threshold = 60.0;
+	zcr_threshold = 120.0;
+	relative_f0_threshold = 0.005;
+
 }
 
 Param::~Param() {
@@ -55,8 +101,13 @@ int AnalysisData::AllocateData(const Param &params) {
 
 int AnalysisData::SaveData(const Param &params) {
 
+   if (params.extract_gain)
+      WriteGslVector(params.basename, ".Gain", params.data_type, frame_energy);
    if (params.extract_lsf_vt)
       WriteGslMatrix(params.basename, ".LSF", params.data_type, lsf_vocal_tract);
+   if (params.extract_lsf_glot)
+      WriteGslMatrix(params.basename, ".LSFSource", params.data_type, lsf_glott);
+   if (params.extract_hnr)
    if (params.extract_hnr)
       WriteGslMatrix(params.basename, ".HNR", params.data_type, hnr_glott);
    if (params.extract_pulses_as_features)

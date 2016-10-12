@@ -125,17 +125,6 @@ ostream& operator<< ( ostream& os, const matrix & m )
 }
 
 
-
-void matrix::load_binary( const char *filename )
-{
-   ;
-}
-
-void matrix::save_binary( const char *filename ) const
-{
-   ;
-}
-
 bool matrix::operator==( const matrix &other ) const
 {
    size_t i, j;
@@ -302,7 +291,7 @@ matrix &matrix::operator/=( const double &f )
 
 matrix matrix::transpose() const 
 {
-   int i, j;
+   size_t i, j;
    matrix result( get_cols(), get_rows() );
 
    for ( i = 0; i < get_rows(); i++ ) {
@@ -332,7 +321,6 @@ matrix matrix::LU_decomp(gsl::permutation *perm,int *psign) const
 
 matrix matrix::LU_invert() const
 {
-   int i, j;
    permutation p;
    matrix a=*this;
    a=a.LU_decomp(&p);
@@ -345,7 +333,7 @@ matrix matrix::LU_invert() const
 // returns sum of all the elements.
 double matrix::sum() const 
 {
-	int i, j;
+   size_t i, j;
 	double sum = 0;
 
 	for ( i = 0; i < get_rows(); i++ ) {
@@ -494,7 +482,7 @@ matrix matrix::get_col( size_t colindex ) const
 	
 	gsl_matrix_get_col( tempvector, m, colindex );
 	gsl_matrix_set_col( columnmatrix.m, 0, tempvector );
-	for ( int i = 0; i < get_rows(); i++ )
+	for ( size_t i = 0; i < get_rows(); i++ )
 		cout << gsl_vector_get( tempvector, i ) << endl;
 
 	// tidy up
@@ -506,7 +494,7 @@ matrix matrix::get_col( size_t colindex ) const
 /** calculates sum of rows returned as a column matrix. */
 matrix matrix::row_sum() const 
 {
-	int	i;
+   size_t	i;
 	matrix sum( get_rows(), 1 );
 	
 	sum.set_zero();
@@ -520,7 +508,7 @@ matrix matrix::row_sum() const
 /** calculates sum of columns returned as a row matrix. */
 matrix matrix::column_sum() const 
 {
-	int	i;
+   size_t	i;
 	matrix sum( 1, get_cols() );
 	
 	sum.set_zero( );
@@ -534,7 +522,7 @@ matrix matrix::column_sum() const
 /** returns trace (diagonal sum) of a square matrix. */
 double matrix::trace() const 
 {
-	int	i;
+   size_t	i;
 	double sum = 0.0;
 	
 	assert (get_rows() == get_cols() );
@@ -556,7 +544,6 @@ double matrix::trace() const
 // don't forget to de-allocate a, which is allocated in this method.
 int matrix::cholesky_decomp( matrix &a ) const 
 {
-	int i, j;
 	int error;
 	matrix result=*this;
 	// do decomposition with call to g_s_l
@@ -588,7 +575,7 @@ void matrix::identity( size_t k )
 void matrix::set_diagonal( double f ) 
 {
 	size_t i;
-	int mn=(get_rows()<get_cols() ? get_rows() : get_cols());
+	size_t mn=(get_rows()<get_cols() ? get_rows() : get_cols());
 	for ( i = 0; i < mn; i++ )
 			set_element( i, i, f );
 }
@@ -604,7 +591,7 @@ bool matrix::is_square() const
 /** returns sum of nth power of all elements. */
 double matrix::norm( double n ) const 
 {
-	int i, j;
+   size_t i, j;
 	double sum = 0.0;
 	
 	for ( i = 0; i < get_rows(); i++ ) {
