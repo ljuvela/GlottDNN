@@ -158,6 +158,7 @@ int GetGain(const Param &params, const gsl::vector &signal, gsl::vector *gain_pt
 	return EXIT_SUCCESS;
 }
 
+//FIXME : remove params, replace with hop size.
 int GetFrame(const Param &params, const gsl::vector &signal, const int frame_index,gsl::vector *frame, gsl::vector *pre_frame) {
 	int i, ind;
 	/* Get samples to frame */
@@ -174,8 +175,8 @@ int GetFrame(const Param &params, const gsl::vector &signal, const int frame_ind
 
 	/* Get pre-frame samples for smooth filtering */
 	if (pre_frame){
-		for(i=0; i<params.lpc_order_vt; i++) {
-			ind = frame_index*params.frame_shift - (int)frame->size()/2+ i - params.lpc_order_vt; // SPTK compatible, ljuvela
+		for(i=0; i<pre_frame->size(); i++) {
+			ind = frame_index*params.frame_shift - (int)frame->size()/2+ i - pre_frame->size(); // SPTK compatible, ljuvela
 			if(ind >= 0 && ind < (int)signal.size())
 				(*pre_frame)(i) = signal(ind);
 
@@ -559,3 +560,70 @@ void GetIaifResidual(const Param &params, const gsl::vector &signal, gsl::vector
 
 
 
+void HnrAnalysis(const Param &params, const gsl::vector &source_signal, const gsl::vector &fundf, gsl::matrix *hnr_glott) {
+
+   std::cout << "HNR Analysis ...";
+
+	/* Variables */
+	int hnr_channels = params.hnr_order;
+	gsl::vector frame(params.frame_length_long);
+   ComplexVector frame_fft;
+	size_t NFFT = 8192; // Long FFT
+	double MIN_LOG_POWER = -60.0;
+	gsl::vector fft_mag(NFFT/2+1);
+
+	gsl::vector_int harmonic_index;
+
+	//gsl::vector harmonic_peak_values;
+	//gsl::vector harmonic_valley_values;
+	gsl::vector hnr_values;
+
+	gsl::vector_int x_interp = LinspaceInt(0, 1,fft_mag.size()-1);
+
+	gsl::vector hnr_interp(fft_mag.size());
+	gsl::vector hnr_erb(hnr_channels);
+
+	int frame_index,i, ind1, ind2;
+	double val;
+	for(frame_index=0;frame_index<params.number_of_frames;frame_index++) {
+      /** HNR Analysis only for voiced frames (zero for unvoiced frames) **/
+      if(fundf(frame_index) > 0) {
+         GetFrame(params, source_signal, frame_index, &frame, NULL);
+         ApplyWindowingFunction(params.default_windowing_function, &frame);
+         FFTRadix2(frame, NFFT, &frame_fft);
+         fft_mag = frame_fft.getAbs();
+
+         for(i=0;i<(int)fft_mag.size();i++) {
+            val = 20*log10(fft_mag(i));
+            fft_mag(i) = GSL_MAX(val,MIN_LOG_POWER); // Min log-power = -60dB
+         }
+         harmonic_index = FindHarmonicPeaks(fft_mag, fundf(frame_index), params.fs);
+         hnr_values = gsl::vector(harmonic_index.size());
+         //harmonic_peak_values = gsl::vector(harmonic_index.size());
+         //harmonic_valley_values = gsl::vector(harmonic_index.size());
+         for(i=0;i<(int)harmonic_index.size();i++) {
+            //harmonic_peak_values(i) = fft_mag(harmonic_index(i));
+
+            if(i>0) {
+               ind1 = (harmonic_index(i)+harmonic_index(i-1))/2;
+            } else {
+               ind1 = harmonic_index(i)/2;
+            }
+
+            if(i==(int)harmonic_index.size()-1) {
+               ind2 = (harmonic_index(i)+fft_mag.size()-1)/2;
+            } else {
+               ind2 = (harmonic_index(i)+harmonic_index(i+1))/2;
+            }
+            val = (fft_mag(ind1) + fft_mag(ind2))/2.0;
+           // harmonic_valley_values(i) = val;
+            hnr_values(i) = val - fft_mag(harmonic_index(i)); // Actually Noise-to-Harmonic ratio
+         }
+
+         InterpolateLinear(harmonic_index, hnr_values, x_interp, &hnr_interp);
+         Linear2Erb(hnr_interp, params.fs, &hnr_erb);
+         hnr_glott->set_col_vec(frame_index,hnr_erb);
+      }
+	}
+	std::cout << " done." << std::endl;
+}

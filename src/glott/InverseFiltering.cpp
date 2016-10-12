@@ -246,8 +246,6 @@ void ArAnalysis(const int &lp_order,const double &warping_lambda, const LpWeight
       if(gsl_isnan((*A)(i)))
             (*A)(i) = (0.0);
    }
-
-
 }
 
 void MeanBasedSignal(const gsl::vector &signal, const int &fs, const double &mean_f0, gsl::vector *mean_based_signal) {

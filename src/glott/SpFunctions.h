@@ -13,6 +13,7 @@
 
 void InterpolateNearest(const gsl::vector &vector, const size_t interpolated_size, gsl::vector *i_vector);
 void InterpolateLinear(const gsl::vector &vector, const size_t interpolated_size, gsl::vector *i_vector);
+void InterpolateLinear(const gsl::vector &x_orig, const gsl::vector &y_orig, const gsl::vector &x_interp, gsl::vector *y_interp);
 void InterpolateSpline(const gsl::vector &vector, const size_t interpolated_size, gsl::vector *i_vector);
 void Filter(const gsl::vector &b, const gsl::vector &a, const gsl::vector &x, gsl::vector *y);
 void Filter(const std::vector<double> &b, const std::vector<double> &a, const gsl::vector &x, gsl::vector *y);
@@ -41,6 +42,9 @@ double getEnergy(const gsl::vector &vec);
 double LogEnergy2FrameEnergy(const double &log_energy, const size_t frame_size);
 double Skewness(const gsl::vector &data);
 int FindPeaks(const gsl::vector &vec, const double &threshold, gsl::vector_int *index, gsl::vector *value);
+gsl::vector_int FindHarmonicPeaks(const gsl::vector &fft_mag, const double &f0, const int &fs);
 void StabilizePoly(const int &fft_length, gsl::vector *A);
+gsl::vector_int LinspaceInt(const int &start_val, const int &hop_val,const int &end_val);
+void Linear2Erb(const gsl::vector &linvec, const int &fs, gsl::vector *erbvec);
 
 #endif /* SRC_GLOTT_SPFUNCTIONS_H_ */

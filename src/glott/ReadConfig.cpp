@@ -69,6 +69,9 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
 	if (ConfigLookupInt("SAMPLING_FREQUENCY", cfg, default_config, &(params->fs)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 
+   params->frame_length_long = (int)round(50/1000.0*(double)params->fs); // Hard coded value of 50ms.
+
+
 	double shift_ms;
 	if (ConfigLookupDouble("FRAME_SHIFT", cfg, default_config, &(shift_ms)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
@@ -180,6 +183,10 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
 
    if (ConfigLookupDouble("RELATIVE_F0_THRESHOLD", cfg, default_config, &(params->relative_f0_threshold)) == EXIT_FAILURE)
          return EXIT_FAILURE;
+
+   if (ConfigLookupInt("HNR_ORDER", cfg, default_config, &(params->hnr_order)) == EXIT_FAILURE)
+         return EXIT_FAILURE;
+
 
    //if (ConfigLookupDouble("F0_CHECK_RANGE", cfg, default_config, &(params->f0_check_range)) == EXIT_FAILURE)
    //      return EXIT_FAILURE;

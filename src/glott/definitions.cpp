@@ -40,6 +40,7 @@ int AnalysisData::AllocateData(const Param &params) {
 	lsf_vocal_tract = gsl::matrix(params.lpc_order_vt,params.number_of_frames,true);
 	poly_glott = gsl::matrix(params.lpc_order_glot+1,params.number_of_frames,true);
 	lsf_glott = gsl::matrix(params.lpc_order_glot,params.number_of_frames,true);
+   hnr_glott = gsl::matrix(params.hnr_order,params.number_of_frames,true);
 
 	excitation_pulses = gsl::matrix(params.paf_pulse_length, params.number_of_frames, true);
 
@@ -56,6 +57,8 @@ int AnalysisData::SaveData(const Param &params) {
 
    if (params.extract_lsf_vt)
       WriteGslMatrix(params.basename, ".LSF", params.data_type, lsf_vocal_tract);
+   if (params.extract_hnr)
+      WriteGslMatrix(params.basename, ".HNR", params.data_type, hnr_glott);
    if (params.extract_pulses_as_features)
       WriteGslMatrix(params.basename, ".PLS", params.data_type, excitation_pulses);
    if (params.extract_f0)

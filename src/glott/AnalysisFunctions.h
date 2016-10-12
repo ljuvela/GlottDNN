@@ -19,5 +19,6 @@ int SpectralAnalysisQmf(const Param &params, const AnalysisData &data, gsl::matr
 int InverseFilter(const Param &params, const AnalysisData &data, gsl::matrix *poly_glott, gsl::vector *source_signal);
 void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl::vector_int &gci_inds, gsl::vector &fundf, gsl::matrix *pulses_mat);
 void GetIaifResidual(const Param &params, const gsl::vector &signal, gsl::vector *residual);
+void HnrAnalysis(const Param &params, const gsl::vector &source_signal, const gsl::vector &fundf, gsl::matrix *hnr_glott);
 
 #endif /* SRC_GLOTT_ANALYSISFUNCTIONS_H_ */

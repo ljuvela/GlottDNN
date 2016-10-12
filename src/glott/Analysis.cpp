@@ -117,7 +117,6 @@ int main(int argc, char *argv[]) {
    GetGain(params, data.signal, &(data.frame_energy));
 
 
-
    /* Spectral analysis for vocal tract transfer function*/
    if(params.qmf_subband_analysis) {
       SpectralAnalysisQmf(params, data, &(data.poly_vocal_tract));
@@ -125,20 +124,22 @@ int main(int argc, char *argv[]) {
       SpectralAnalysis(params, data, &(data.poly_vocal_tract));
    }
 
-   /* Convert vocal tract AR polynomials to LSF */
-   Poly2Lsf(data.poly_vocal_tract, &(data.lsf_vocal_tract));
-
    /* Perform glottal inverse filtering with the estimated VT AR polynomials */
    InverseFilter(params, data, &(data.poly_glott), &(data.source_signal));
 
-   /* Convert glottal source AR polynomials to LSF */
-   Poly2Lsf(data.poly_glott, &(data.lsf_glott));
-
-   /* Extract pitch synchronous (excitation) waveforms at each frame */
+      /* Extract pitch synchronous (excitation) waveforms at each frame */
    if (params.use_waveforms_directly)
       GetPulses(params, data.signal, data.gci_inds, data.fundf, &(data.excitation_pulses));
    else
       GetPulses(params, data.source_signal, data.gci_inds, data.fundf, &(data.excitation_pulses));
+
+   HnrAnalysis(params, data.source_signal, data.fundf, &(data.hnr_glott));
+
+   /* Convert vocal tract AR polynomials to LSF */
+   Poly2Lsf(data.poly_vocal_tract, &(data.lsf_vocal_tract));
+
+   /* Convert glottal source AR polynomials to LSF */
+   Poly2Lsf(data.poly_glott, &(data.lsf_glott));
 
    /* Write analyzed features to files */
    data.SaveData(params);

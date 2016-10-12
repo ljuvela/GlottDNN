@@ -18,11 +18,13 @@ struct Param {
 public:
 	int fs;
 	int frame_length;
+	int frame_length_long;
 	int frame_shift;
 	int number_of_frames;
 	int signal_length;
 	int lpc_order_vt;
 	int lpc_order_glot;
+	int hnr_order;
 	bool use_external_f0;
 	char *external_f0_filename;
 	bool use_external_gci;
@@ -84,6 +86,8 @@ public:
 	gsl::matrix poly_glott;
 	gsl::matrix lsf_glott;
 	gsl::matrix excitation_pulses;
+   gsl::matrix hnr_glott;
+
 
 	/* QMF analysis specific */
 	//gsl::matrix lsf_vt_qmf1;

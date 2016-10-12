@@ -5,15 +5,6 @@
  *      Author: ljuvela
  */
 
-/**
- * Function Interpolate_lin
- *
- * Interpolates linearly given vector to new vector of given length
- *
- * @param vector original vector
- * @param i_vector interpolated vector
- */
-
 #include <gsl/gsl_spline.h>			/* GSL, Interpolation */
 #include <gsl/gsl_fft_real.h>
 #include <gsl/gsl_fft_halfcomplex.h>
@@ -132,6 +123,45 @@ void InterpolateLinear(const gsl::vector &vector, const size_t interpolated_size
     gsl_spline_free(spline);
 	gsl_interp_accel_free(acc);
 }
+
+/** Interp1
+ *
+ */
+void InterpolateLinear(const gsl::vector &x_orig, const gsl::vector &y_orig, const gsl::vector &x_interp, gsl::vector *y_interp) {
+   size_t len = x_orig.size();
+	size_t interpolated_size = x_interp.size();
+	*y_interp = gsl::vector(interpolated_size);
+
+	/* Read values to array */
+	double x[len];
+	double y[len];
+	size_t i;
+	for(i=0; i<len; i++) {
+		x[i] = x_orig(i);
+		y[i] = y_orig(i);
+	}
+	gsl_interp_accel *acc = gsl_interp_accel_alloc();
+	gsl_spline *spline = gsl_spline_alloc(gsl_interp_linear, len);
+	gsl_spline_init(spline, x, y, len);
+	double xi;
+    i = 0;
+
+
+   for(i=0; i<interpolated_size; i++) {
+      xi = x_interp(i);
+      if (xi > x_orig(x_orig.size()-1))
+         (*y_interp)(i) = y_orig(y_orig.size()-1);
+      else if  (xi < x_orig(0))
+         (*y_interp)(i) = y_orig(0);
+      else
+         (*y_interp)(i) = gsl_spline_eval(spline, xi, acc);
+   }
+
+    /* Free memory */
+   gsl_spline_free(spline);
+	gsl_interp_accel_free(acc);
+}
+
 
 
 void InterpolateSpline(const gsl::vector &vector, const size_t interpolated_size, gsl::vector *i_vector) {
@@ -737,6 +767,7 @@ void Poly2Lsf(const gsl::matrix &a_mat, gsl::matrix *lsf_mat) {
 
 /** Overlap-add a frame to the target vector position given by
  *  size_t center_index (center of the frame goes to center_index)
+ *  author: @mairaksi
  */
 void OverlapAdd(const gsl::vector &frame, const size_t center_index, gsl::vector *target) {
    //center index = frame_index*params.frame_shift , start_ind = frame_index*params.frame_shift - ((int)frame->size())/2 + i;
@@ -757,7 +788,7 @@ void OverlapAdd(const gsl::vector &frame, const size_t center_index, gsl::vector
 }
 
 /** Compute the mean value of a vector
- *
+ *  author: @mairaksi
  */
 double getMean(const gsl::vector &vec) {
    size_t i;
@@ -769,7 +800,7 @@ double getMean(const gsl::vector &vec) {
 }
 
 /** Compute the total energy of a vector (subtract mean)
- *
+ *  author: @mairaksi
  */
 double getEnergy(const gsl::vector &vec) {
    double mean = getMean(vec);
@@ -786,7 +817,7 @@ double LogEnergy2FrameEnergy(const double &log_energy, const size_t frame_size) 
 }
 
 /** Compute the skewness statistic of a vector
- *
+ *  author: @mairaksi
  */
 double Skewness(const gsl::vector &data) {
 	int i;
@@ -808,7 +839,7 @@ double Skewness(const gsl::vector &data) {
 }
 
 /** Compute vector mean of non-zero elements
- *
+ *  author: @mairaksi
  */
 double getMeanF0(const gsl::vector &fundf) {
    size_t i;
@@ -826,6 +857,7 @@ double getMeanF0(const gsl::vector &fundf) {
 
 /** Find the peaks (indeces and values) of gsl::vector vec
  *  With amplitudes greater than threshold*max(abs(vec))
+ *  author: @mairaksi
  */
 int FindPeaks(const gsl::vector &vec, const double &threshold, gsl::vector_int *index, gsl::vector *value) {
 
@@ -875,10 +907,69 @@ int FindPeaks(const gsl::vector &vec, const double &threshold, gsl::vector_int *
    return ii;
 }
 
+/** Find the indices of the harmonic peaks of a magnitude spectrum
+ *  Authors: @mairaksi & @ljuvela
+ */
+gsl::vector_int FindHarmonicPeaks(const gsl::vector &fft_mag, const double &f0, const int &fs) {
+   double HARMONIC_SEARCH_COEFF = 0.5;
+   int MAX_HARMONICS = 300;
+   int fft_length = ((int)fft_mag.size()-1)*2;
+   int MIN_SEARCH_RANGE = rint(10/fs*fft_length); // 10 Hz minimum
+   gsl::vector_int peak_inds_temp(MAX_HARMONICS);
+   gsl::vector search_range_vector;
+
+
+	int current_harmonic = 0, guess_index = 0, harmonic_search_range;
+	int i,j;
+	double guess_index_double, val;
+
+	while(1) {
+      /* Number of frequency bins/f0 * search coeff (0.5) * attenuation */
+      val = (double)fft_length*HARMONIC_SEARCH_COEFF*f0/(double)fs * (double)(fft_mag.size()-1-guess_index)/(double)(fft_mag.size()-1);
+		/* Define harmonics search range, decreasing to the higher frequencies */
+		harmonic_search_range = (int)GSL_MAX(val,MIN_SEARCH_RANGE);
+
+		/* Estimate the index of the i_th harmonic
+		 * Use an iterative estimation based on earlier values */
+		if(current_harmonic > 0) {
+			guess_index_double = 0.0;
+			for(j=0;j<current_harmonic;j++)
+				guess_index_double += peak_inds_temp(j)/(j+1.0)*(current_harmonic+1.0); // f0 estimate based on previous harmonic
+			guess_index = (int)GSL_MAX(guess_index_double/j - (harmonic_search_range-1)/2.0,0); // Shift index by half of search range size
+		} else
+			guess_index = (int)GSL_MAX(f0/(fs/(double)fft_length) - (harmonic_search_range-1)/2.0,0);
+
+		/* Stop search if the end (minus safe limit) of the fft vector or the maximum number of harmonics is reached */
+		if(guess_index + harmonic_search_range > fft_mag.size()-1 || current_harmonic > MAX_HARMONICS-1) {
+			break;
+		}
+
+		/* Find the maximum of the i_th harmonic */
+		search_range_vector = gsl::vector(harmonic_search_range);
+		for(j=0; j<harmonic_search_range; j++) {
+				search_range_vector(j) = fft_mag(guess_index+j);
+		}
+
+		peak_inds_temp(current_harmonic) = guess_index + search_range_vector.max_index();
+		current_harmonic++;
+	}
+
+   gsl::vector_int peak_inds(current_harmonic);
+   for(i=0;i<current_harmonic;i++)
+      peak_inds(i) = peak_inds_temp(i);
+
+   return peak_inds;
+}
+
+
+
+
+
+
 /** Stabilize a polynomial by computing the FFT autocorrelation of
  *  its' inverse power spectrum and perfoming Levinson
+ *  author: @mairaksi
  */
-
 void StabilizePoly(const int &fft_length, gsl::vector *A) {
 
 	ComplexVector a_fft;
@@ -886,7 +977,7 @@ void StabilizePoly(const int &fft_length, gsl::vector *A) {
 
 	gsl::vector a_mag = a_fft.getAbs();
 	size_t i;
-	double temp, thresh = 0.0001;
+	double thresh = 0.0001;
 	for(i=0;i<a_mag.size();i++) {
       a_mag(i) = 1.0/GSL_MAX(pow(a_mag(i),2),thresh);
 	}
@@ -902,13 +993,41 @@ void StabilizePoly(const int &fft_length, gsl::vector *A) {
 }
 
 
+gsl::vector_int LinspaceInt(const int &start_val, const int &hop_val,const int &end_val) {
+   int N = floor((end_val-start_val)/hop_val)+1;
+   if(N < 1)
+      return gsl::vector_int();
 
+   gsl::vector_int vec(N);
+   int i;
+   for(i=0;i<N;i++)
+      vec(i) = start_val+hop_val*i;
 
+   return vec;
+}
 
+void Linear2Erb(const gsl::vector &linvec, const int &fs, gsl::vector *erbvec) {
+	double SMALL_VALUE = 0.0001;
+	int i,j,hnr_channels = erbvec->size();
+   gsl::vector erb(linvec.size());
+	gsl::vector erb_sum(hnr_channels);
 
+	/* Evaluate ERB scale indices for vector */
+	for(i=0;i<(int)linvec.size();i++)
+		erb(i) = log10(0.00437*((double)i/((double)linvec.size()-1.0)*((double)fs/2.0))+1.0) / log10(0.00437*((double)fs/2.0)+1.0) * ((double)hnr_channels-SMALL_VALUE);
+                                                                                          // Subtract SMALL_VALUE to keep erb indeces within range of hnr_channels
 
+	/* Evaluate values according to ERB rate */
+	for(i=0;i<linvec.size();i++) {
+		j = floor(erb(i));
+		(*erbvec)(j) += linvec(i);
+		erb_sum(j) += 1.0;
+	}
 
-
+	/* Average values */
+	for(i=0;i<hnr_channels;i++)
+		(*erbvec)(i) *= 1.0/GSL_MAX(erb_sum(i),1.0);
+}
 
 
 
