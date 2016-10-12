@@ -1,12 +1,13 @@
 #include <gslwrap/vector_double.h>
 #include <gslwrap/vector_int.h>
 #include <cmath>
-#include <float.h>
+#include <cfloat>
 
 #include "definitions.h"
 #include "SpFunctions.h"
 #include "FileIo.h"
 #include "InverseFiltering.h"
+#include "PitchEstimation.h"
 #include "AnalysisFunctions.h"
 #include "DebugUtils.h"
 #include "Filters.h"
@@ -18,7 +19,7 @@ int PolarityDetection(const Param &params, gsl::vector *signal, gsl::vector *sou
       return EXIT_SUCCESS;
 
    case POLARITY_INVERT :
-      std::cout << " -- Inverting polarity (SIGNAL_POLARITY = 'INVERT')" << std::endl;
+      std::cout << " -- Inverting polarity (SIGNAL_POLARITY = \"INVERT\")" << std::endl;
       (*signal) *= (double)-1.0;
       return EXIT_SUCCESS;
 
@@ -67,6 +68,26 @@ int GetF0(const Param &params, const gsl::vector &signal, gsl::vector *fundf, gs
 		} else {
 			fundf->copy(fundf_ext);
 		}
+	} else {
+      if(!source_signal_iaif->is_set()) {
+          *source_signal_iaif = gsl::vector(signal.size());
+         GetIaifResidual(params, signal, source_signal_iaif);
+      }
+      *fundf = gsl::vector(params.number_of_frames);
+      gsl::vector signal_frame = gsl::vector(params.frame_length);
+      gsl::vector glottal_frame = gsl::vector(2*params.frame_length); // Longer frame
+      int frame_index;
+      for(frame_index=0;frame_index<params.number_of_frames;frame_index++) {
+         GetFrame(params, signal, frame_index, &signal_frame, NULL);
+         GetFrame(params, *source_signal_iaif, frame_index, &glottal_frame, NULL);
+         double ff;
+         gsl::vector candidates(3);
+         FundamentalFrequency(params, glottal_frame, signal_frame, &ff, &candidates);
+         (*fundf)(frame_index) = ff;
+        // std::cout << ff << std::endl ;
+      }
+
+        //std::cout  << *fundf << std::endl;
 	}
 	std::cout << " done." << std::endl;
 	return EXIT_SUCCESS;
@@ -505,11 +526,11 @@ void GetIaifResidual(const Param &params, const gsl::vector &signal, gsl::vector
    for(frame_index=0;frame_index<(size_t)params.number_of_frames;frame_index++) {
       GetFrame(params, signal, frame_index, &frame, &pre_frame);
 
-
+      /* Pre-emphasis and windowing */
       Filter(std::vector<double>{1.0, -params.gif_pre_emphasis_coefficient},B, frame, &frame_pre_emph);
       ApplyWindowingFunction(params.default_windowing_function, &frame_pre_emph);
 
-      ArAnalysis(params.lpc_order_vt,0.0, NONE, weight_fn, frame_pre_emph, &A);
+      ArAnalysis(params.lpc_order_vt, 0.0, NONE, weight_fn, frame_pre_emph, &A);
       ConcatenateFrames(pre_frame, frame, &frame_full);
 
       Filter(A,B,frame_full,&frame_residual);
@@ -524,8 +545,9 @@ void GetIaifResidual(const Param &params, const gsl::vector &signal, gsl::vector
 
       Filter(A,B,frame_full,&frame_residual);
 
+      /* Set energy of residual equal to energy of frame */
       double ola_gain = (double)params.frame_length/((double)params.frame_shift*2.0);
-      frame_residual *= getEnergy(frame)/getEnergy(frame_residual)/ola_gain; // Set energy of residual euqual to energy of frame
+      frame_residual *= getEnergy(frame)/getEnergy(frame_residual)/ola_gain;
 
       ApplyWindowingFunction(HANN, &frame_residual);
 

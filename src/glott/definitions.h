@@ -55,6 +55,12 @@ public:
 	bool extract_pulses_as_features;
 	int lpc_order_vt_qmf1;
 	int lpc_order_vt_qmf2;
+	double f0_max;
+	double f0_min;
+	double voicing_threshold;
+   double zcr_threshold;
+   double relative_f0_threshold;
+   //double f0_check_range;
 };
 
 

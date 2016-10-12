@@ -166,6 +166,25 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
    if (ConfigLookupInt("LPC_ORDER_QMF2", cfg, default_config, &(params->lpc_order_vt_qmf2)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 
+   if (ConfigLookupDouble("F0_MIN", cfg, default_config, &(params->f0_min)) == EXIT_FAILURE)
+         return EXIT_FAILURE;
+
+   if (ConfigLookupDouble("F0_MAX", cfg, default_config, &(params->f0_max)) == EXIT_FAILURE)
+         return EXIT_FAILURE;
+
+   if (ConfigLookupDouble("VOICING_THRESHOLD", cfg, default_config, &(params->voicing_threshold)) == EXIT_FAILURE)
+         return EXIT_FAILURE;
+
+   if (ConfigLookupDouble("ZCR_THRESHOLD", cfg, default_config, &(params->zcr_threshold)) == EXIT_FAILURE)
+         return EXIT_FAILURE;
+
+   if (ConfigLookupDouble("RELATIVE_F0_THRESHOLD", cfg, default_config, &(params->relative_f0_threshold)) == EXIT_FAILURE)
+         return EXIT_FAILURE;
+
+   //if (ConfigLookupDouble("F0_CHECK_RANGE", cfg, default_config, &(params->f0_check_range)) == EXIT_FAILURE)
+   //      return EXIT_FAILURE;
+
+
 	/* Read enum style configurations */
 	char *cstring = NULL;
 	/* Data Format */
