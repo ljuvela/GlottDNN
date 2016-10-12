@@ -660,10 +660,12 @@ void Poly2Lsf(const gsl::matrix &a_mat, gsl::matrix *lsf_mat) {
    for(i=0;i<a_mat.size2();i++) {
       Poly2Lsf(a_mat.get_col_vec(i), &lsf);
       lsf_mat->set_col_vec(i, lsf);
-      //std::cout << lsf_mat->get_col_vec(i) << std::endl;
    }
 }
 
+/** Overlap-add a frame to the target vector position given by
+ *  size_t center_index (center of the frame goes to center_index)
+ */
 void OverlapAdd(const gsl::vector &frame, const size_t center_index, gsl::vector *target) {
    //center index = frame_index*params.frame_shift , start_ind = frame_index*params.frame_shift - ((int)frame->size())/2 + i;
    // Frame must be HANN windowed beforehand!
@@ -682,7 +684,9 @@ void OverlapAdd(const gsl::vector &frame, const size_t center_index, gsl::vector
    }
 }
 
-
+/** Compute the mean value of a vector
+ *
+ */
 double getMean(const gsl::vector &vec) {
    size_t i;
    double sum = 0.0;
@@ -692,6 +696,9 @@ double getMean(const gsl::vector &vec) {
    return sum/(double)vec.size();
 }
 
+/** Compute the total energy of a vector (subtract mean)
+ *
+ */
 double getEnergy(const gsl::vector &vec) {
    double mean = getMean(vec);
    double sum = 0.0;
@@ -706,6 +713,9 @@ double LogEnergy2FrameEnergy(const double &log_energy, const size_t frame_size) 
    return (double)pow(10,log_energy/20.0)*(double)frame_size;
 }
 
+/** Compute the skewness statistic of a vector
+ *
+ */
 double Skewness(const gsl::vector &data) {
 	int i;
 	int N = (int)data.size();
@@ -725,6 +735,9 @@ double Skewness(const gsl::vector &data) {
 	return m3/s3;
 }
 
+/** Compute vector mean of non-zero elements
+ *
+ */
 double getMeanF0(const gsl::vector &fundf) {
    size_t i;
    int n = 0;
@@ -736,9 +749,12 @@ double getMeanF0(const gsl::vector &fundf) {
          n++;
       }
    }
-   return sum/(double)n;
+   return sum/(double)GSL_MAX(n,1);
 }
 
+/** Find the peaks (indeces and values) of gsl::vector vec
+ *  With amplitudes greater than threshold*max(abs(vec))
+ */
 int FindPeaks(const gsl::vector &vec, const double &threshold, gsl::vector_int *index, gsl::vector *value) {
 
    int i,ii;
@@ -786,5 +802,41 @@ int FindPeaks(const gsl::vector &vec, const double &threshold, gsl::vector_int *
    }
    return ii;
 }
+
+/** Stabilize a polynomial by computing the FFT autocorrelation of
+ *  its' inverse power spectrum and perfoming Levinson
+ */
+
+void StabilizePoly(const int &fft_length, gsl::vector *A) {
+
+	ComplexVector a_fft;
+	FFTRadix2(*A,&a_fft);
+
+	gsl::vector a_mag = a_fft.getAbs();
+	size_t i;
+	double temp, thresh = 0.0001;
+	for(i=0;i<a_mag.size();i++) {
+      a_mag(i) = 1.0/GSL_MAX(pow(a_mag(i),2),thresh);
+	}
+
+	a_fft.setAllImag(0.0);
+	a_fft.setReal(a_mag);
+
+	gsl::vector ac(A->size());
+	IFFTRadix2(a_fft, &ac);
+
+	Levinson(ac, A);
+
+}
+
+
+
+
+
+
+
+
+
+
 
 

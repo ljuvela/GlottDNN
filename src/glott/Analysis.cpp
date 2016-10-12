@@ -70,11 +70,18 @@ int main(int argc, char *argv[]) {
    if(GetGci(params, data.signal, data.fundf, &(data.gci_inds), &(data.source_signal_iaif)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
+
    /* Estimate frame log-energy (Gain) */
    GetGain(params, data.signal, &(data.frame_energy));
 
+
+
    /* Spectral analysis for vocal tract transfer function*/
-   SpectralAnalysis(params, data, &(data.poly_vocal_tract));
+   if(params.qmf_subband_analysis) {
+      SpectralAnalysisQmf(params, data, &(data.poly_vocal_tract));
+   } else {
+      SpectralAnalysis(params, data, &(data.poly_vocal_tract));
+   }
 
    /* Convert vocal tract AR polynomials to LSF */
    Poly2Lsf(data.poly_vocal_tract, &(data.lsf_vocal_tract));

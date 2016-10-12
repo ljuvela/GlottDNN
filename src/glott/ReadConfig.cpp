@@ -160,6 +160,11 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
    if (ConfigLookupBool("EXTRACT_PULSES_AS_FEATURES", cfg, default_config, &(params->extract_pulses_as_features)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
+   if (ConfigLookupInt("LPC_ORDER_QMF1", cfg, default_config, &(params->lpc_order_vt_qmf1)) == EXIT_FAILURE)
+		return EXIT_FAILURE;
+
+   if (ConfigLookupInt("LPC_ORDER_QMF2", cfg, default_config, &(params->lpc_order_vt_qmf2)) == EXIT_FAILURE)
+		return EXIT_FAILURE;
 
 	/* Read enum style configurations */
 	char *cstring = NULL;

@@ -40,5 +40,6 @@ double getEnergy(const gsl::vector &vec);
 double LogEnergy2FrameEnergy(const double &log_energy, const size_t frame_size);
 double Skewness(const gsl::vector &data);
 int FindPeaks(const gsl::vector &vec, const double &threshold, gsl::vector_int *index, gsl::vector *value);
+void StabilizePoly(const int &fft_length, gsl::vector *A);
 
 #endif /* SRC_GLOTT_SPFUNCTIONS_H_ */

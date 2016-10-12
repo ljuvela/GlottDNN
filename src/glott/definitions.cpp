@@ -43,6 +43,12 @@ int AnalysisData::AllocateData(const Param &params) {
 
 	excitation_pulses = gsl::matrix(params.paf_pulse_length, params.number_of_frames, true);
 
+	//if(params.qmf_subband_analysis) {
+   //lsf_vt_qmf1 = gsl::matrix(params.lpc_order_vt_qmf1+1,params.number_of_frames, true); // Includes QMF gain
+   //   lsf_vt_qmf2 = gsl::matrix(params.lpc_order_vt_qmf2,params.number_of_frames, true);
+   //   gain_qmf = gsl::vector(params.number_of_frames,true);
+	//}
+
 	return EXIT_SUCCESS;
 }
 

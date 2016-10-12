@@ -53,6 +53,8 @@ public:
 	bool extract_glottal_excitation;
 	bool extract_gci_signal;
 	bool extract_pulses_as_features;
+	int lpc_order_vt_qmf1;
+	int lpc_order_vt_qmf2;
 };
 
 
@@ -77,6 +79,10 @@ public:
 	gsl::matrix lsf_glott;
 	gsl::matrix excitation_pulses;
 
+	/* QMF analysis specific */
+	//gsl::matrix lsf_vt_qmf1;
+	//gsl::matrix lsf_vt_qmf2;
+	//gsl::vector gain_qmf;
 };
 
 

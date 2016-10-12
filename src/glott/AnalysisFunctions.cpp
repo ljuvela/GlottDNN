@@ -10,7 +10,7 @@
 #include "AnalysisFunctions.h"
 #include "DebugUtils.h"
 #include "Filters.h"
-
+#include "QmfFunctions.h"
 
 int PolarityDetection(const Param &params, gsl::vector *signal, gsl::vector *source_signal_iaif) {
    switch(params.signal_polarity) {
@@ -110,6 +110,7 @@ int GetGain(const Param &params, const gsl::vector &signal, gsl::vector *gain_pt
 	gsl::vector frame = gsl::vector(params.frame_length);
 	gsl::vector gain = gsl::vector(params.number_of_frames);
 	int frame_index;
+	double frame_energy;
 	for(frame_index=0;frame_index<params.number_of_frames;frame_index++) {
 		GetFrame(params, signal, frame_index, &frame, NULL);
 
@@ -124,7 +125,11 @@ int GetGain(const Param &params, const gsl::vector &signal, gsl::vector *gain_pt
 			sum =+ DBL_MIN;
 
 		gain(frame_index) = 10.0*log10(sum/((double)(frame.size() * frame.size()))); // energy per sample (not power)*/
-		gain(frame_index) = (double)20.0*log10(getEnergy(frame)/((double)frame.size()));
+		frame_energy = getEnergy(frame);
+		if(frame_energy == 0.0)
+			frame_energy =+ DBL_MIN;
+
+		gain(frame_index) = (double)20.0*log10(frame_energy/((double)frame.size()));
 	}
 	*gain_ptr = gain;
 	return EXIT_SUCCESS;
@@ -219,12 +224,107 @@ int SpectralAnalysis(const Param &params, const AnalysisData &data, gsl::matrix 
 	return EXIT_SUCCESS;
 }
 
+int SpectralAnalysisQmf(const Param &params, const AnalysisData &data, gsl::matrix *poly_vocal_tract) {
+   gsl::vector frame(params.frame_length);
+   gsl::vector frame_pre_emph(params.frame_length);
+   gsl::vector pre_frame(params.lpc_order_vt,true);
+   gsl::vector frame_qmf1(frame.size()/2); // Downsampled low-band frame
+   gsl::vector frame_qmf2(frame.size()/2); // Downsampled high-band frame
+   gsl::vector lp_weight_downsampled(frame_qmf1.size() + params.lpc_order_vt_qmf1);
+   gsl::vector B(1);B(0) = 1.0;
+
+   gsl::vector H0 = Qmf::LoadFilter(kCUTOFF05PI);
+   gsl::vector H1 = Qmf::GetMatchingFilter(H0);
+
+	gsl::vector lp_weight(params.frame_length + params.lpc_order_vt,true);
+	gsl::vector A(params.lpc_order_vt+1,true);
+	gsl::vector A_qmf1(params.lpc_order_vt_qmf1+1,true);
+	gsl::vector A_qmf2(params.lpc_order_vt_qmf2+1,true);
+	//gsl::vector lsf_qmf1(params.lpc_order_vt_qmf1,true);
+	//gsl::vector lsf_qmf2(params.lpc_order_vt_qmf2,true);
+   //gsl::vector gain_qmf(params.number_of_frames);
+   double gain_qmf, e1, e2;
+
+   gsl::vector lip_radiation(2);lip_radiation(0) = 1.0;
+   lip_radiation(1) = -params.gif_pre_emphasis_coefficient;
+
+   //gsl::vector frame_full; // frame + preframe
+   //gsl::vector residual_full; // residual with preframe
+
+   std::cout << "QMF sub-band-based spectral analysis ...";
+
+   size_t frame_index;
+	for(frame_index=0;frame_index<(size_t)params.number_of_frames;frame_index++) {
+			GetFrame(params, data.signal, frame_index, &frame, &pre_frame);
+
+
+			/** Voiced analysis (Low-band = QCP, High-band = LPC) **/
+         if(data.fundf(frame_index) != 0) {
+            /* Pre-emphasis */
+            Filter(lip_radiation, B, frame, &frame_pre_emph);
+            Qmf::GetSubBands(frame_pre_emph, H0, H1, &frame_qmf1, &frame_qmf2);
+            /* Gain differences between frame_qmf1 and frame_qmf2: */
+
+            e1 = getEnergy(frame_qmf1);
+            e2 = getEnergy(frame_qmf2);
+            if(e1 == 0.0)
+               e1 += DBL_MIN;
+            if(e2 == 0.0)
+               e2 += DBL_MIN;
+            gain_qmf = 20*log10(e1/e2);
+
+
+            /** Low-band analysis **/
+            GetLpWeight(params,params.lp_weighting_function,data.gci_inds, frame, frame_index, &lp_weight);
+            Qmf::Decimate(lp_weight,2,&lp_weight_downsampled);
+
+            ApplyWindowingFunction(params.default_windowing_function,&frame_qmf1);
+            ArAnalysis(params.lpc_order_vt_qmf1,0.0,NONE, lp_weight_downsampled, frame_qmf1, &A_qmf1);
+
+            /** High-band analysis **/
+            ApplyWindowingFunction(params.default_windowing_function,&frame_qmf2);
+            ArAnalysis(params.lpc_order_vt_qmf2,0.0,NONE, lp_weight_downsampled, frame_qmf2, &A_qmf2);
+
+         /** Unvoiced analysis (Low-band = LPC, High-band = LPC, no pre-emphasis) **/
+         } else {
+            Qmf::GetSubBands(frame, H0, H1, &frame_qmf1, &frame_qmf2);
+            e1 = getEnergy(frame_qmf1);
+            e2 = getEnergy(frame_qmf2);
+            if(e1 == 0.0)
+               e1 += DBL_MIN;
+            if(e2 == 0.0)
+               e2 += DBL_MIN;
+            gain_qmf = 20*log10(e1/e2);
+
+
+            /** Low-band analysis **/
+            ApplyWindowingFunction(params.default_windowing_function,&frame_qmf1);
+            ArAnalysis(params.lpc_order_vt_qmf1,0.0,NONE, lp_weight_downsampled, frame_qmf2, &A_qmf1);
+
+            /** High-band analysis **/
+            ApplyWindowingFunction(params.default_windowing_function,&frame_qmf2);
+            ArAnalysis(params.lpc_order_vt_qmf2,0.0,NONE, lp_weight_downsampled, frame_qmf2, &A_qmf2);
+         }
+         Qmf::CombinePoly(A_qmf1,A_qmf2,gain_qmf,(int)frame_qmf1.size(),&A);
+
+         poly_vocal_tract->set_col_vec(frame_index,A);
+         //Poly2Lsf(A_qmf1,&lsf_qmf1);
+         //Poly2Lsf(A_qmf2,&lsf_qmf2);
+         //lsf_qmf1->set_col_vec(frame_index,lsf_qmf1);
+         //lsf_qmf2->set_col_vec(frame_index,lsf_qmf2);
+	}
+
+	return EXIT_SUCCESS;
+}
+
+
+
 int InverseFilter(const Param &params, const AnalysisData &data, gsl::matrix *poly_glott, gsl::vector *source_signal) {
    size_t frame_index;
 	gsl::vector frame(params.frame_length,true);
 	gsl::vector pre_frame(params.lpc_order_vt,true);
    gsl::vector frame_full(params.frame_length+params.lpc_order_vt); // Pre-frame + frame
-   gsl::vector frame_residual(params.frame_length); // Pre-frame + frame
+   gsl::vector frame_residual(params.frame_length);
    gsl::vector a_glott(params.lpc_order_glot+1);
    gsl::vector b(1);b(0) = 1.0;
 

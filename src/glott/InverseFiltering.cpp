@@ -206,6 +206,11 @@ void WWLP(const gsl::vector &weight_function, const double &warping_lambda, cons
          (*A)(i) =  (-1.0)*a_tmp(i-1,0);
       }
       (*A)(0) = 1.0;
+
+      // Stabilize polynomial
+      StabilizePoly(frame.size(),A);
+
+
    /// Use Levinson if no LP weighting
    } else {
       Levinson(Rfull.get_col_vec(0), A);
@@ -213,16 +218,11 @@ void WWLP(const gsl::vector &weight_function, const double &warping_lambda, cons
 
 
 
+
     // Stabilize unstable filter by scaling the poles along the unit circle
    //AC_stabilize(A,frame->size);
    //Pole_stabilize(a);
 
-
-   // Replace NaN-values with zeros in case of all-zero frames
-  // for(i=0;i<a->size;i++) {
-   //   if(gsl_isnan((*A)(i)))
-    //     (*A)(i) = (0.0);
-   //}
 }
 
 void LPC(const gsl::vector &frame, const int &lpc_order, gsl::vector *A) {
@@ -239,6 +239,15 @@ void ArAnalysis(const int &lp_order,const double &warping_lambda, const LpWeight
    } else {
       WWLP(lp_weight, warping_lambda, weight_type, lp_order, frame, A);
    }
+
+   /* Replace NaN-values with zeros in case of all-zero frames */
+   size_t i;
+   for(i=0;i<A->size();i++) {
+      if(gsl_isnan((*A)(i)))
+            (*A)(i) = (0.0);
+   }
+
+
 }
 
 void MeanBasedSignal(const gsl::vector &signal, const int &fs, const double &mean_f0, gsl::vector *mean_based_signal) {
