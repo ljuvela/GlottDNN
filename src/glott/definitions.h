@@ -53,6 +53,12 @@ public:
 	bool extract_glottal_excitation;
 	bool extract_gci_signal;
 	bool extract_pulses_as_features;
+	double f0_max;
+	double f0_min;
+	double voicing_threshold;
+   double zcr_threshold;
+   double relative_f0_threshold;
+   //double f0_check_range;
 };
 
 

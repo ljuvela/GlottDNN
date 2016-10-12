@@ -1,3 +1,46 @@
+//   MIT License
+//
+//   Copyright (c) 2016 ljuvela
+//
+//   Permission is hereby granted, free of charge, to any person obtaining a copy
+//   of this software and associated documentation files (the "Software"), to deal
+//   in the Software without restriction, including without limitation the rights
+//   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//   copies of the Software, and to permit persons to whom the Software is
+//   furnished to do so, subject to the following conditions:
+//
+//   The above copyright notice and this permission notice shall be included in all
+//   copies or substantial portions of the Software.
+//
+//   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+//   SOFTWARE.
+//
+//
+//  <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//               GlottDNN Speech Parameter Extractor
+//  <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//
+//  This program reads a speech file and extracts speech
+//  parameters using glottal inverse filtering.
+//
+//  This program has been written in Aalto University,
+//  Department of Signal Processing and Acoustics, Espoo, Finland
+//
+//  This program uses some code from the original GlottHMM vocoder program
+//  written by Tuomo Raitio, now re-factored and re-written in C++
+//
+//  Authors: Lauri Juvela, Manu Airaksinen
+//  Acknowledgements: Tuomo Raitio, Paavo Alku
+//
+//  File Analysis.cpp
+//  Version: 1.0
+
+
 /***********************************************/
 /*                 INCLUDE                     */
 /***********************************************/
@@ -55,6 +98,8 @@ int main(int argc, char *argv[]) {
 
    /* High-pass filter signal to eliminate low frequency "rumble" */
    HighPassFiltering(params, &(data.signal));
+
+   // IAIF analysis if( PolarityDetection || GetF0 || GetGci)
 
    /* Read or estimate signal polarity */
    PolarityDetection(params, &(data.signal), &(data.source_signal_iaif));

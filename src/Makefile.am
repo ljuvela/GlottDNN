@@ -23,6 +23,7 @@ Analysis_SOURCES = glott/Analysis.cpp Filters.h \
 					glott/InverseFiltering.h glott/InverseFiltering.cpp \
 					glott/ComplexVector.h glott/ComplexVector.cpp \
 					glott/SpFunctions.h glott/SpFunctions.cpp \
+					glott/PitchEstimation.h glott/PitchEstimation.cpp \
 					glott/AnalysisFunctions.h glott/AnalysisFunctions.cpp \
 					glott/DebugUtils.h glott/DebugUtils.cpp
 					

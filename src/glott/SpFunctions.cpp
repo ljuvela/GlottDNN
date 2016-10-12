@@ -284,11 +284,40 @@ void AllPassDelay(const double &lambda, gsl::vector *signal) {
 	}
 }
 
+void FFTRadix2(const gsl::vector &x, const size_t nfft, ComplexVector *X ) {
+   size_t i;
+   size_t N = x.size();
+   assert(IsPow2(nfft));
+
+   if(X == NULL) {
+      *X = ComplexVector(nfft/2+1);
+   } else {
+      X->resize(nfft/2+1);
+   }
+
+   /* Allocate space for FFT */
+   double *data = (double *)calloc(nfft,sizeof(double));
+
+   /* Calculate spectrum */
+   for (i=0; i<N; i++)
+      data[i] = x(i);
+   gsl_fft_real_radix2_transform(data, 1, nfft);
+   for(i=1; i<nfft/2; i++){
+      X->setReal(i, data[i]);
+      X->setImag(i, data[nfft-i]);
+   }
+   X->setReal(0, data[0]);
+   X->setReal(nfft/2, data[nfft/2]);
+
+   /* Free memory*/
+   free(data);
+}
 
 void FFTRadix2(const gsl::vector &x, ComplexVector *X ) {
    size_t i;
    size_t N = x.size();
    size_t nfft = NextPow2(2*N);
+
 
    if(X == NULL) {
       *X = ComplexVector(nfft/2+1);
@@ -317,7 +346,6 @@ void FFTRadix2(const gsl::vector &x, ComplexVector *X ) {
 void IFFTRadix2(const ComplexVector &X, gsl::vector *x) {
 
    size_t nfft = 2*(X.getSize()-1);
-
    assert(IsPow2(nfft));
 
    if(!(x->is_set()))
@@ -345,6 +373,50 @@ void IFFTRadix2(const ComplexVector &X, gsl::vector *x) {
    /* Free memory*/
    free(data);
 }
+
+void FastAutocorr(const gsl::vector &x, gsl::vector *ac)
+{
+   int i;
+   size_t N = x.size();
+   size_t nfft = NextPow2(2*N-1);
+
+   double *data = (double*)calloc(nfft,sizeof(double)); /* complex, takes 2*nfft/2  values*/
+   gsl::vector X(nfft/2+1);
+
+   /* Calculate power spectral density */
+   for (i=0; i<x.size(); i++)
+      data[i] = x(i);
+   gsl_fft_real_radix2_transform(data, 1, nfft);
+   for(i=1; i<nfft/2; i++) {
+      X(i) = data[i]*data[i]+ data[nfft-i]*data[nfft-i];
+   }
+   X(0) = data[0]*data[0];
+   X(nfft/2) = data[nfft/2]*data[nfft/2];
+
+    /* Inverse transform PSD for autocorrelation */
+    for (i=0;i<nfft/2+1;i++)
+        data[i] = X(i);
+    for (i=nfft/2+1;i<nfft;i++)
+        data[i] = 0;
+    gsl_fft_halfcomplex_radix2_inverse(data, 1, nfft);
+
+    if (ac == NULL || !ac->is_set())
+       *ac = gsl::vector(2*N-1);
+    else
+       ac->resize(2*N-1);
+
+    /* Set values symmetrically to AC vector */
+    for (i=0;i<ac->size();i++) {
+      if (i<N)
+         (*ac)(i) = data[N-i-1];
+      else
+         (*ac)(i) = data[i-N+1];
+    }
+
+    /* Free memory*/
+    free(data);
+}
+
 
 /**
  * Find the next integer that is a power of 2
