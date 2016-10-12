@@ -36,9 +36,10 @@ void WFilter(const gsl::vector &A, const gsl::vector &B,const gsl::vector &signa
 void WarpingAlphas2Sigmas(double *alp, double *sigm, double lambda, int dim);
 void OverlapAdd(const gsl::vector &frame, const size_t center_index, gsl::vector *target);
 double getMean(const gsl::vector &vec);
+double getMeanF0(const gsl::vector &fundf);
 double getEnergy(const gsl::vector &vec);
 double LogEnergy2FrameEnergy(const double &log_energy, const size_t frame_size);
 double Skewness(const gsl::vector &data);
-
+int FindPeaks(const gsl::vector &vec, const double &threshold, gsl::vector_int *index, gsl::vector *value);
 
 #endif /* SRC_GLOTT_SPFUNCTIONS_H_ */

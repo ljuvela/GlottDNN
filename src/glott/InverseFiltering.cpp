@@ -14,6 +14,7 @@
 #include "DebugUtils.h"
 
 gsl::vector_int GetFrameGcis(const Param &params, const int frame_index, const gsl::vector_int &gci_inds) {
+
 	/* Get frame sample range */
 	int sample_index = round((double)params.signal_length*(double)frame_index/(double)params.number_of_frames);
 	int minind = sample_index - round(params.frame_length/2);
@@ -34,7 +35,7 @@ gsl::vector_int GetFrameGcis(const Param &params, const int frame_index, const g
 
 	/* Set frame gcis*/
 	size_t i;
-	for(i=0;i<frame_gci_inds.size();i++)
+	for(i=0;i<n_gci_inds;i++)
 		frame_gci_inds(i) = gci_inds(min_gci_ind+i) - minind;
 
 	return frame_gci_inds;
@@ -45,6 +46,7 @@ void LpWeightAme(const Param &params, const gsl::vector_int &gci_inds,
 
 
 	gsl::vector_int inds = GetFrameGcis(params, frame_index, gci_inds);
+
 
 	if(!weight->is_set()) {
 		*weight = gsl::vector(params.frame_length + params.lpc_order_vt);
@@ -237,7 +239,81 @@ void ArAnalysis(const int &lp_order,const double &warping_lambda, const LpWeight
    } else {
       WWLP(lp_weight, warping_lambda, weight_type, lp_order, frame, A);
    }
+}
 
+void MeanBasedSignal(const gsl::vector &signal, const int &fs, const double &mean_f0, gsl::vector *mean_based_signal) {
+	int N,winlen;
+
+	/* Round window length to nearest odd integer */
+	winlen = 2*lround((1.75*(double)fs/mean_f0 + 1)/2)-1;
+    N = (winlen-1)/2;
+
+	/* Calculate the mean-based signal */
+	//gsl_vector *y = gsl_vector_calloc(signal->size);
+	gsl::vector win(2*N+1);
+	win.set_all(1.0);
+	ApplyWindowingFunction(BLACKMAN,&win);
+	int n, m, i;
+	double sum;
+	for (n=0;n<(int)signal.size();n++){
+		sum = 0.0;
+		i = 0;
+		for(m=-N;m<=N;m++) {
+			if((n+m>=0) && (n+m<signal.size())){
+				sum += signal(n+m)*win(i);
+				i++;
+			}
+      }
+		(*mean_based_signal)(n) = sum/(double)(2*N+1);
+	}
+}
+
+
+void SedreamsGciDetection(const gsl::vector &residual, const gsl::vector &mean_based_signal, gsl::vector_int *gci_inds) {
+   gsl::vector_int peak_inds;
+   gsl::vector peak_values;
+   int number_of_peaks = FindPeaks(mean_based_signal, 0.1, &peak_inds, &peak_values);
+
+   gsl::vector_int start(number_of_peaks);
+   gsl::vector_int stop(number_of_peaks);
+	int i,j, ii = 0;
+	for(i=0;i<number_of_peaks;i++) {
+		if(peak_values(i) < 0) { // only minima
+			/* Find next zero-crossing */
+			for(j=peak_inds(i);j<mean_based_signal.size()-1;j++) {
+				if(GSL_SIGN(mean_based_signal(j)) != GSL_SIGN(mean_based_signal(j+1))) {
+					stop(ii) = j;
+					start(ii) = peak_inds(i);
+					ii++;
+					break;
+				}
+         }
+      }
+   }
+
+   /* If no GCIs found, set gci_inds as empty and return */
+	if (ii == 0){
+      (*gci_inds) = gsl::vector_int();
+		return ;
+	}
+
+
+   (*gci_inds) = gsl::vector_int(ii);
+
+	/* Locate IAIF residual minima at the intervals and set them as GCI*/
+	double minval;
+	int minind;
+	for(i=0;i<ii;i++){
+		minval = DBL_MAX;
+		minind = 0;
+		for(j=start(i);j<stop(i);j++){ // loop through the interval
+			if (residual(j) < minval){
+				minval = residual(j);
+				minind = j;
+			}
+		}
+		(*gci_inds)(i) = minind+1; // Offset by 1 (caused dy differentiation)
+	}
 }
 
 

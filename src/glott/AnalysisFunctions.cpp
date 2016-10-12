@@ -99,19 +99,30 @@ int GetF0(const Param &params, const gsl::vector &signal, gsl::vector *fundf, gs
  * output: gci_signal: Sparse signal-length representation of gcis as ones and otherwise zeros
  *
  */
-int GetGci(const Param &params, const gsl::vector &signal, gsl::vector_int *gci_inds, gsl::vector *source_signal_iaif) {
-
+int GetGci(const Param &params, const gsl::vector &signal, const gsl::vector &fundf, gsl::vector_int *gci_inds, gsl::vector *source_signal_iaif) {
 	if(params.use_external_gci) {
 		std::cout << "Reading GCI information from external file: " << params.external_gci_filename << " ...";
 		gsl::vector gcis;
-		ReadGslVector(params.external_gci_filename, params.data_type, &gcis);
+		if(ReadGslVector(params.external_gci_filename, params.data_type, &gcis) == EXIT_FAILURE)
+         return EXIT_FAILURE;
+
 		*gci_inds = gsl::vector_int(gcis.size());
 		size_t i;
 		for (i=0; i<gci_inds->size();i++) {
-			(*gci_inds)(i) = (int)round( gcis(i) * params.fs);
+			(*gci_inds)(i) = (int)round(gcis(i) * params.fs);
 		}
+	} else {
+      if(!source_signal_iaif->is_set()) {
+         *source_signal_iaif = gsl::vector(signal.size());
+         GetIaifResidual(params, signal, source_signal_iaif);
+      }
+      std::cout << "GCI estimation using the SEDREAMS algorithm ...";
+      gsl::vector mean_based_signal(signal.size(),true);
+      MeanBasedSignal(signal, params.fs, getMeanF0(fundf),&mean_based_signal);
+      SedreamsGciDetection(*source_signal_iaif,mean_based_signal,gci_inds);
 	}
-	std::cout << " done." << std::endl;
+
+   std::cout << " done." << std::endl;
 	return EXIT_SUCCESS;
 }
 
@@ -443,3 +454,6 @@ void GetIaifResidual(const Param &params, const gsl::vector &signal, gsl::vector
       OverlapAdd(frame_residual, frame_index*params.frame_shift, residual);
    }
 }
+
+
+
