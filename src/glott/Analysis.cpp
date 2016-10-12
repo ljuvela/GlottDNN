@@ -112,10 +112,8 @@ int main(int argc, char *argv[]) {
    if(GetGci(params, data.signal, data.fundf, &(data.gci_inds), &(data.source_signal_iaif)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-
    /* Estimate frame log-energy (Gain) */
    GetGain(params, data.signal, &(data.frame_energy));
-
 
    /* Spectral analysis for vocal tract transfer function*/
    if(params.qmf_subband_analysis) {
