@@ -25,10 +25,6 @@ int PolarityDetection(const Param &params, gsl::vector *signal, gsl::vector *sou
 
    case POLARITY_DETECT :
       std::cout << "Using automatic polarity detection ...";
-      if(!source_signal_iaif->is_set()) {
-          *source_signal_iaif = gsl::vector(signal->size());
-         GetIaifResidual(params, *signal, source_signal_iaif);
-      }
 
       if(Skewness(*source_signal_iaif) > 0) {
          std::cout << "... Detected negative polarity. Inverting signal." << std::endl;
@@ -53,7 +49,7 @@ int PolarityDetection(const Param &params, gsl::vector *signal, gsl::vector *sou
  * output: fundf: Obtained F0 vector.
  *
  */
-int GetF0(const Param &params, const gsl::vector &signal, gsl::vector *fundf, gsl::vector *source_signal_iaif) {
+int GetF0(const Param &params, const gsl::vector &signal, const gsl::vector &source_signal_iaif, gsl::vector *fundf) {
 
 	std::cout << "F0 analysis ";
 	if(params.use_external_f0) {
@@ -71,17 +67,13 @@ int GetF0(const Param &params, const gsl::vector &signal, gsl::vector *fundf, gs
 			fundf->copy(fundf_ext);
 		}
 	} else {
-      if(!source_signal_iaif->is_set()) {
-          *source_signal_iaif = gsl::vector(signal.size());
-         GetIaifResidual(params, signal, source_signal_iaif);
-      }
       *fundf = gsl::vector(params.number_of_frames);
       gsl::vector signal_frame = gsl::vector(params.frame_length);
       gsl::vector glottal_frame = gsl::vector(2*params.frame_length); // Longer frame
       int frame_index;
       for(frame_index=0;frame_index<params.number_of_frames;frame_index++) {
          GetFrame(signal, frame_index,params.frame_shift, &signal_frame, NULL);
-         GetFrame(*source_signal_iaif, frame_index, params.frame_shift, &glottal_frame, NULL);
+         GetFrame(source_signal_iaif, frame_index, params.frame_shift, &glottal_frame, NULL);
          double ff;
          gsl::vector candidates(3);
          FundamentalFrequency(params, glottal_frame, signal_frame, &ff, &candidates);
@@ -101,7 +93,7 @@ int GetF0(const Param &params, const gsl::vector &signal, gsl::vector *fundf, gs
  * output: gci_signal: Sparse signal-length representation of gcis as ones and otherwise zeros
  *
  */
-int GetGci(const Param &params, const gsl::vector &signal, const gsl::vector &fundf, gsl::vector_int *gci_inds, gsl::vector *source_signal_iaif) {
+int GetGci(const Param &params, const gsl::vector &signal, const gsl::vector &source_signal_iaif, const gsl::vector &fundf, gsl::vector_int *gci_inds) {
 	if(params.use_external_gci) {
 		std::cout << "Reading GCI information from external file: " << params.external_gci_filename << " ...";
 		gsl::vector gcis;
@@ -114,14 +106,10 @@ int GetGci(const Param &params, const gsl::vector &signal, const gsl::vector &fu
 			(*gci_inds)(i) = (int)round(gcis(i) * params.fs);
 		}
 	} else {
-      if(!source_signal_iaif->is_set()) {
-         *source_signal_iaif = gsl::vector(signal.size());
-         GetIaifResidual(params, signal, source_signal_iaif);
-      }
       std::cout << "GCI estimation using the SEDREAMS algorithm ...";
       gsl::vector mean_based_signal(signal.size(),true);
       MeanBasedSignal(signal, params.fs, getMeanF0(fundf),&mean_based_signal);
-      SedreamsGciDetection(*source_signal_iaif,mean_based_signal,gci_inds);
+      SedreamsGciDetection(source_signal_iaif,mean_based_signal,gci_inds);
 	}
 
    std::cout << " done." << std::endl;
@@ -498,6 +486,8 @@ void GetIaifResidual(const Param &params, const gsl::vector &signal, gsl::vector
    gsl::vector G(params.lpc_order_glot_iaif+1,true);
    gsl::vector weight_fn;
 
+   if(!residual->is_set())
+      *residual = gsl::vector(signal.size());
 
 
    size_t frame_index;

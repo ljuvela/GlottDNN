@@ -99,28 +99,28 @@ int main(int argc, char *argv[]) {
    /* High-pass filter signal to eliminate low frequency "rumble" */
    HighPassFiltering(params, &(data.signal));
 
-   // IAIF analysis if( PolarityDetection || GetF0 || GetGci)
+   if(!params.use_external_f0 || !params.use_external_gci || (params.signal_polarity == POLARITY_DETECT))
+      GetIaifResidual(params, data.signal, (&data.source_signal_iaif));
 
    /* Read or estimate signal polarity */
    PolarityDetection(params, &(data.signal), &(data.source_signal_iaif));
 
    /* Read or estimate fundamental frequency (F0)  */
-   if(GetF0(params, data.signal, &(data.fundf), &(data.source_signal_iaif)) == EXIT_FAILURE)
+   if(GetF0(params, data.signal, data.source_signal_iaif, &(data.fundf)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
    /* Read or estimate glottal closure instants (GCIs)*/
-   if(GetGci(params, data.signal, data.fundf, &(data.gci_inds), &(data.source_signal_iaif)) == EXIT_FAILURE)
+   if(GetGci(params, data.signal, data.source_signal_iaif, data.fundf, &(data.gci_inds)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
    /* Estimate frame log-energy (Gain) */
    GetGain(params, data.signal, &(data.frame_energy));
 
    /* Spectral analysis for vocal tract transfer function*/
-   if(params.qmf_subband_analysis) {
+   if(params.qmf_subband_analysis)
       SpectralAnalysisQmf(params, data, &(data.poly_vocal_tract));
-   } else {
+   else
       SpectralAnalysis(params, data, &(data.poly_vocal_tract));
-   }
 
    /* Perform glottal inverse filtering with the estimated VT AR polynomials */
    InverseFilter(params, data, &(data.poly_glott), &(data.source_signal));
