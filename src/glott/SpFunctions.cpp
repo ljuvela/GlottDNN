@@ -16,6 +16,7 @@
 #include <gsl/gsl_complex_math.h>   /* GSL, Arithmetic operations for complex numbers */
 #include <gslwrap/vector_double.h>
 #include <vector>
+#include <queue>
 #include "ComplexVector.h"
 #include "definitions.h"
 #include "SpFunctions.h"
@@ -1029,5 +1030,9 @@ void Linear2Erb(const gsl::vector &linvec, const int &fs, gsl::vector *erbvec) {
 		(*erbvec)(i) *= 1.0/GSL_MAX(erb_sum(i),1.0);
 }
 
+void MedianFilter(const gsl::vector &x, const size_t filterlen, gsl::vector *y) {
+
+
+}
 
 
