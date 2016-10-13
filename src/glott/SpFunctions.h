@@ -31,7 +31,7 @@ void ConcatenateFrames(const gsl::vector &frame1, const gsl::vector &frame2, gsl
 int NextPow2(int n);
 bool IsPow2(int n);
 void FFTRadix2(const gsl::vector &x, ComplexVector *X);
-void FFTRadix2(const gsl::vector &x, const size_t nfft, ComplexVector *X);
+void FFTRadix2(const gsl::vector &x, size_t nfft, ComplexVector *X);
 void IFFTRadix2(const ComplexVector &X, gsl::vector *x);
 void WFilter(const gsl::vector &A, const gsl::vector &B,const gsl::vector &signal,const double &lambda, gsl::vector *result);
 void WarpingAlphas2Sigmas(double *alp, double *sigm, double lambda, int dim);

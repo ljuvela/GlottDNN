@@ -97,8 +97,8 @@ void InterpolateLinear(const gsl::vector &vector, const size_t interpolated_size
 	*i_vector = gsl::vector(interpolated_size);
 
 	/* Read values to array */
-	double x[len];
-	double y[len];
+	double *x = new double[len];
+	double *y = new double[len];
 	size_t i;
 	for(i=0; i<len; i++) {
 		x[i] = i;
@@ -119,9 +119,11 @@ void InterpolateLinear(const gsl::vector &vector, const size_t interpolated_size
     	i++;
     }
 
-    /* Free memory */
-    gsl_spline_free(spline);
+   /* Free memory */
+   gsl_spline_free(spline);
 	gsl_interp_accel_free(acc);
+   delete[] x;
+	delete[] y;
 }
 
 /** Interp1
@@ -132,9 +134,13 @@ void InterpolateLinear(const gsl::vector &x_orig, const gsl::vector &y_orig, con
 	size_t interpolated_size = x_interp.size();
 	*y_interp = gsl::vector(interpolated_size);
 
+
+
 	/* Read values to array */
-	double x[len];
-	double y[len];
+	//double x[len];
+	//double y[len];
+	double *x = new double[len];
+	double *y = new double[len];
 	size_t i;
 	for(i=0; i<len; i++) {
 		x[i] = x_orig(i);
@@ -160,6 +166,8 @@ void InterpolateLinear(const gsl::vector &x_orig, const gsl::vector &y_orig, con
     /* Free memory */
    gsl_spline_free(spline);
 	gsl_interp_accel_free(acc);
+	delete[] x;
+	delete[] y;
 }
 
 
@@ -172,8 +180,8 @@ void InterpolateSpline(const gsl::vector &vector, const size_t interpolated_size
    //*i_vector = gsl::vector(interpolated_size);
 
    /* Read values to array */
-   double x[len];
-   double y[len];
+	double *x = new double[len];
+	double *y = new double[len];
    size_t i;
    for(i=0; i<len; i++) {
       x[i] = i;
@@ -197,6 +205,8 @@ void InterpolateSpline(const gsl::vector &vector, const size_t interpolated_size
    /* Free memory */
    gsl_spline_free(spline);
    gsl_interp_accel_free(acc);
+   delete[] x;
+   delete[] y;
 }
 
 void InterpolateNearest(const gsl::vector &vector, const size_t interpolated_size, gsl::vector *i_vector) {
@@ -314,10 +324,13 @@ void AllPassDelay(const double &lambda, gsl::vector *signal) {
 	}
 }
 
-void FFTRadix2(const gsl::vector &x, const size_t nfft, ComplexVector *X ) {
+void FFTRadix2(const gsl::vector &x, size_t nfft, ComplexVector *X ) {
    size_t i;
    size_t N = x.size();
-   assert(IsPow2(nfft));
+   //assert(IsPow2(nfft));
+   if(!IsPow2(nfft))
+      nfft = (size_t)NextPow2(nfft);
+
 
    if(X == NULL) {
       *X = ComplexVector(nfft/2+1);
@@ -406,7 +419,7 @@ void IFFTRadix2(const ComplexVector &X, gsl::vector *x) {
 
 void FastAutocorr(const gsl::vector &x, gsl::vector *ac)
 {
-   int i;
+   size_t i;
    size_t N = x.size();
    size_t nfft = NextPow2(2*N-1);
 
@@ -616,10 +629,12 @@ void Roots(const gsl::vector &x, const size_t ncoef, ComplexVector *r) {
    /* Initialize root arrays */
     //size_t ncoef = x.size()-1; // no minus one?
     size_t nroots = ncoef-1;
-    double coeffs[ncoef];
+    //double coeffs[ncoef];
+    double *coeffs = new double[ncoef];
 
     /* Complex values require 2 x space*/
-    double roots[2*nroots];
+    double *roots = new double[2*nroots];
+    //double roots[2*nroots];
 
     /* Copy coefficients to arrays */
     /* Copy coefficients to arrays */
@@ -641,6 +656,8 @@ void Roots(const gsl::vector &x, const size_t ncoef, ComplexVector *r) {
     }
 
     gsl_poly_complex_workspace_free(w);
+    delete[] coeffs;
+    delete[] roots;
 
 }
 
@@ -727,7 +744,8 @@ void Poly2Lsf(const gsl::vector &a, gsl::vector *lsf) {
    size_t nroots_q = q.size()-2;
    size_t lsf_size = (nroots_p+nroots_p)/2;
    size_t ind=0;
-   double lsf_double[lsf_size];
+   //double lsf_double[lsf_size];
+   double *lsf_double = new double[lsf_size];
 
    /* Solve roots of P and convert to angle */
    ComplexVector r_p;
@@ -747,6 +765,7 @@ void Poly2Lsf(const gsl::vector &a, gsl::vector *lsf) {
    for(i=0; i<lsf_size; i++)
       (*lsf)(i) = lsf_double[i];
 
+   delete[] lsf_double;
 }
 
 void Poly2Lsf(const gsl::matrix &a_mat, gsl::matrix *lsf_mat) {
@@ -865,16 +884,16 @@ int FindPeaks(const gsl::vector &vec, const double &threshold, gsl::vector_int *
    gsl::vector_int idxtemp(vec.size());
    gsl::vector valtemp(vec.size());
     /* find maximum of abs x */
-   int maxidx = 0;
+   //int maxidx = 0;
    double xmax = 0.0;
     for(i=0;i<(int)vec.size();i++){
       if (vec(i) > xmax){
          xmax = vec(i);
-         maxidx = i;
+     //    maxidx = i;
       }
       if (vec(i) < -1*xmax){
          xmax = -1*vec(i);
-         maxidx = i;
+       //  maxidx = i;
       }
     }
 
@@ -883,7 +902,7 @@ int FindPeaks(const gsl::vector &vec, const double &threshold, gsl::vector_int *
    Filter(std::vector<double>{1.0, -1.0}, std::vector<double>{1.0},vec,&vec_diff);
 
    /* find peaks at diff zero crossings */
-   for (i=1,ii=0;i<vec_diff.size();i++){
+   for (i=1,ii=0;i<(int)vec_diff.size();i++){
       if (vec_diff(i)*vec_diff(i-1)<0 &&
             (vec(i) > threshold*xmax || vec(i) < -1.0*threshold*xmax)){
          idxtemp(ii) = i;
@@ -940,7 +959,7 @@ gsl::vector_int FindHarmonicPeaks(const gsl::vector &fft_mag, const double &f0, 
 			guess_index = (int)GSL_MAX(f0/(fs/(double)fft_length) - (harmonic_search_range-1)/2.0,0);
 
 		/* Stop search if the end (minus safe limit) of the fft vector or the maximum number of harmonics is reached */
-		if(guess_index + harmonic_search_range > fft_mag.size()-1 || current_harmonic > MAX_HARMONICS-1) {
+		if(guess_index + harmonic_search_range > (int)fft_mag.size()-1 || current_harmonic > MAX_HARMONICS-1) {
 			break;
 		}
 
@@ -973,7 +992,7 @@ gsl::vector_int FindHarmonicPeaks(const gsl::vector &fft_mag, const double &f0, 
 void StabilizePoly(const int &fft_length, gsl::vector *A) {
 
 	ComplexVector a_fft;
-	FFTRadix2(*A,&a_fft);
+	FFTRadix2(*A,(size_t)fft_length,&a_fft);
 
 	gsl::vector a_mag = a_fft.getAbs();
 	size_t i;
@@ -1018,7 +1037,7 @@ void Linear2Erb(const gsl::vector &linvec, const int &fs, gsl::vector *erbvec) {
                                                                                           // Subtract SMALL_VALUE to keep erb indeces within range of hnr_channels
 
 	/* Evaluate values according to ERB rate */
-	for(i=0;i<linvec.size();i++) {
+	for(i=0;i<(int)linvec.size();i++) {
 		j = floor(erb(i));
 		(*erbvec)(j) += linvec(i);
 		erb_sum(j) += 1.0;
@@ -1046,7 +1065,7 @@ int GetFrame(const gsl::vector &signal, const int &frame_index, const int &frame
 
 	/* Get pre-frame samples for smooth filtering */
 	if (pre_frame){
-		for(i=0; i<pre_frame->size(); i++) {
+		for(i=0; i<(int)pre_frame->size(); i++) {
 			ind = frame_index*frame_shift - (int)frame->size()/2+ i - pre_frame->size(); // SPTK compatible, ljuvela
 			if(ind >= 0 && ind < (int)signal.size())
 				(*pre_frame)(i) = signal(ind);

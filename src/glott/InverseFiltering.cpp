@@ -287,7 +287,7 @@ void SedreamsGciDetection(const gsl::vector &residual, const gsl::vector &mean_b
 	for(i=0;i<number_of_peaks;i++) {
 		if(peak_values(i) < 0) { // only minima
 			/* Find next zero-crossing */
-			for(j=peak_inds(i);j<mean_based_signal.size()-1;j++) {
+			for(j=peak_inds(i);j<(int)mean_based_signal.size()-1;j++) {
 				if(GSL_SIGN(mean_based_signal(j)) != GSL_SIGN(mean_based_signal(j+1))) {
 					stop(ii) = j;
 					start(ii) = peak_inds(i);

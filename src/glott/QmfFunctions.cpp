@@ -13,7 +13,7 @@
 #include "ComplexVector.h"
 #include "definitions.h"
 #include "SpFunctions.h"
-#include "QmfFunctions.h""
+#include "QmfFunctions.h"
 
 
 
@@ -78,7 +78,7 @@ void Qmf::Decimate(const gsl::vector &frame_orig, const int skip, gsl::vector *f
 void Qmf::CombinePoly(const gsl::vector &a_qmf1, const gsl::vector &a_qmf2,
                const double &qmf_gain, const int &Nsub, gsl::vector *a_combined) {
 	// RADIX2 Implementation:
-   int i;
+   size_t i;
    double temp;
    double thresh = 0.0000001;
 	size_t Nlow = a_qmf1.size();
