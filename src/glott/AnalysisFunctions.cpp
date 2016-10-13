@@ -9,7 +9,7 @@
 #include "InverseFiltering.h"
 #include "PitchEstimation.h"
 #include "AnalysisFunctions.h"
-#include "DebugUtils.h"
+#include "Utils.h"
 #include "Filters.h"
 #include "QmfFunctions.h"
 
@@ -159,8 +159,7 @@ int GetGain(const Param &params, const gsl::vector &signal, gsl::vector *gain_pt
 		if(frame_energy == 0.0)
 			frame_energy =+ DBL_MIN;
 
-		// gain(frame_index) = (double)20.0*log10(frame_energy/((double)frame.size()));
-		gain(frame_index) = (double)20.0*log10(frame_energy/((double)frame.size())) - 10.0*log10(E_REF); // compatiblility with GlottHMM
+		gain(frame_index) = FrameEnergy2LogEnergy(frame_energy,frame.size());
 	}
 	*gain_ptr = gain;
 	return EXIT_SUCCESS;

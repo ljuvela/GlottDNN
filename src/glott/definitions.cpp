@@ -20,6 +20,7 @@ Param::Param() {
 	default_windowing_function = HANN;
 	signal_polarity = POLARITY_DEFAULT;
    lp_weighting_function = AME;
+   excitation_method = SINGLE_PULSE_EXCITATION;
    /* Other parameters */
 	fs = 16000;
 	frame_length = 400;
@@ -61,7 +62,8 @@ Param::Param() {
 	voicing_threshold = 60.0;
 	zcr_threshold = 120.0;
 	relative_f0_threshold = 0.005;
-
+	speed_scale = 1.0;
+	pitch_scale = 1.0;
 }
 
 Param::~Param() {
@@ -84,9 +86,9 @@ int AnalysisData::AllocateData(const Param &params) {
 
 	poly_vocal_tract = gsl::matrix(params.lpc_order_vt+1,params.number_of_frames,true);
 	lsf_vocal_tract = gsl::matrix(params.lpc_order_vt,params.number_of_frames,true);
-	poly_glott = gsl::matrix(params.lpc_order_glot+1,params.number_of_frames,true);
-	lsf_glott = gsl::matrix(params.lpc_order_glot,params.number_of_frames,true);
-   hnr_glott = gsl::matrix(params.hnr_order,params.number_of_frames,true);
+	poly_glot = gsl::matrix(params.lpc_order_glot+1,params.number_of_frames,true);
+	lsf_glot = gsl::matrix(params.lpc_order_glot,params.number_of_frames,true);
+   hnr_glot = gsl::matrix(params.hnr_order,params.number_of_frames,true);
 
 	excitation_pulses = gsl::matrix(params.paf_pulse_length, params.number_of_frames, true);
 
@@ -106,10 +108,10 @@ int AnalysisData::SaveData(const Param &params) {
    if (params.extract_lsf_vt)
       WriteGslMatrix(params.basename, ".LSF", params.data_type, lsf_vocal_tract);
    if (params.extract_lsf_glot)
-      WriteGslMatrix(params.basename, ".LSFSource", params.data_type, lsf_glott);
+      WriteGslMatrix(params.basename, ".LSFSource", params.data_type, lsf_glot);
    if (params.extract_hnr)
    if (params.extract_hnr)
-      WriteGslMatrix(params.basename, ".HNR", params.data_type, hnr_glott);
+      WriteGslMatrix(params.basename, ".HNR", params.data_type, hnr_glot);
    if (params.extract_pulses_as_features)
       WriteGslMatrix(params.basename, ".PLS", params.data_type, excitation_pulses);
    if (params.extract_f0)
@@ -118,8 +120,10 @@ int AnalysisData::SaveData(const Param &params) {
    if (params.extract_glottal_excitation)
       WriteGslVector(params.basename, ".GlottalExcitation", params.data_type, source_signal);
 
-
-
-
    return EXIT_SUCCESS;
 }
+
+SynthesisData::SynthesisData() {}
+
+SynthesisData::~SynthesisData() {}
+

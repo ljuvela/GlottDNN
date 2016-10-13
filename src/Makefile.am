@@ -14,7 +14,7 @@ gslwrap/matrix_float.cc gslwrap/matrix_double.cc gslwrap/matrix_int.cc \
 gslwrap/vector_float.cc gslwrap/vector_double.cc gslwrap/vector_int.cc \
 gslwrap/random_generator.cc 
 
-bin_PROGRAMS = Analysis
+bin_PROGRAMS = Analysis Synthesis
 
 Analysis_SOURCES = glott/Analysis.cpp Filters.h \
 					glott/definitions.h glott/definitions.cpp \
@@ -26,6 +26,18 @@ Analysis_SOURCES = glott/Analysis.cpp Filters.h \
 					glott/QmfFunctions.h glott/QmfFunctions.cpp \
 					glott/PitchEstimation.h glott/PitchEstimation.cpp \
 					glott/AnalysisFunctions.h glott/AnalysisFunctions.cpp \
-					glott/DebugUtils.h glott/DebugUtils.cpp
+					glott/Utils.h glott/Utils.cpp
 					
 Analysis_LDADD = libgslwrap.a
+					
+Synthesis_SOURCES = glott/Synthesis.cpp Filters.h \
+					glott/definitions.h glott/definitions.cpp \
+					glott/ReadConfig.h glott/ReadConfig.cpp \
+					glott/FileIo.h glott/FileIo.cpp \
+					glott/InverseFiltering.h glott/InverseFiltering.cpp \
+					glott/ComplexVector.h glott/ComplexVector.cpp \
+					glott/SpFunctions.h glott/SpFunctions.cpp \
+					glott/SynthesisFunctions.h glott/SynthesisFunctions.cpp \
+					glott/Utils.h glott/Utils.cpp
+					
+Synthesis_LDADD = libgslwrap.a

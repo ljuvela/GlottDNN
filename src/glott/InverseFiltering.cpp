@@ -11,7 +11,7 @@
 #include "definitions.h"
 #include "SpFunctions.h"
 #include "InverseFiltering.h"
-#include "DebugUtils.h"
+#include "Utils.h"
 
 gsl::vector_int GetFrameGcis(const Param &params, const int frame_index, const gsl::vector_int &gci_inds) {
 

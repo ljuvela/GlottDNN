@@ -1,5 +1,8 @@
 #ifndef UTILS_H_
 #define UTILS_H_
+#include <vector>
+
+gsl::vector StdVector2GslVector(const std::vector<double> &stdvec);
 
 /* Debug functions */
 void VPrint1(const gsl::vector &vector);

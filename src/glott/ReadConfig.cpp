@@ -187,6 +187,11 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
    if (ConfigLookupInt("HNR_ORDER", cfg, default_config, &(params->hnr_order)) == EXIT_FAILURE)
          return EXIT_FAILURE;
 
+   if (ConfigLookupDouble("SPEED_SCALE", cfg, default_config, &(params->speed_scale)) == EXIT_FAILURE)
+         return EXIT_FAILURE;
+
+   if (ConfigLookupDouble("PITCH_SCALE", cfg, default_config, &(params->pitch_scale)) == EXIT_FAILURE)
+         return EXIT_FAILURE;
 
    //if (ConfigLookupDouble("F0_CHECK_RANGE", cfg, default_config, &(params->f0_check_range)) == EXIT_FAILURE)
    //      return EXIT_FAILURE;

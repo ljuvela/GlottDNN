@@ -95,7 +95,11 @@ void Filter(const std::vector<double> &b, const gsl::vector a, const gsl::vector
 
 void InterpolateLinear(const gsl::vector &vector, const size_t interpolated_size, gsl::vector *i_vector) {
 	size_t len = vector.size();
-	*i_vector = gsl::vector(interpolated_size);
+   if (i_vector->is_set()) {
+      i_vector->resize(interpolated_size);
+   } else {
+      *i_vector = gsl::vector(interpolated_size);
+   }
 
 	/* Read values to array */
 	double *x = new double[len];
@@ -176,9 +180,11 @@ void InterpolateLinear(const gsl::vector &x_orig, const gsl::vector &y_orig, con
 void InterpolateSpline(const gsl::vector &vector, const size_t interpolated_size, gsl::vector *i_vector) {
 
    size_t len = vector.size();
-   if (i_vector->size() != len)
-      i_vector->resize(len);
-   //*i_vector = gsl::vector(interpolated_size);
+   if (i_vector->is_set()) {
+      i_vector->resize(interpolated_size);
+   } else {
+      *i_vector = gsl::vector(interpolated_size);
+   }
 
    /* Read values to array */
 	double *x = new double[len];
@@ -208,6 +214,47 @@ void InterpolateSpline(const gsl::vector &vector, const size_t interpolated_size
    gsl_interp_accel_free(acc);
    delete[] x;
    delete[] y;
+}
+
+/**
+ * Function Interpolate
+ *
+ * Interpolates given vector to new vector of given length
+ *
+ * @param vector original vector
+ * @param i_vector interpolated vector
+ */
+void Interpolate(const gsl::vector &vector, gsl::vector *i_vector) {
+
+   int i,len = vector.size(),length = i_vector->size();
+
+   /* Read values to array */
+   double x[len];
+   double y[len];
+   for(i=0; i<len; i++) {
+      x[i] = i;
+      y[i] = vector(i);
+   }
+   gsl_interp_accel *acc = gsl_interp_accel_alloc();
+    gsl_spline *spline = gsl_spline_alloc(gsl_interp_cspline,len);
+    gsl_spline_init(spline, x, y, len);
+    double xi;
+    i = 0;
+
+    /* New implementation (27.3.2009, bug fix 8.2.2010) */
+    /* Bug fix to GSL v.1.15, 26.1.2012 */
+    xi = x[0];
+    while(i<length) {
+      (*i_vector)(i) = gsl_spline_eval(spline, xi, acc);
+      xi += (len-1)/(double)(length-1);
+      if(xi > len-1)
+         xi = len-1;
+      i++;
+    }
+
+    /* Free memory */
+    gsl_spline_free(spline);
+   gsl_interp_accel_free(acc);
 }
 
 void InterpolateNearest(const gsl::vector &vector, const size_t interpolated_size, gsl::vector *i_vector) {
@@ -834,6 +881,10 @@ double getEnergy(const gsl::vector &vec) {
 
 double LogEnergy2FrameEnergy(const double &log_energy, const size_t frame_size) {
    return (double)pow(10,log_energy/20.0)*(double)frame_size;
+}
+
+double FrameEnergy2LogEnergy(const double &frame_energy, const size_t frame_size) {
+   return (double)20.0*log10(frame_energy/(double)frame_size);
 }
 
 /** Compute the skewness statistic of a vector
