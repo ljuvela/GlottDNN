@@ -46,5 +46,6 @@ gsl::vector_int FindHarmonicPeaks(const gsl::vector &fft_mag, const double &f0, 
 void StabilizePoly(const int &fft_length, gsl::vector *A);
 gsl::vector_int LinspaceInt(const int &start_val, const int &hop_val,const int &end_val);
 void Linear2Erb(const gsl::vector &linvec, const int &fs, gsl::vector *erbvec);
+int GetFrame(const gsl::vector &signal, const int &frame_index, const int &frame_shift,gsl::vector *frame, gsl::vector *pre_frame);
 
 #endif /* SRC_GLOTT_SPFUNCTIONS_H_ */

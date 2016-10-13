@@ -1030,4 +1030,30 @@ void Linear2Erb(const gsl::vector &linvec, const int &fs, gsl::vector *erbvec) {
 }
 
 
+int GetFrame(const gsl::vector &signal, const int &frame_index, const int &frame_shift,gsl::vector *frame, gsl::vector *pre_frame) {
+	int i, ind;
+	/* Get samples to frame */
+	if (frame != NULL) {
+		for(i=0; i<(int)frame->size(); i++) {
+			ind = frame_index*frame_shift - ((int)frame->size())/2 + i; // SPTK compatible, ljuvela
+			if (ind >= 0 && ind < (int)signal.size()){
+				(*frame)(i) = signal(ind);
+			}
+		}
+	} else {
+		return EXIT_FAILURE;
+	}
+
+	/* Get pre-frame samples for smooth filtering */
+	if (pre_frame){
+		for(i=0; i<pre_frame->size(); i++) {
+			ind = frame_index*frame_shift - (int)frame->size()/2+ i - pre_frame->size(); // SPTK compatible, ljuvela
+			if(ind >= 0 && ind < (int)signal.size())
+				(*pre_frame)(i) = signal(ind);
+
+  		}
+	}
+
+	return EXIT_SUCCESS;
+}
 
