@@ -25,10 +25,6 @@ int PolarityDetection(const Param &params, gsl::vector *signal, gsl::vector *sou
 
    case POLARITY_DETECT :
       std::cout << "Using automatic polarity detection ...";
-      if(!source_signal_iaif->is_set()) {
-          *source_signal_iaif = gsl::vector(signal->size());
-         GetIaifResidual(params, *signal, source_signal_iaif);
-      }
 
       if(Skewness(*source_signal_iaif) > 0) {
          std::cout << "... Detected negative polarity. Inverting signal." << std::endl;
@@ -53,7 +49,7 @@ int PolarityDetection(const Param &params, gsl::vector *signal, gsl::vector *sou
  * output: fundf: Obtained F0 vector.
  *
  */
-int GetF0(const Param &params, const gsl::vector &signal, gsl::vector *fundf, gsl::vector *source_signal_iaif) {
+int GetF0(const Param &params, const gsl::vector &signal, const gsl::vector &source_signal_iaif, gsl::vector *fundf) {
 
 	std::cout << "F0 analysis ";
 	if(params.use_external_f0) {
@@ -71,10 +67,6 @@ int GetF0(const Param &params, const gsl::vector &signal, gsl::vector *fundf, gs
 			fundf->copy(fundf_ext);
 		}
 	} else {
-      if(!source_signal_iaif->is_set()) {
-          *source_signal_iaif = gsl::vector(signal.size());
-         GetIaifResidual(params, signal, source_signal_iaif);
-      }
       *fundf = gsl::vector(params.number_of_frames);
       gsl::vector signal_frame = gsl::vector(params.frame_length);
       gsl::vector glottal_frame = gsl::vector(2*params.frame_length); // Longer frame
@@ -82,8 +74,12 @@ int GetF0(const Param &params, const gsl::vector &signal, gsl::vector *fundf, gs
       double ff;
       gsl::vector candidates(3);
       for(frame_index=0;frame_index<params.number_of_frames;frame_index++) {
-         GetFrame(params, signal, frame_index, &signal_frame, NULL);
-         GetFrame(params, *source_signal_iaif, frame_index, &glottal_frame, NULL);
+
+         GetFrame(signal, frame_index,params.frame_shift, &signal_frame, NULL);
+         GetFrame(source_signal_iaif, frame_index, params.frame_shift, &glottal_frame, NULL);
+         double ff;
+         gsl::vector candidates(3);
+
          FundamentalFrequency(params, glottal_frame, signal_frame, &ff, &candidates);
          (*fundf)(frame_index) = ff;
       }
@@ -114,7 +110,7 @@ int GetF0(const Param &params, const gsl::vector &signal, gsl::vector *fundf, gs
  * output: gci_signal: Sparse signal-length representation of gcis as ones and otherwise zeros
  *
  */
-int GetGci(const Param &params, const gsl::vector &signal, const gsl::vector &fundf, gsl::vector_int *gci_inds, gsl::vector *source_signal_iaif) {
+int GetGci(const Param &params, const gsl::vector &signal, const gsl::vector &source_signal_iaif, const gsl::vector &fundf, gsl::vector_int *gci_inds) {
 	if(params.use_external_gci) {
 		std::cout << "Reading GCI information from external file: " << params.external_gci_filename << " ...";
 		gsl::vector gcis;
@@ -127,14 +123,10 @@ int GetGci(const Param &params, const gsl::vector &signal, const gsl::vector &fu
 			(*gci_inds)(i) = (int)round(gcis(i) * params.fs);
 		}
 	} else {
-      if(!source_signal_iaif->is_set()) {
-         *source_signal_iaif = gsl::vector(signal.size());
-         GetIaifResidual(params, signal, source_signal_iaif);
-      }
       std::cout << "GCI estimation using the SEDREAMS algorithm ...";
       gsl::vector mean_based_signal(signal.size(),true);
       MeanBasedSignal(signal, params.fs, getMeanF0(fundf),&mean_based_signal);
-      SedreamsGciDetection(*source_signal_iaif,mean_based_signal,gci_inds);
+      SedreamsGciDetection(source_signal_iaif,mean_based_signal,gci_inds);
 	}
 
    std::cout << " done." << std::endl;
@@ -150,7 +142,7 @@ int GetGain(const Param &params, const gsl::vector &signal, gsl::vector *gain_pt
 	int frame_index;
 	double frame_energy;
 	for(frame_index=0;frame_index<params.number_of_frames;frame_index++) {
-		GetFrame(params, signal, frame_index, &frame, NULL);
+		GetFrame(signal, frame_index, params.frame_shift, &frame, NULL);
 
 		/* Evaluate gain of frame, normalize energy per sample basis */
 	/*	double sum = 0.0;
@@ -171,34 +163,6 @@ int GetGain(const Param &params, const gsl::vector &signal, gsl::vector *gain_pt
 		gain(frame_index) = (double)20.0*log10(frame_energy/((double)frame.size())) - 10.0*log10(E_REF); // compatiblility with GlottHMM
 	}
 	*gain_ptr = gain;
-	return EXIT_SUCCESS;
-}
-
-//FIXME : remove params, replace with hop size.
-int GetFrame(const Param &params, const gsl::vector &signal, const int frame_index,gsl::vector *frame, gsl::vector *pre_frame) {
-	int i, ind;
-	/* Get samples to frame */
-	if (frame != NULL) {
-		for(i=0; i<(int)frame->size(); i++) {
-			ind = frame_index*params.frame_shift - ((int)frame->size())/2 + i; // SPTK compatible, ljuvela
-			if (ind >= 0 && ind < (int)signal.size()){
-				(*frame)(i) = signal(ind);
-			}
-		}
-	} else {
-		return EXIT_FAILURE;
-	}
-
-	/* Get pre-frame samples for smooth filtering */
-	if (pre_frame){
-		for(i=0; i<pre_frame->size(); i++) {
-			ind = frame_index*params.frame_shift - (int)frame->size()/2+ i - pre_frame->size(); // SPTK compatible, ljuvela
-			if(ind >= 0 && ind < (int)signal.size())
-				(*pre_frame)(i) = signal(ind);
-
-  		}
-	}
-
 	return EXIT_SUCCESS;
 }
 
@@ -224,7 +188,7 @@ int SpectralAnalysis(const Param &params, const AnalysisData &data, gsl::matrix 
 
    size_t frame_index;
 	for(frame_index=0;frame_index<(size_t)params.number_of_frames;frame_index++) {
-			GetFrame(params, data.signal, frame_index, &frame, &pre_frame);
+			GetFrame(data.signal, frame_index, params.frame_shift, &frame, &pre_frame);
 			/** Voiced analysis **/
 			if(data.fundf(frame_index) != 0) {
 
@@ -295,7 +259,7 @@ int SpectralAnalysisQmf(const Param &params, const AnalysisData &data, gsl::matr
 
    size_t frame_index;
 	for(frame_index=0;frame_index<(size_t)params.number_of_frames;frame_index++) {
-			GetFrame(params, data.signal, frame_index, &frame, &pre_frame);
+			GetFrame(data.signal, frame_index, params.frame_shift, &frame, &pre_frame);
 
 
 			/** Voiced analysis (Low-band = QCP, High-band = LPC) **/
@@ -369,7 +333,7 @@ int InverseFilter(const Param &params, const AnalysisData &data, gsl::matrix *po
    gsl::vector b(1);b(0) = 1.0;
 
 	for(frame_index=0;frame_index<(size_t)params.number_of_frames;frame_index++) {
-      GetFrame(params, data.signal, frame_index, &frame, &pre_frame);
+      GetFrame(data.signal, frame_index, params.frame_shift, &frame, &pre_frame);
       ConcatenateFrames(pre_frame, frame, &frame_full);
       if(params.warping_lambda_vt == 0.0) {
          Filter(data.poly_vocal_tract.get_col_vec(frame_index),b,frame_full,&frame_residual);
@@ -539,11 +503,13 @@ void GetIaifResidual(const Param &params, const gsl::vector &signal, gsl::vector
    gsl::vector G(params.lpc_order_glot_iaif+1,true);
    gsl::vector weight_fn;
 
+   if(!residual->is_set())
+      *residual = gsl::vector(signal.size());
 
 
    size_t frame_index;
    for(frame_index=0;frame_index<(size_t)params.number_of_frames;frame_index++) {
-      GetFrame(params, signal, frame_index, &frame, &pre_frame);
+      GetFrame(signal, frame_index, params.frame_shift, &frame, &pre_frame);
 
       /* Pre-emphasis and windowing */
       Filter(std::vector<double>{1.0, -params.gif_pre_emphasis_coefficient},B, frame, &frame_pre_emph);
@@ -604,7 +570,7 @@ void HnrAnalysis(const Param &params, const gsl::vector &source_signal, const gs
 	for(frame_index=0;frame_index<params.number_of_frames;frame_index++) {
       /** HNR Analysis only for voiced frames (zero for unvoiced frames) **/
       if(fundf(frame_index) > 0) {
-         GetFrame(params, source_signal, frame_index, &frame, NULL);
+         GetFrame(source_signal, frame_index, params.frame_shift, &frame, NULL);
          ApplyWindowingFunction(params.default_windowing_function, &frame);
          FFTRadix2(frame, NFFT, &frame_fft);
          fft_mag = frame_fft.getAbs();

@@ -31,7 +31,7 @@ void ConcatenateFrames(const gsl::vector &frame1, const gsl::vector &frame2, gsl
 int NextPow2(int n);
 bool IsPow2(int n);
 void FFTRadix2(const gsl::vector &x, ComplexVector *X);
-void FFTRadix2(const gsl::vector &x, const size_t nfft, ComplexVector *X);
+void FFTRadix2(const gsl::vector &x, size_t nfft, ComplexVector *X);
 void IFFTRadix2(const ComplexVector &X, gsl::vector *x);
 void WFilter(const gsl::vector &A, const gsl::vector &B,const gsl::vector &signal,const double &lambda, gsl::vector *result);
 void WarpingAlphas2Sigmas(double *alp, double *sigm, double lambda, int dim);
@@ -46,5 +46,6 @@ gsl::vector_int FindHarmonicPeaks(const gsl::vector &fft_mag, const double &f0, 
 void StabilizePoly(const int &fft_length, gsl::vector *A);
 gsl::vector_int LinspaceInt(const int &start_val, const int &hop_val,const int &end_val);
 void Linear2Erb(const gsl::vector &linvec, const int &fs, gsl::vector *erbvec);
+int GetFrame(const gsl::vector &signal, const int &frame_index, const int &frame_shift,gsl::vector *frame, gsl::vector *pre_frame);
 
 #endif /* SRC_GLOTT_SPFUNCTIONS_H_ */
