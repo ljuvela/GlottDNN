@@ -51,11 +51,18 @@ int WriteWavFile(const char *basename, const char *extension, const gsl::vector 
       return EXIT_FAILURE;
    }
 
+
+   double scale = GSL_MAX(signal.max(),-signal.min());
+   if (scale > 1.0)
+      std::cout << "Warning: Signal maximum value is: " << scale << std::endl;
+   else
+      scale = 1.0;
+
    /* Create buffer and write signal to file */
    double *buffer = new double[signal.size()];
    size_t i;
    for(i=0;i<signal.size();i++)
-      buffer[i] = signal(i);
+      buffer[i] = signal(i)/scale;
    file.write(buffer, signal.size());
    delete[] buffer;
 

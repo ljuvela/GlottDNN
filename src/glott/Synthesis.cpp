@@ -69,14 +69,17 @@ int main(int argc, char *argv[]) {
 
    CreateExcitation(params, data, &(data.excitation_signal));
 
+   HarmonicModification(params, data, (&data.excitation_signal));
+
    //SpectralMatchExcitation(params, data, (&data.excitation_signal));
 
+   FilterExcitation(params, data, &(data.signal));
 
-   VPrint1(data.excitation_signal);
-
-   if(WriteWavFile(filename, "exc.wav", data.excitation_signal, params.fs) == EXIT_FAILURE)
+   if(WriteWavFile(filename, ".exc.wav", data.excitation_signal, params.fs) == EXIT_FAILURE)
        return EXIT_FAILURE;
 
+   if(WriteWavFile(filename, ".syn.wav", data.signal, params.fs) == EXIT_FAILURE)
+       return EXIT_FAILURE;
 
    std::cout << "Finished synthesis" << std::endl;
 

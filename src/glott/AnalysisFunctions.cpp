@@ -554,9 +554,6 @@ void HnrAnalysis(const Param &params, const gsl::vector &source_signal, const gs
 	gsl::vector fft_mag(NFFT/2+1);
 
 	gsl::vector_int harmonic_index;
-
-	//gsl::vector harmonic_peak_values;
-	//gsl::vector harmonic_valley_values;
 	gsl::vector hnr_values;
 
 	gsl::vector_int x_interp = LinspaceInt(0, 1,fft_mag.size()-1);
@@ -570,21 +567,16 @@ void HnrAnalysis(const Param &params, const gsl::vector &source_signal, const gs
       /** HNR Analysis only for voiced frames (zero for unvoiced frames) **/
       if(fundf(frame_index) > 0) {
          GetFrame(source_signal, frame_index, params.frame_shift, &frame, NULL);
-         ApplyWindowingFunction(params.default_windowing_function, &frame);
+         ApplyWindowingFunction(COSINE, &frame);
          FFTRadix2(frame, NFFT, &frame_fft);
          fft_mag = frame_fft.getAbs();
-
          for(i=0;i<(int)fft_mag.size();i++) {
             val = 20*log10(fft_mag(i));
             fft_mag(i) = GSL_MAX(val,MIN_LOG_POWER); // Min log-power = -60dB
          }
          harmonic_index = FindHarmonicPeaks(fft_mag, fundf(frame_index), params.fs);
          hnr_values = gsl::vector(harmonic_index.size());
-         //harmonic_peak_values = gsl::vector(harmonic_index.size());
-         //harmonic_valley_values = gsl::vector(harmonic_index.size());
          for(i=0;i<(int)harmonic_index.size();i++) {
-            //harmonic_peak_values(i) = fft_mag(harmonic_index(i));
-
             if(i>0) {
                ind1 = (harmonic_index(i)+harmonic_index(i-1))/2;
             } else {
@@ -597,7 +589,6 @@ void HnrAnalysis(const Param &params, const gsl::vector &source_signal, const gs
                ind2 = (harmonic_index(i)+harmonic_index(i+1))/2;
             }
             val = (fft_mag(ind1) + fft_mag(ind2))/2.0;
-           // harmonic_valley_values(i) = val;
             hnr_values(i) = val - fft_mag(harmonic_index(i)); // Actually Noise-to-Harmonic ratio
          }
 

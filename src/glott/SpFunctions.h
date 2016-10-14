@@ -13,6 +13,7 @@
 
 void Interpolate(const gsl::vector &vector, gsl::vector *i_vector);
 void InterpolateNearest(const gsl::vector &vector, const size_t interpolated_size, gsl::vector *i_vector);
+void InterpolateLinear(const gsl::matrix &mat, const double frame_index, gsl::vector *i_vector);
 void InterpolateLinear(const gsl::vector &vector, const size_t interpolated_size, gsl::vector *i_vector);
 void InterpolateLinear(const gsl::vector &x_orig, const gsl::vector &y_orig, const gsl::vector &x_interp, gsl::vector *y_interp);
 void InterpolateSpline(const gsl::vector &vector, const size_t interpolated_size, gsl::vector *i_vector);
@@ -20,9 +21,12 @@ void Filter(const gsl::vector &b, const gsl::vector &a, const gsl::vector &x, gs
 void Filter(const std::vector<double> &b, const std::vector<double> &a, const gsl::vector &x, gsl::vector *y);
 void Filter(const gsl::vector b, const std::vector<double> &a, const gsl::vector &x, gsl::vector *y);
 void Filter(const std::vector<double> &b, const gsl::vector a, const gsl::vector &x, gsl::vector *y);
+gsl::vector Conv(const gsl::vector &conv1, const gsl::vector &conv2);
 void ApplyWindowingFunction(const WindowingFunctionType &window_function, gsl::vector *frame);
 void Autocorrelation(const gsl::vector &frame, const int &order, gsl::vector *r);
 void Levinson(const gsl::vector &r, gsl::vector *A);
+void Lsf2Poly(const gsl::vector &lsf_vec, gsl::vector *poly_vec);
+void Lsf2Poly(const gsl::matrix &lsf_mat, gsl::matrix *poly_mat);
 void Poly2Lsf(const gsl::vector &a, gsl::vector *lsf);
 void Poly2Lsf(const gsl::matrix &a_mat, gsl::matrix *lsf_mat);
 void Roots(const gsl::vector &x, ComplexVector *r);
@@ -49,6 +53,7 @@ gsl::vector_int FindHarmonicPeaks(const gsl::vector &fft_mag, const double &f0, 
 void StabilizePoly(const int &fft_length, gsl::vector *A);
 gsl::vector_int LinspaceInt(const int &start_val, const int &hop_val,const int &end_val);
 void Linear2Erb(const gsl::vector &linvec, const int &fs, gsl::vector *erbvec);
+void Erb2Linear(const gsl::vector &vector_erb, const int &fs,  gsl::vector *vector_lin);
 int GetFrame(const gsl::vector &signal, const int &frame_index, const int &frame_shift,gsl::vector *frame, gsl::vector *pre_frame);
 double GetFilteringGain(const gsl::vector &b, const gsl::vector &a,
                         const gsl::vector &signal, const size_t &center_index,

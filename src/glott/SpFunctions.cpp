@@ -92,6 +92,21 @@ void Filter(const std::vector<double> &b, const gsl::vector a, const gsl::vector
 	Filter(b_vec, a, x, y);
 }
 
+void InterpolateLinear(const gsl::matrix &mat, const double frame_index, gsl::vector *i_vector) {
+   if (i_vector->is_set()) {
+      i_vector->resize(mat.get_rows());
+   } else {
+      *i_vector = gsl::vector(mat.get_rows());
+   }
+
+   int floor_index = floor(frame_index);
+   int ceil_index = ceil(frame_index);
+   double interp_x = frame_index - floor_index;
+   size_t i;
+   for(i=0;i<mat.get_rows();i++) {
+      (*i_vector)(i) = mat(i,floor_index) + interp_x*(mat(i,ceil_index) - mat(i,floor_index));
+   }
+}
 
 void InterpolateLinear(const gsl::vector &vector, const size_t interpolated_size, gsl::vector *i_vector) {
 	size_t len = vector.size();
@@ -461,6 +476,8 @@ void IFFTRadix2(const ComplexVector &X, gsl::vector *x) {
       (*x)(i) = data[i];
    }
 
+   //*x /= (2.0*M_PI);
+
    /* Free memory*/
    free(data);
 }
@@ -711,6 +728,132 @@ void Roots(const gsl::vector &x, const size_t ncoef, ComplexVector *r) {
 
 void Roots(const gsl::vector &x, ComplexVector *r) {
    Roots(x, x.size(), r);
+}
+
+
+/**
+ * Function Conv
+ *
+ * Convolve two vectors
+ *
+ * @param conv1
+ * @param conv2
+ */
+gsl::vector Conv(const gsl::vector &conv1, const gsl::vector &conv2) {
+   int i,j,n = conv2.size();
+   gsl::vector result(conv1.size()+conv2.size()-1,true);
+   gsl::vector temp(conv1.size()+conv2.size()-1,true);
+
+   /* Set coefficients to temp */
+   for(i=0;i<(int)conv1.size();i++) {
+      temp(i) = conv1(i);
+   }
+
+   /* FIR-filter (Convolution) */
+   for(i=0;i<temp.size();i++) {
+      for(j=0; j<=GSL_MIN(i,n-1); j++) {
+         result(i) += temp(i-j) * conv2(j);
+      }
+   }
+   return result;
+}
+
+/**
+ * Function lsf2poly
+ *
+ * Convert LSF to polynomial
+ *
+ * @param lsf_matrix
+ * @param poly
+ * @param index
+ */
+void Lsf2Poly(const gsl::vector &lsf_vec, gsl::vector *poly_vec) {
+
+   int i,l = lsf_vec.size();
+   gsl::vector fi_p, fi_q;
+
+   /* Create fi_p and fi_q */
+   if(l%2 == 0) {
+      fi_p = gsl::vector(l/2);
+      fi_q = gsl::vector(l/2);
+      for(i=0;i<l;i=i+2) {
+         fi_p(i/2) = lsf_vec(i);
+      }
+      for(i=1;i<l;i=i+2) {
+         fi_q((i-1)/2) = lsf_vec(i);
+      }
+   } else {
+      fi_p = gsl::vector((l+1)/2);
+      for(i=0;i<l;i=i+2) {
+         fi_p(i/2) = lsf_vec(i);
+      }
+      if((l-1)/2 > 0) {
+         fi_q = gsl::vector((l-1)/2);
+         for(i=1;i<l-1;i=i+2) {
+            fi_q((i-1)/2) = lsf_vec(i);
+         }
+      }
+   }
+
+   if (l > 50) {
+      //leja(fi_p);
+      //leja(fi_q);
+   }
+
+   /* Construct vectors P and Q */
+   gsl::vector cp(3);
+   gsl::vector cq(3);
+   cp.set_all(1.0);
+   cq.set_all(1.0);
+   gsl::vector P(1); P(0)=1.0;
+   gsl::vector Q(1); Q(0)=1.0;
+
+   for(i=0;i<fi_p.size();i++) {
+      cp(1) = -2*cos(fi_p(i));
+      P = Conv(P,cp);
+   }
+   if((l-1)/2 > 0) {
+      for(i=0;i<fi_q.size();i++) {
+         cq(1) = -2*cos(fi_q(i));
+         Q = Conv(Q,cq);
+      }
+   }
+
+   /* Add trivial zeros */
+   if(l%2 == 0) {
+      gsl::vector conv(2);
+      conv.set_all(1.0);
+      P = Conv(P,conv);
+      conv(0) = -1.0;
+      Q = Conv(Q,conv);
+   } else {
+      gsl::vector conv(3,true);
+      conv(0) = -1.0;
+      conv(2) = 1.0;
+      Q = Conv(Q,conv);
+   }
+
+   /* Construct polynomial */
+   for(i=1;i<P.size();i++) {
+      (*poly_vec)(P.size()-i-1)  = 0.5*(P(i)+Q(i));
+   }
+}
+
+
+void Lsf2Poly(const gsl::matrix &lsf_mat, gsl::matrix *poly_mat) {
+
+   if (poly_mat->isnull()) {
+      *poly_mat = gsl::matrix(lsf_mat.size1()+1, lsf_mat.size2());
+   } else {
+      // TODO: resize (not urgent, lsf_mat is correctly allocated)
+   }
+
+   size_t i;
+   gsl::vector poly_vec(lsf_mat.size1()+1);
+   for(i=0;i<lsf_mat.size2();i++) {
+      Lsf2Poly(lsf_mat.get_col_vec(i), &poly_vec);
+      poly_mat->set_col_vec(i, poly_vec);
+   }
 }
 
 void Poly2Lsf(const gsl::vector &a, gsl::vector *lsf) {
@@ -985,7 +1128,7 @@ gsl::vector_int FindHarmonicPeaks(const gsl::vector &fft_mag, const double &f0, 
    double HARMONIC_SEARCH_COEFF = 0.5;
    int MAX_HARMONICS = 300;
    int fft_length = ((int)fft_mag.size()-1)*2;
-   int MIN_SEARCH_RANGE = rint(10/fs*fft_length); // 10 Hz minimum
+   int MIN_SEARCH_RANGE = rint(10.0/(double)fs*(double)fft_length); // 10 Hz minimum
    gsl::vector_int peak_inds_temp(MAX_HARMONICS);
    gsl::vector search_range_vector;
 
@@ -1099,6 +1242,34 @@ void Linear2Erb(const gsl::vector &linvec, const int &fs, gsl::vector *erbvec) {
 	for(i=0;i<hnr_channels;i++)
 		(*erbvec)(i) *= 1.0/GSL_MAX(erb_sum(i),1.0);
 }
+
+/**
+ * Function Convert_ERB2Hz
+ *
+ * Convert vector scale from ERB to Hz
+ *
+ * @param vector_erb pointer to vector of ERB-scale HNR values
+ * @param vector pointer to reconstructed HNR vector
+ *
+ */
+void Erb2Linear(const gsl::vector &vector_erb, const int &fs,  gsl::vector *vector_lin) {
+
+   double SMALL_VALUE = 0.0001;
+   int i,j,hnr_channels = vector_erb.size();
+   gsl::vector erb(vector_lin->size());
+
+   /* Evaluate ERB scale indices for vector */
+   for(i=0;i<vector_lin->size();i++)
+      erb(i) = log10(0.00437*(i/(vector_lin->size()-1.0)*(fs/2.0))+1.0)/log10(0.00437*(fs/2.0)+1.0)*(hnr_channels-SMALL_VALUE);
+
+   /* Evaluate values according to ERB rate, smooth */
+   for(i=0;i<vector_lin->size();i++) {
+      j = floor(erb(i));
+      (*vector_lin)(i) = vector_erb(j);
+   }
+   //MA(vector_lin,3);
+}
+
 
 void MedianFilter(const gsl::vector &x, const size_t filterlen, gsl::vector *y) {
 
