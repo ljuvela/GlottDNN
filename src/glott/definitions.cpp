@@ -108,7 +108,7 @@ int AnalysisData::SaveData(const Param &params) {
    if (params.extract_lsf_vt)
       WriteGslMatrix(params.basename, ".LSF", params.data_type, lsf_vocal_tract);
    if (params.extract_lsf_glot)
-      WriteGslMatrix(params.basename, ".LSFSource", params.data_type, lsf_glot);
+      WriteGslMatrix(params.basename, ".LSFsource", params.data_type, lsf_glot);
    if (params.extract_hnr)
    if (params.extract_hnr)
       WriteGslMatrix(params.basename, ".HNR", params.data_type, hnr_glot);

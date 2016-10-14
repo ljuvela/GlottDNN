@@ -187,39 +187,39 @@ int SpectralAnalysis(const Param &params, const AnalysisData &data, gsl::matrix 
 
    size_t frame_index;
 	for(frame_index=0;frame_index<(size_t)params.number_of_frames;frame_index++) {
-			GetFrame(data.signal, frame_index, params.frame_shift, &frame, &pre_frame);
-			/** Voiced analysis **/
-			if(data.fundf(frame_index) != 0) {
+      GetFrame(data.signal, frame_index, params.frame_shift, &frame, &pre_frame);
+		/** Voiced analysis **/
+		if(data.fundf(frame_index) != 0) {
 
-			   /* Estimate Weighted Linear Prediction weight */
-				GetLpWeight(params,params.lp_weighting_function,data.gci_inds, frame, frame_index, &lp_weight);
+		   /* Estimate Weighted Linear Prediction weight */
+			GetLpWeight(params,params.lp_weighting_function,data.gci_inds, frame, frame_index, &lp_weight);
 
-				/* Pre-emphasis and windowing */
-            Filter(std::vector<double>{1.0, -params.gif_pre_emphasis_coefficient},B, frame, &frame_pre_emph);
+			/* Pre-emphasis and windowing */
+         Filter(std::vector<double>{1.0, -params.gif_pre_emphasis_coefficient},B, frame, &frame_pre_emph);
+         ApplyWindowingFunction(params.default_windowing_function, &frame_pre_emph);
+
+         /* First-loop envelope */
+			ArAnalysis(params.lpc_order_vt,params.warping_lambda_vt, params.lp_weighting_function, lp_weight, frame_pre_emph, &A);
+
+			/* Second-loop envelope (if IAIF is used) */
+			if(params.use_iterative_gif) {
+            ConcatenateFrames(pre_frame, frame, &frame_full);
+            Filter(A,B,frame_full,&residual_full);
+
+            ApplyWindowingFunction(params.default_windowing_function, &residual_full);
+            ArAnalysis(params.lpc_order_glot_iaif,0.0, NONE, lp_weight, residual_full.subvector(params.lpc_order_vt,params.frame_length), &G);
+
+            Filter(G,B,frame,&frame_pre_emph); // Iterated pre-emphasis
             ApplyWindowingFunction(params.default_windowing_function, &frame_pre_emph);
-
-            /* First-loop envelope */
-				ArAnalysis(params.lpc_order_vt,params.warping_lambda_vt, params.lp_weighting_function, lp_weight, frame_pre_emph, &A);
-
-				/* Second-loop envelope (if IAIF is used) */
-				if(params.use_iterative_gif) {
-               ConcatenateFrames(pre_frame, frame, &frame_full);
-               Filter(A,B,frame_full,&residual_full);
-
-               ApplyWindowingFunction(params.default_windowing_function, &residual_full);
-               ArAnalysis(params.lpc_order_glot_iaif,0.0, NONE, lp_weight, residual_full.subvector(params.lpc_order_vt,params.frame_length), &G);
-
-               Filter(G,B,frame,&frame_pre_emph); // Iterated pre-emphasis
-               ApplyWindowingFunction(params.default_windowing_function, &frame_pre_emph);
-               ArAnalysis(params.lpc_order_vt,params.warping_lambda_vt, params.lp_weighting_function, lp_weight, frame_pre_emph, &A);
-				}
+            ArAnalysis(params.lpc_order_vt,params.warping_lambda_vt, params.lp_weighting_function, lp_weight, frame_pre_emph, &A);
+         }
 
          /** Unvoiced analysis **/
-			} else {
-				ApplyWindowingFunction(params.default_windowing_function,&frame);
-				LPC(frame, params.lpc_order_vt, &A);
-			}
-			poly_vocal_tract->set_col_vec(frame_index,A);
+		} else {
+			ApplyWindowingFunction(params.default_windowing_function,&frame);
+			LPC(frame, params.lpc_order_vt, &A);
+		}
+		poly_vocal_tract->set_col_vec(frame_index,A);
 	}
 
 
@@ -261,60 +261,60 @@ int SpectralAnalysisQmf(const Param &params, const AnalysisData &data, gsl::matr
 			GetFrame(data.signal, frame_index, params.frame_shift, &frame, &pre_frame);
 
 
-			/** Voiced analysis (Low-band = QCP, High-band = LPC) **/
-         if(data.fundf(frame_index) != 0) {
-            /* Pre-emphasis */
-            Filter(lip_radiation, B, frame, &frame_pre_emph);
-            Qmf::GetSubBands(frame_pre_emph, H0, H1, &frame_qmf1, &frame_qmf2);
-            /* Gain differences between frame_qmf1 and frame_qmf2: */
+		/** Voiced analysis (Low-band = QCP, High-band = LPC) **/
+      if(data.fundf(frame_index) != 0) {
+         /* Pre-emphasis */
+         Filter(lip_radiation, B, frame, &frame_pre_emph);
+         Qmf::GetSubBands(frame_pre_emph, H0, H1, &frame_qmf1, &frame_qmf2);
+         /* Gain differences between frame_qmf1 and frame_qmf2: */
 
-            e1 = getEnergy(frame_qmf1);
-            e2 = getEnergy(frame_qmf2);
-            if(e1 == 0.0)
-               e1 += DBL_MIN;
-            if(e2 == 0.0)
-               e2 += DBL_MIN;
-            gain_qmf = 20*log10(e1/e2);
-
-
-            /** Low-band analysis **/
-            GetLpWeight(params,params.lp_weighting_function,data.gci_inds, frame, frame_index, &lp_weight);
-            Qmf::Decimate(lp_weight,2,&lp_weight_downsampled);
-
-            ApplyWindowingFunction(params.default_windowing_function,&frame_qmf1);
-            ArAnalysis(params.lpc_order_vt_qmf1,0.0,NONE, lp_weight_downsampled, frame_qmf1, &A_qmf1);
-
-            /** High-band analysis **/
-            ApplyWindowingFunction(params.default_windowing_function,&frame_qmf2);
-            ArAnalysis(params.lpc_order_vt_qmf2,0.0,NONE, lp_weight_downsampled, frame_qmf2, &A_qmf2);
-
-         /** Unvoiced analysis (Low-band = LPC, High-band = LPC, no pre-emphasis) **/
-         } else {
-            Qmf::GetSubBands(frame, H0, H1, &frame_qmf1, &frame_qmf2);
-            e1 = getEnergy(frame_qmf1);
-            e2 = getEnergy(frame_qmf2);
-            if(e1 == 0.0)
-               e1 += DBL_MIN;
-            if(e2 == 0.0)
-               e2 += DBL_MIN;
-            gain_qmf = 20*log10(e1/e2);
+         e1 = getEnergy(frame_qmf1);
+         e2 = getEnergy(frame_qmf2);
+         if(e1 == 0.0)
+            e1 += DBL_MIN;
+         if(e2 == 0.0)
+            e2 += DBL_MIN;
+         gain_qmf = 20*log10(e1/e2);
 
 
-            /** Low-band analysis **/
-            ApplyWindowingFunction(params.default_windowing_function,&frame_qmf1);
-            ArAnalysis(params.lpc_order_vt_qmf1,0.0,NONE, lp_weight_downsampled, frame_qmf2, &A_qmf1);
+         /** Low-band analysis **/
+         GetLpWeight(params,params.lp_weighting_function,data.gci_inds, frame, frame_index, &lp_weight);
+         Qmf::Decimate(lp_weight,2,&lp_weight_downsampled);
 
-            /** High-band analysis **/
-            ApplyWindowingFunction(params.default_windowing_function,&frame_qmf2);
-            ArAnalysis(params.lpc_order_vt_qmf2,0.0,NONE, lp_weight_downsampled, frame_qmf2, &A_qmf2);
-         }
-         Qmf::CombinePoly(A_qmf1,A_qmf2,gain_qmf,(int)frame_qmf1.size(),&A);
+         ApplyWindowingFunction(params.default_windowing_function,&frame_qmf1);
+         ArAnalysis(params.lpc_order_vt_qmf1,0.0,NONE, lp_weight_downsampled, frame_qmf1, &A_qmf1);
 
-         poly_vocal_tract->set_col_vec(frame_index,A);
-         //Poly2Lsf(A_qmf1,&lsf_qmf1);
-         //Poly2Lsf(A_qmf2,&lsf_qmf2);
-         //lsf_qmf1->set_col_vec(frame_index,lsf_qmf1);
-         //lsf_qmf2->set_col_vec(frame_index,lsf_qmf2);
+         /** High-band analysis **/
+         ApplyWindowingFunction(params.default_windowing_function,&frame_qmf2);
+         ArAnalysis(params.lpc_order_vt_qmf2,0.0,NONE, lp_weight_downsampled, frame_qmf2, &A_qmf2);
+
+      /** Unvoiced analysis (Low-band = LPC, High-band = LPC, no pre-emphasis) **/
+      } else {
+         Qmf::GetSubBands(frame, H0, H1, &frame_qmf1, &frame_qmf2);
+         e1 = getEnergy(frame_qmf1);
+         e2 = getEnergy(frame_qmf2);
+         if(e1 == 0.0)
+            e1 += DBL_MIN;
+         if(e2 == 0.0)
+            e2 += DBL_MIN;
+         gain_qmf = 20*log10(e1/e2);
+
+
+         /** Low-band analysis **/
+         ApplyWindowingFunction(params.default_windowing_function,&frame_qmf1);
+         ArAnalysis(params.lpc_order_vt_qmf1,0.0,NONE, lp_weight_downsampled, frame_qmf2, &A_qmf1);
+
+         /** High-band analysis **/
+         ApplyWindowingFunction(params.default_windowing_function,&frame_qmf2);
+         ArAnalysis(params.lpc_order_vt_qmf2,0.0,NONE, lp_weight_downsampled, frame_qmf2, &A_qmf2);
+      }
+      Qmf::CombinePoly(A_qmf1,A_qmf2,gain_qmf,(int)frame_qmf1.size(),&A);
+
+      poly_vocal_tract->set_col_vec(frame_index,A);
+      //Poly2Lsf(A_qmf1,&lsf_qmf1);
+      //Poly2Lsf(A_qmf2,&lsf_qmf2);
+      //lsf_qmf1->set_col_vec(frame_index,lsf_qmf1);
+      //lsf_qmf2->set_col_vec(frame_index,lsf_qmf2);
 	}
 
 	return EXIT_SUCCESS;

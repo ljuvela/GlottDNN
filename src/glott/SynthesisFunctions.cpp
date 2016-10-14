@@ -12,6 +12,7 @@
 #include "definitions.h"
 #include "Utils.h"
 #include "SpFunctions.h"
+#include "InverseFiltering.h"
 #include "Filters.h"
 #include "SynthesisFunctions.h"
 
@@ -41,7 +42,7 @@ gsl::vector GetSinglePulse(const size_t &pulse_len, const double &energy, const 
 void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vector *excitation_signal) {
 
    gsl::vector single_pulse_base;
-  gsl::random_generator rand_gen;
+   gsl::random_generator rand_gen;
 
    gsl::gaussian_random gauss_gen(rand_gen);
 
@@ -107,8 +108,59 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
          sample_index += params.frame_shift;
       }
    }
+}
 
 
+
+
+void SpectralMatchExcitation(const Param &params,const SynthesisData &data, gsl::vector *excitation_signal) {
+   /* Get analysis filters for generated excitation */
+   size_t frame_index;
+   gsl::vector frame(params.frame_length);
+   gsl::vector a_gen(params.lpc_order_glot+1);
+   gsl::vector a_tar(params.lpc_order_glot+1);
+   gsl::vector w;
+   gsl::matrix poly_glot_generated(params.lpc_order_glot+1, params.number_of_frames);
+   for(frame_index=0;frame_index<(size_t)params.number_of_frames;frame_index++) {
+      GetFrame(*excitation_signal,frame_index,params.frame_shift,&frame,NULL);
+      ApplyWindowingFunction(params.default_windowing_function,&frame);
+      //LPC(frame,params.lpc_order_glot,&A);
+      ArAnalysis(params.lpc_order_glot, 0.0, NONE, w, frame, &a_gen);
+      poly_glot_generated.set_col_vec(frame_index,a_gen);
+   }
+
+   /* Spectral match excitation */
+   gsl::vector excitation_orig(excitation_signal->size());
+   excitation_orig.copy(*excitation_signal);
+
+   int sample_index,i;
+   int previous_frame_index = -1;
+   double gain = 1.0, sum;
+   for(sample_index=0;sample_index<(int)excitation_signal->size();sample_index++) {
+      frame_index = rint(params.speed_scale * sample_index / (params.signal_length-1) * (params.number_of_frames-1));
+      if((int)frame_index != previous_frame_index) { //TODO: interpolation of parameters between frames according to update_interval
+         a_gen = data.poly_glot.get_col_vec(frame_index);
+         a_tar = poly_glot_generated.get_col_vec(frame_index);
+         gain = GetFilteringGain(a_gen, a_tar, *excitation_signal, sample_index, params.frame_length, 0.0); // Should this be from ecitation_signal or excitation_orig?
+         //gain = a_tar.norm2()/a_gen.norm2(); // Experimental gain normalization term
+         a_tar(0) = 0.0;
+      }
+      sum = 0.0;
+      for(i=0;i<GSL_MIN(params.lpc_order_glot+1,sample_index);i++) {
+         sum += excitation_orig(sample_index-i)*a_gen(i)*gain - (*excitation_signal)(sample_index-i)*a_tar(i);
+      }
+      (*excitation_signal)(sample_index) = sum;
+      previous_frame_index = frame_index;
+   }
 
 }
+
+
+
+
+
+
+
+
+
 

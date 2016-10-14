@@ -40,6 +40,7 @@ void OverlapAdd(const gsl::vector &frame, const size_t center_index, gsl::vector
 double getMean(const gsl::vector &vec);
 double getMeanF0(const gsl::vector &fundf);
 double getEnergy(const gsl::vector &vec);
+double getSquareSum(const gsl::vector &vec);
 double LogEnergy2FrameEnergy(const double &log_energy, const size_t frame_size);
 double FrameEnergy2LogEnergy(const double &frame_energy, const size_t frame_size);
 double Skewness(const gsl::vector &data);
@@ -49,5 +50,7 @@ void StabilizePoly(const int &fft_length, gsl::vector *A);
 gsl::vector_int LinspaceInt(const int &start_val, const int &hop_val,const int &end_val);
 void Linear2Erb(const gsl::vector &linvec, const int &fs, gsl::vector *erbvec);
 int GetFrame(const gsl::vector &signal, const int &frame_index, const int &frame_shift,gsl::vector *frame, gsl::vector *pre_frame);
-
+double GetFilteringGain(const gsl::vector &b, const gsl::vector &a,
+                        const gsl::vector &signal, const size_t &center_index,
+                        const size_t &frame_length, const double &warping_lambda);
 #endif /* SRC_GLOTT_SPFUNCTIONS_H_ */
