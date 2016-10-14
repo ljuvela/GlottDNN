@@ -4,6 +4,7 @@
 #include "definitions.h"
 
 int ReadWavFile(const char *fname, gsl::vector *signal, Param *params);
+int WriteWavFile(const char *basename, const char *extension, const gsl::vector &signal, const int &fs);
 int ReadGslVector(const char *filename, const DataType format, gsl::vector *vector_ptr);
 int ReadGslVector(const char *basename, const char *extension, const DataType format, gsl::vector *vector_ptr);
 int ReadGslMatrix(const char *filename, const DataType format, const size_t n_rows,  gsl::matrix *matrix_ptr);

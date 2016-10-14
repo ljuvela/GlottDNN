@@ -111,6 +111,106 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
 }
 
 
+void HarmonicModification(const Param &params, const SynthesisData &data, gsl::vector *excitation_signal) {
+   std::cout << "HNR modification ...";
+
+
+   /* Variables */
+   int hnr_channels = params.hnr_order;
+   gsl::vector frame(params.frame_length_long);
+   ComplexVector frame_fft;
+   size_t NFFT = 8192; // Long FFT
+   double MIN_LOG_POWER = -60.0;
+   gsl::vector fft_mag(NFFT/2+1);
+   gsl::vector fft_phase(NFFT/2+1);
+
+   gsl::vector_int harmonic_index;
+   gsl::vector hnr_values;
+
+   gsl::vector_int x_interp = LinspaceInt(0, 1,fft_mag.size()-1);
+
+   gsl::vector hnr_interp(fft_mag.size());
+   gsl::vector hnr_erb(hnr_channels);
+   gsl::vector hnr_diff(fft_mag.size());
+
+   gsl::random_generator rand_gen;
+   gsl::gaussian_random random_gauss_gen(rand_gen);
+   gsl::vector noise_vec(fft_mag.size());
+   gsl::vector excitation_orig(*excitation_signal);
+   excitation_signal->set_all(0.0);
+
+   int frame_index,i, ind1, ind2;
+   double val;
+   for(frame_index=0;frame_index<params.number_of_frames;frame_index++) {
+      /** HNR modification only in voiced frames **/
+      if(data.fundf(frame_index) > 0) {
+         GetFrame(excitation_orig, frame_index, rint(params.frame_shift/params.speed_scale), &frame, NULL);
+         ApplyWindowingFunction(COSINE, &frame);
+         FFTRadix2(frame, NFFT, &frame_fft);
+         fft_mag = frame_fft.getAbs();
+         fft_phase = frame_fft.getAng();
+
+         for(i=0;i<(int)fft_mag.size();i++) {
+            val = 20*log10(fft_mag(i));
+            fft_mag(i) = GSL_MAX(val,MIN_LOG_POWER); // Min log-power = -60dB
+         }
+         harmonic_index = FindHarmonicPeaks(fft_mag, data.fundf(frame_index), params.fs);
+         hnr_values = gsl::vector(harmonic_index.size());
+         for(i=0;i<(int)harmonic_index.size();i++) {
+
+            /* Lower spectral valley */
+            if(i>0) {
+               ind1 = (harmonic_index(i)+harmonic_index(i-1))/2;
+            } else {
+               ind1 = harmonic_index(i)/2;
+            }
+            /* Upper spectral valley */
+            if(i==(int)harmonic_index.size()-1) {
+               ind2 = (harmonic_index(i)+fft_mag.size()-1)/2;
+            } else {
+               ind2 = (harmonic_index(i)+harmonic_index(i+1))/2;
+            }
+            val = (fft_mag(ind1) + fft_mag(ind2))/2.0;
+            hnr_values(i) = val - fft_mag(harmonic_index(i)); // Actually Noise-to-Harmonic ratio
+         }
+
+         /* Get FFT length HNR estimates */
+         InterpolateLinear(harmonic_index, hnr_values, x_interp, &hnr_interp);
+         Linear2Erb(hnr_interp, params.fs, &hnr_erb);
+
+         /* Difference in erb space */
+         hnr_erb -= data.hnr_glot.get_col_vec(frame_index);
+         hnr_erb *= -1.0;
+         Erb2Linear(hnr_erb, params.fs, &hnr_diff);
+         // Modify magnitude
+         for(i=0;i<fft_mag.size();i++)
+            noise_vec(i) = random_gauss_gen.get();
+
+         noise_vec *= noise_vec.size()/getEnergy(noise_vec);
+
+         for(i=0;i<fft_mag.size();i++) {
+            //fft_mag(i) = pow(10,fft_mag(i)/20.0); // Convert to linear scale
+            if(hnr_diff(i) > 0) {
+               //fft_mag(i) *= noise_vec(i)*pow(10,hnr_diff(i)/20.0);
+               //frame_fft.setReal(i,frame_fft.getReal(i)*noise_vec(i)*pow(10,hnr_diff(i)/20.0));
+               //frame_fft.setImag(i,frame_fft.getImag(i)*noise_vec(i)*pow(10,hnr_diff(i)/20.0));
+               //double val = noise_vec(i)*pow(10,hnr_diff(i)/20.0);
+               //std::cout << val << std::endl;
+            }
+         }
+         IFFTRadix2(frame_fft,&frame);
+         ApplyWindowingFunction(COSINE, &frame);
+         frame /= 0.5*(double)frame.size()/(double)params.frame_shift;
+
+         OverlapAdd(frame,frame_index*rint(params.frame_shift/params.speed_scale),excitation_signal);
+
+         //
+      }
+   }
+   std::cout << " done." << std::endl;
+}
+
+
 
 
 void SpectralMatchExcitation(const Param &params,const SynthesisData &data, gsl::vector *excitation_signal) {
@@ -119,14 +219,18 @@ void SpectralMatchExcitation(const Param &params,const SynthesisData &data, gsl:
    gsl::vector frame(params.frame_length);
    gsl::vector a_gen(params.lpc_order_glot+1);
    gsl::vector a_tar(params.lpc_order_glot+1);
+   gsl::vector lsf_gen(params.lpc_order_glot);
+   gsl::vector lsf_tar_interpolated(params.lpc_order_glot);
+   gsl::vector lsf_gen_interpolated(params.lpc_order_glot);
    gsl::vector w;
-   gsl::matrix poly_glot_generated(params.lpc_order_glot+1, params.number_of_frames);
+   gsl::matrix lsf_glot_generated(params.lpc_order_glot, params.number_of_frames);
    for(frame_index=0;frame_index<(size_t)params.number_of_frames;frame_index++) {
-      GetFrame(*excitation_signal,frame_index,params.frame_shift,&frame,NULL);
+      GetFrame(*excitation_signal,frame_index,rint(params.frame_shift/params.speed_scale),&frame,NULL);
       ApplyWindowingFunction(params.default_windowing_function,&frame);
       //LPC(frame,params.lpc_order_glot,&A);
       ArAnalysis(params.lpc_order_glot, 0.0, NONE, w, frame, &a_gen);
-      poly_glot_generated.set_col_vec(frame_index,a_gen);
+      Poly2Lsf(a_gen,&lsf_gen);
+      lsf_glot_generated.set_col_vec(frame_index,lsf_gen);
    }
 
    /* Spectral match excitation */
@@ -134,15 +238,17 @@ void SpectralMatchExcitation(const Param &params,const SynthesisData &data, gsl:
    excitation_orig.copy(*excitation_signal);
 
    int sample_index,i;
-   int previous_frame_index = -1;
-   double gain = 1.0, sum;
+   double gain = 1.0, sum, frame_index_double;
+   int UPDATE_INTERVAL = rint(params.fs*0.005); // Hard-coded 5ms update interval
    for(sample_index=0;sample_index<(int)excitation_signal->size();sample_index++) {
-      frame_index = rint(params.speed_scale * sample_index / (params.signal_length-1) * (params.number_of_frames-1));
-      if((int)frame_index != previous_frame_index) { //TODO: interpolation of parameters between frames according to update_interval
-         a_gen = data.poly_glot.get_col_vec(frame_index);
-         a_tar = poly_glot_generated.get_col_vec(frame_index);
-         gain = GetFilteringGain(a_gen, a_tar, *excitation_signal, sample_index, params.frame_length, 0.0); // Should this be from ecitation_signal or excitation_orig?
-         //gain = a_tar.norm2()/a_gen.norm2(); // Experimental gain normalization term
+
+      if(sample_index % UPDATE_INTERVAL == 0) { //TODO: interpolation of parameters between frames according to update_interval
+         frame_index_double = params.speed_scale * sample_index / (params.signal_length-1) * (params.number_of_frames-1);
+         InterpolateLinear(lsf_glot_generated,frame_index_double,&lsf_gen_interpolated);
+         InterpolateLinear(data.lsf_glot,frame_index_double,&lsf_tar_interpolated);
+         Lsf2Poly(lsf_gen_interpolated,&a_gen);
+         Lsf2Poly(lsf_tar_interpolated,&a_tar);
+         gain = GetFilteringGain(a_gen, a_tar, excitation_orig, sample_index, params.frame_length, 0.0); // Should this be from ecitation_signal or excitation_orig?
          a_tar(0) = 0.0;
       }
       sum = 0.0;
@@ -150,13 +256,39 @@ void SpectralMatchExcitation(const Param &params,const SynthesisData &data, gsl:
          sum += excitation_orig(sample_index-i)*a_gen(i)*gain - (*excitation_signal)(sample_index-i)*a_tar(i);
       }
       (*excitation_signal)(sample_index) = sum;
-      previous_frame_index = frame_index;
    }
 
 }
 
 
+void FilterExcitation(const Param &params, const SynthesisData &data, gsl::vector *signal) {
 
+   int sample_index,i;
+   double gain = 1.0, sum, frame_index_double;
+   gsl::vector lsf_interp(params.lpc_order_vt);
+   gsl::vector a_interp(params.lpc_order_vt+1);
+   gsl::vector B(1);B(0)=1.0;
+   int UPDATE_INTERVAL = rint(params.fs*0.005); // Hard-coded 5ms update interval
+   signal->copy(data.excitation_signal);
+
+   for(sample_index=0;sample_index<(int)signal->size();sample_index++) {
+
+      if(sample_index % UPDATE_INTERVAL == 0) {
+         frame_index_double = params.speed_scale * sample_index / (params.signal_length-1) * (params.number_of_frames-1);
+         InterpolateLinear(data.lsf_vocal_tract,frame_index_double,&lsf_interp);
+         Lsf2Poly(lsf_interp,&a_interp);
+         gain = GetFilteringGain(B, a_interp, data.excitation_signal, sample_index, params.frame_length, params.warping_lambda_vt); // Should this be from ecitation_signal or excitation_orig?
+         //a_interp(0) = 0.0;
+      }
+      sum = data.excitation_signal(sample_index)*gain;
+      for(i=1;i<GSL_MIN(params.lpc_order_vt+1,sample_index);i++) {
+         sum -=  (*signal)(sample_index-i)*a_interp(i);
+      }
+      (*signal)(sample_index) = sum;
+   }
+
+
+}
 
 
 

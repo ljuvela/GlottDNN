@@ -73,6 +73,8 @@ public:
 
 	void resize(size_t n);
 
+	// FIXME: what?
+
 	template <class oclass>
 		void copy(const oclass &other)
 		{
@@ -90,6 +92,7 @@ public:
 				gsl_vector_set(gsldata, i, (double)other[i]);
 			}
 		}
+
 	void copy(const vector& other);
 	bool is_set() const{if (gsldata) return true; else return false;}
 //	void clone(vector& other);
