@@ -1132,3 +1132,56 @@ int GetFrame(const gsl::vector &signal, const int &frame_index, const int &frame
 	return EXIT_SUCCESS;
 }
 
+double getSquareSum(const gsl::vector &vec) {
+   double sum = 0.0;
+   size_t i;
+   for(i=0; i<vec.size(); i++) {
+      sum += vec(i)*vec(i);
+   }
+   return sum;
+}
+
+
+double GetFilteringGain(const gsl::vector &b, const gsl::vector &a,
+                        const gsl::vector &signal, const size_t &center_index,
+                        const size_t &frame_length, const double &warping_lambda) {
+
+/* Initialize */
+	int i,j,k;
+	int p = GSL_MAX(a.size(),b.size());
+
+	gsl::vector frame(frame_length);
+	gsl::vector pre_frame(p);
+	gsl::vector frame_full(frame_length + p);
+
+	/* Get samples to frame */
+	int offset = (int)frame_length/2;
+	for(i=0; i<(int)frame_length; i++){
+		k = (int)center_index-offset+i ;
+		if (k >= 0 && k<(int)signal.size())
+			frame(i) =  signal(k);
+	}
+
+	/* Get pre-frame samples for smooth filtering */
+	for(i=0; i<p; i++) {
+		k = center_index-offset-p+i;
+		if(k >= 0 && k<(int)signal.size())
+			pre_frame(i) = signal(k);
+	}
+
+	ConcatenateFrames(pre_frame,frame,&frame_full);
+
+	/* Filter */
+	gsl::vector result(frame_length);
+
+	if(warping_lambda == 0.0)
+      Filter(b,a,frame_full,&result);
+   else
+      WFilter(b,a,frame_full,warping_lambda,&result);
+
+	return getEnergy(frame) * (double)fmin(1/getEnergy(result),50.0); // prevent large values from divide by zero
+
+
+}
+
+

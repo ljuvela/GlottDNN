@@ -68,6 +68,9 @@ int main(int argc, char *argv[]) {
 
    CreateExcitation(params, data, &(data.excitation_signal));
 
+   //SpectralMatchExcitation(params, data, (&data.excitation_signal));
+
+
    VPrint1(data.excitation_signal);
 
 
