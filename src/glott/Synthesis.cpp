@@ -24,6 +24,7 @@
 
 #include <vector>
 #include <gslwrap/vector_double.h>
+#include <gslwrap/vector_int.h>
 
 #include "Filters.h"
 #include "definitions.h"
@@ -69,6 +70,9 @@ int main(int argc, char *argv[]) {
    CreateExcitation(params, data, &(data.excitation_signal));
 
    VPrint1(data.excitation_signal);
+
+   if(WriteWavFile(filename, "exc.wav", data.excitation_signal, params.fs) == EXIT_FAILURE)
+       return EXIT_FAILURE;
 
 
    std::cout << "Finished synthesis" << std::endl;

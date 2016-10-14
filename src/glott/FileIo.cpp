@@ -34,6 +34,34 @@ void create_file (const char * fname, int format)
 	*/
 } /* create_file */
 
+int WriteWavFile(const char *basename, const char *extension, const gsl::vector &signal, const int &fs) {
+
+   /* Filename processing */
+   std::string fname_str;
+   fname_str += basename;
+   fname_str += extension;
+   std::cout << "Writing file " << fname_str  << std::endl;
+
+   /* Filename processing */
+   SndfileHandle file ;
+   int channels = 1;
+   file = SndfileHandle(fname_str.c_str(), SFM_WRITE, SF_FORMAT_WAV | SF_FORMAT_PCM_16, channels, fs) ;
+   if (file.error()) {
+      std::cerr << "Error: Failed to open file: " << fname_str.c_str() << std::endl;
+      return EXIT_FAILURE;
+   }
+
+   /* Create buffer and write signal to file */
+   double *buffer = new double[signal.size()];
+   size_t i;
+   for(i=0;i<signal.size();i++)
+      buffer[i] = signal(i);
+   file.write(buffer, signal.size());
+   delete[] buffer;
+
+   return EXIT_SUCCESS;
+}
+
 int ReadWavFile (const char *fname, gsl::vector *signal, Param *params) {
 
 	SndfileHandle file ;
