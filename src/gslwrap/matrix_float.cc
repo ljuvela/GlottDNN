@@ -106,14 +106,6 @@ ostream& operator<< ( ostream& os, const matrix_float & m )
 
    os.setf( ios::fixed );
 
-//FIXME for aCC (doesn't find correct outstream function
-//     for ( i = 0; i < m.get_rows(); i++ ) {
-//    	   for ( j = 0; j < m.get_cols() - 1; j++ ) {
-//  		   os << setprecision( 6 ) << setw( 11 ) ;//<< m.get_element( i, j ) << " ";
-//    	   }
-//    	   os << setprecision( 6 ) << setw( 11 ) ;//<< m.get_element( i, j ) << endl;
-//     }
-
    for ( i = 0; i < m.get_rows(); i++ ) {
 	   for ( j = 0; j < m.get_cols() - 1; j++ ) {
   		   os << m.get_element( i, j ) << " ";

@@ -10,6 +10,7 @@ enum DataType {ASCII, BINARY};
 enum SignalPolarity {POLARITY_DEFAULT, POLARITY_INVERT, POLARITY_DETECT};
 enum LpWeightingFunction {NONE, AME, STE};
 enum WindowingFunctionType {HANN, HAMMING, BLACKMAN, COSINE};
+enum ExcitationMethod {SINGLE_PULSE_EXCITATION, DNN_GENERATED_EXCITATION, PULSES_AS_FEATURES_EXCITATION};
 
 /* Structures */
 struct Param {
@@ -62,7 +63,10 @@ public:
 	double voicing_threshold;
    double zcr_threshold;
    double relative_f0_threshold;
+   double speed_scale;
+   double pitch_scale;
    //double f0_check_range;
+   ExcitationMethod excitation_method;
 };
 
 
@@ -83,16 +87,40 @@ public:
 
 	gsl::matrix poly_vocal_tract;
 	gsl::matrix lsf_vocal_tract;
-	gsl::matrix poly_glott;
-	gsl::matrix lsf_glott;
+	gsl::matrix poly_glot;
+	gsl::matrix lsf_glot;
 	gsl::matrix excitation_pulses;
-   gsl::matrix hnr_glott;
+   gsl::matrix hnr_glot;
 
 
 	/* QMF analysis specific */
 	//gsl::matrix lsf_vt_qmf1;
 	//gsl::matrix lsf_vt_qmf2;
 	//gsl::vector gain_qmf;
+};
+
+/* Define analysis data variable struct*/
+struct SynthesisData {
+   SynthesisData();
+   ~SynthesisData();
+public:
+   gsl::vector signal;
+   gsl::vector fundf;
+   gsl::vector frame_energy;
+   gsl::vector excitation_signal;
+  // gsl::vector excitation_pulse;
+
+   gsl::matrix poly_vocal_tract;
+   gsl::matrix lsf_vocal_tract;
+   gsl::matrix poly_glot;
+   gsl::matrix lsf_glot;
+   gsl::matrix excitation_pulses;
+   gsl::matrix hnr_glot;
+
+   /* QMF analysis specific */
+   //gsl::matrix lsf_vt_qmf1;
+   //gsl::matrix lsf_vt_qmf2;
+   //gsl::vector gain_qmf;
 };
 
 

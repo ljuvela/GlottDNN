@@ -9,7 +9,7 @@
 #include "InverseFiltering.h"
 #include "PitchEstimation.h"
 #include "AnalysisFunctions.h"
-#include "DebugUtils.h"
+#include "Utils.h"
 #include "Filters.h"
 #include "QmfFunctions.h"
 
@@ -71,17 +71,34 @@ int GetF0(const Param &params, const gsl::vector &signal, const gsl::vector &sou
       gsl::vector signal_frame = gsl::vector(params.frame_length);
       gsl::vector glottal_frame = gsl::vector(2*params.frame_length); // Longer frame
       int frame_index;
+      double ff;
+      gsl::vector candidates(3);
       for(frame_index=0;frame_index<params.number_of_frames;frame_index++) {
+
          GetFrame(signal, frame_index,params.frame_shift, &signal_frame, NULL);
          GetFrame(source_signal_iaif, frame_index, params.frame_shift, &glottal_frame, NULL);
          double ff;
          gsl::vector candidates(3);
+
          FundamentalFrequency(params, glottal_frame, signal_frame, &ff, &candidates);
          (*fundf)(frame_index) = ff;
-        // std::cout << ff << std::endl ;
       }
 
-        //std::cout  << *fundf << std::endl;
+//
+//      /* Copy original F0 */
+//      gsl_vector *fundf_orig = gsl_vector_alloc(fundf->size);
+//      gsl_vector_memcpy(fundf_orig,fundf);
+//
+//      /* Process */
+//      MedFilt3(fundf);
+//      Fill_f0_gaps(fundf, params);
+//      Fundf_postprocessing(fundf, fundf_orig, fundf_candidates, params);
+//      MedFilt3(fundf);
+//      Fill_f0_gaps(fundf, params);
+//      Fundf_postprocessing(fundf, fundf_orig, fundf_candidates, params);
+//      MedFilt3(fundf);
+
+
 	}
 	std::cout << " done." << std::endl;
 	return EXIT_SUCCESS;
@@ -142,8 +159,7 @@ int GetGain(const Param &params, const gsl::vector &signal, gsl::vector *gain_pt
 		if(frame_energy == 0.0)
 			frame_energy =+ DBL_MIN;
 
-		// gain(frame_index) = (double)20.0*log10(frame_energy/((double)frame.size()));
-		gain(frame_index) = (double)20.0*log10(frame_energy/((double)frame.size() * E_REF)); // compatiblility with GlottHMM
+		gain(frame_index) = FrameEnergy2LogEnergy(frame_energy,frame.size());
 	}
 	*gain_ptr = gain;
 	return EXIT_SUCCESS;

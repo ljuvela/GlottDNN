@@ -1,7 +1,16 @@
 #include <gslwrap/vector_double.h>
-
+#include <vector>
 #include "definitions.h"
-#include "DebugUtils.h"
+#include "Utils.h"
+
+gsl::vector StdVector2GslVector(const std::vector<double> &stdvec) {
+   gsl::vector gslvec(stdvec.size());
+   size_t i;
+   for(i=0;i<gslvec.size();i++)
+      gslvec(i) = stdvec[i];
+
+   return gslvec;
+}
 
 /*********************************************************************/
 /*                       TEST FUNCTIONS                              */

@@ -7,7 +7,7 @@
 
 namespace Qmf {
 
-gsl::vector LoadFilter(const std::vector<double> &saved_filter);
+gsl::vector LoadFilter(const std::vector<double> &saved_filter); // TODO: StdVector2GslVector
 
 gsl::vector GetMatchingFilter(const gsl::vector &H0);
 

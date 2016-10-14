@@ -145,7 +145,14 @@ int ReadGslVector(const char *filename, const DataType format, gsl::vector *vect
 	return EXIT_SUCCESS;
 }
 
-int ReadGslMatrix(const char *filename, const DataType format, const size_t n_rows,  gsl::matrix *matrix_ptr){
+int ReadGslVector(const char *basename, const char *extension, const DataType format, gsl::vector *vector_ptr) {
+   std::string filename;
+   filename += basename;
+   filename += extension;
+   return ReadGslVector(filename.c_str(), format, vector_ptr);
+}
+
+int ReadGslMatrix(const char *filename, const DataType format, const size_t n_rows,  gsl::matrix *matrix_ptr) {
 	/* Get file length */
 	int size;
 	size = EvalFileLength(filename, format);
@@ -158,8 +165,8 @@ int ReadGslMatrix(const char *filename, const DataType format, const size_t n_ro
 	}
 	size_t n_cols = size/n_rows;
 
-	/* Allocate vector */
-	*(matrix_ptr) = gsl::matrix(n_rows, n_cols);
+	/* Read in transposed matrix */
+	gsl::matrix matrix_temp(n_cols, n_rows);
 
 	FILE *inputfile = NULL;
 	inputfile = fopen(filename, "r");
@@ -168,13 +175,22 @@ int ReadGslMatrix(const char *filename, const DataType format, const size_t n_ro
 		return EXIT_FAILURE;
 	}
 	if(format == ASCII) {
-		matrix_ptr->fscanf(inputfile);
+		matrix_temp.fscanf(inputfile);
 	} else if(format == BINARY) {
-		matrix_ptr->fread(inputfile);
+		matrix_temp.fread(inputfile);
 	}
 	fclose(inputfile);
 
+	*matrix_ptr = matrix_temp.transpose();
+
 	return EXIT_SUCCESS;
+}
+
+int ReadGslMatrix(const char *basename, const char *extension, const DataType format, const size_t n_rows,  gsl::matrix *matrix_ptr) {
+   std::string filename;
+   filename += basename;
+   filename += extension;
+   return ReadGslMatrix(filename.c_str(), format, n_rows, matrix_ptr);
 }
 
 int WriteGslVector(const char *basename, const char *extension, const DataType &format, const gsl::vector &vector) {
@@ -235,3 +251,40 @@ int WriteGslMatrix(const char *basename, const char *extension, const DataType &
    return EXIT_SUCCESS;
 }
 
+int ReadSynthesisData(const char *basename, Param *params, SynthesisData *data) {
+
+   if (ReadGslVector(basename, ".F0", params->data_type, &(data->fundf)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
+   if (ReadGslVector(basename, ".Gain", params->data_type, &(data->frame_energy)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
+   if (ReadGslMatrix(basename, ".LSF", params->data_type, params->lpc_order_vt, &(data->lsf_vocal_tract)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
+   if (1) // TODO: add conditional
+      if (ReadGslMatrix(basename, ".LSFsource", params->data_type, params->lpc_order_glot, &(data->lsf_glot)) == EXIT_FAILURE)
+         return EXIT_FAILURE;
+
+   if (1) // TODO: add conditional
+      if (ReadGslMatrix(basename, ".HNR", params->data_type, params->hnr_order, &(data->hnr_glot)) == EXIT_FAILURE)
+         return EXIT_FAILURE;
+
+   /* Read number of frames & compute signal length */
+   params->number_of_frames = (int)(data->fundf.size());
+   if(params->number_of_frames != data->frame_energy.size() ||
+      params->number_of_frames != data->lsf_vocal_tract.get_cols() ||
+      params->number_of_frames != data->lsf_glot.get_cols() ||
+      params->number_of_frames != data->hnr_glot.get_cols() ) {
+
+      std::cerr << "Error: Number of frames in input files do not match." << std::endl;
+      return EXIT_FAILURE;
+   }
+
+   params->signal_length = rint(params->number_of_frames * params->frame_shift/params->speed_scale);
+   data->signal = gsl::vector(params->signal_length,true);
+   data->excitation_signal = gsl::vector(params->signal_length,true);
+
+   return EXIT_SUCCESS;
+
+}
