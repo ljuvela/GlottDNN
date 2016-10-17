@@ -58,4 +58,5 @@ int GetFrame(const gsl::vector &signal, const int &frame_index, const int &frame
 double GetFilteringGain(const gsl::vector &b, const gsl::vector &a,
                         const gsl::vector &signal, const size_t &center_index,
                         const size_t &frame_length, const double &warping_lambda);
+void SharpenPowerSpectrumPeaks(const gsl::vector_int &peak_indices, const double &gamma, const int &power_spectrum_win, gsl::vector *fft_pow);
 #endif /* SRC_GLOTT_SPFUNCTIONS_H_ */

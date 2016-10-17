@@ -64,6 +64,8 @@ Param::Param() {
 	relative_f0_threshold = 0.005;
 	speed_scale = 1.0;
 	pitch_scale = 1.0;
+	use_postfiltering = false;
+	postfilter_coefficient = 0.4;
 }
 
 Param::~Param() {

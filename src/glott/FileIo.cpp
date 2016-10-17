@@ -307,10 +307,10 @@ int ReadSynthesisData(const char *basename, Param *params, SynthesisData *data) 
 
    /* Read number of frames & compute signal length */
    params->number_of_frames = (int)(data->fundf.size());
-   if(params->number_of_frames != data->frame_energy.size() ||
-      params->number_of_frames != data->lsf_vocal_tract.get_cols() ||
-      params->number_of_frames != data->lsf_glot.get_cols() ||
-      params->number_of_frames != data->hnr_glot.get_cols() ) {
+   if(params->number_of_frames != (int)data->frame_energy.size() ||
+      params->number_of_frames != (int)data->lsf_vocal_tract.get_cols() ||
+      params->number_of_frames != (int)data->lsf_glot.get_cols() ||
+      params->number_of_frames != (int)data->hnr_glot.get_cols() ) {
 
       std::cerr << "Error: Number of frames in input files do not match." << std::endl;
       return EXIT_FAILURE;

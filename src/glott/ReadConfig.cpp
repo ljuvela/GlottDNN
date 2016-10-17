@@ -193,6 +193,12 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
    if (ConfigLookupDouble("PITCH_SCALE", cfg, default_config, &(params->pitch_scale)) == EXIT_FAILURE)
          return EXIT_FAILURE;
 
+   if (ConfigLookupDouble("POSTFILTER_COEFFICIENT", cfg, default_config, &(params->postfilter_coefficient)) == EXIT_FAILURE)
+         return EXIT_FAILURE;
+
+   if (ConfigLookupBool("USE_POSTFILTERING", cfg, default_config, &(params->use_postfiltering)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
    //if (ConfigLookupDouble("F0_CHECK_RANGE", cfg, default_config, &(params->f0_check_range)) == EXIT_FAILURE)
    //      return EXIT_FAILURE;
 

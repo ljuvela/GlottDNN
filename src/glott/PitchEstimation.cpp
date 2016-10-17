@@ -100,7 +100,7 @@ void FundamentalFrequency(const Param &params, const gsl::vector &glottal_frame,
    // signal_frame: short speech frame
 
    size_t i,n;
-   double r_max;
+   //double r_max;
    gsl::vector_int max_inds(NUMBER_OF_F0_CANDIDATES);
    gsl::vector_int max_inds_interp(NUMBER_OF_F0_CANDIDATES);
 
@@ -135,11 +135,11 @@ void FundamentalFrequency(const Param &params, const gsl::vector &glottal_frame,
       r(i) = 0.0;
 
    /* Clear samples descending from the end-points */
-   size_t ind = rint(params.fs/params.f0_max);
+   int ind = rint(params.fs/params.f0_max);
    while(r(ind)-r(ind+1) > 0) {
       r(ind) = 0.0;
       ind++;
-      if(ind+1>r.size()-1)
+      if(ind+1>(int)r.size()-1)
          break;
    }
    ind = rint(params.fs/params.f0_min)-1;
@@ -183,7 +183,7 @@ void FundamentalFrequency(const Param &params, const gsl::vector &glottal_frame,
       while(r(ind)-r(ind+1) > 0) {
          r(ind) = 0.0;
          ind++;
-         if(ind+1>r.size()-1) {
+         if(ind+1>(int)r.size()-1) {
             break;
          }
       }

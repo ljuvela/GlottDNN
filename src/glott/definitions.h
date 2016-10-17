@@ -65,6 +65,8 @@ public:
    double relative_f0_threshold;
    double speed_scale;
    double pitch_scale;
+   bool use_postfiltering;
+   double postfilter_coefficient;
    //double f0_check_range;
    ExcitationMethod excitation_method;
 };

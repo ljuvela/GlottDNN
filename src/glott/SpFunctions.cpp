@@ -244,8 +244,9 @@ void Interpolate(const gsl::vector &vector, gsl::vector *i_vector) {
    int i,len = vector.size(),length = i_vector->size();
 
    /* Read values to array */
-   double x[len];
-   double y[len];
+   double *x = new double[len];
+   double *y = new double[len];
+
    for(i=0; i<len; i++) {
       x[i] = i;
       y[i] = vector(i);
@@ -270,6 +271,8 @@ void Interpolate(const gsl::vector &vector, gsl::vector *i_vector) {
     /* Free memory */
     gsl_spline_free(spline);
    gsl_interp_accel_free(acc);
+   delete[] x;
+   delete[] y;
 }
 
 void InterpolateNearest(const gsl::vector &vector, const size_t interpolated_size, gsl::vector *i_vector) {
@@ -750,7 +753,7 @@ gsl::vector Conv(const gsl::vector &conv1, const gsl::vector &conv2) {
    }
 
    /* FIR-filter (Convolution) */
-   for(i=0;i<temp.size();i++) {
+   for(i=0;i<(int)temp.size();i++) {
       for(j=0; j<=GSL_MIN(i,n-1); j++) {
          result(i) += temp(i-j) * conv2(j);
       }
@@ -808,12 +811,12 @@ void Lsf2Poly(const gsl::vector &lsf_vec, gsl::vector *poly_vec) {
    gsl::vector P(1); P(0)=1.0;
    gsl::vector Q(1); Q(0)=1.0;
 
-   for(i=0;i<fi_p.size();i++) {
+   for(i=0;i<(int)fi_p.size();i++) {
       cp(1) = -2*cos(fi_p(i));
       P = Conv(P,cp);
    }
    if((l-1)/2 > 0) {
-      for(i=0;i<fi_q.size();i++) {
+      for(i=0;i<(int)fi_q.size();i++) {
          cq(1) = -2*cos(fi_q(i));
          Q = Conv(Q,cq);
       }
@@ -834,7 +837,7 @@ void Lsf2Poly(const gsl::vector &lsf_vec, gsl::vector *poly_vec) {
    }
 
    /* Construct polynomial */
-   for(i=1;i<P.size();i++) {
+   for(i=1;i<(int)P.size();i++) {
       (*poly_vec)(P.size()-i-1)  = 0.5*(P(i)+Q(i));
    }
 }
@@ -1259,11 +1262,11 @@ void Erb2Linear(const gsl::vector &vector_erb, const int &fs,  gsl::vector *vect
    gsl::vector erb(vector_lin->size());
 
    /* Evaluate ERB scale indices for vector */
-   for(i=0;i<vector_lin->size();i++)
+   for(i=0;i<(int)vector_lin->size();i++)
       erb(i) = log10(0.00437*(i/(vector_lin->size()-1.0)*(fs/2.0))+1.0)/log10(0.00437*(fs/2.0)+1.0)*(hnr_channels-SMALL_VALUE);
 
    /* Evaluate values according to ERB rate, smooth */
-   for(i=0;i<vector_lin->size();i++) {
+   for(i=0;i<(int)vector_lin->size();i++) {
       j = floor(erb(i));
       (*vector_lin)(i) = vector_erb(j);
    }
@@ -1318,7 +1321,7 @@ double GetFilteringGain(const gsl::vector &b, const gsl::vector &a,
                         const size_t &frame_length, const double &warping_lambda) {
 
 /* Initialize */
-	int i,j,k;
+	int i,k;
 	int p = GSL_MAX(a.size(),b.size());
 
 	gsl::vector frame(frame_length);
@@ -1354,5 +1357,41 @@ double GetFilteringGain(const gsl::vector &b, const gsl::vector &a,
 
 
 }
+
+
+void SharpenPowerSpectrumPeaks(const gsl::vector_int &peak_indices, const double &gamma, const int &power_spectrum_win, gsl::vector *fft_pow) {
+   int i,j;
+
+   //int POWER_SPECTRUM_WIN = 20;
+   int n = (int)peak_indices.size();
+	/* Nonlinearity in power reduction depending on the width of the valley */
+	//double l = 150.0;
+	//double d = 40.0;
+	//double add = 0.5 + gamma;
+	//double c = 0.5;
+	//int dist;
+	//double mod;
+
+	/* Modify spectrum between zero and the first peak */
+	//dist = peak_indices(0);
+	//mod = c*(-1.0/(1.0 + exp((-dist+l)/d))) + add;
+	for(i=0;i<peak_indices(0) - power_spectrum_win;i++)
+      (*fft_pow)(i) *= gamma;
+
+	/* Modify spectrum between the last formant and FS/2 */
+	//dist = floor(fft_pow->size()/2)-peak_indeces(n-1);
+	//mod = c*(-1.0/(1.0 + exp((-dist+l)/d))) + add;
+	for(i=peak_indices(n-1) + power_spectrum_win+1;i<(int)fft_pow->size()/2+1;i++)
+		(*fft_pow)(i) *= gamma;
+
+	/* Modify spectrum within a constant number of bins from the formant peaks */
+	for(i=0;i<n-1;i++) {
+	//	dist = peak_indices(i+1) - peak_indices(i);
+	//	mod = c*(-1.0/(1.0 + exp((-dist+l)/d))) + add;
+		for(j=peak_indices(i) + power_spectrum_win+1;j<peak_indices(i+1) - power_spectrum_win;j++)
+			(*fft_pow)(j) *= gamma;
+	}
+}
+
 
 

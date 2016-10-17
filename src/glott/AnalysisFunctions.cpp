@@ -77,7 +77,6 @@ int GetF0(const Param &params, const gsl::vector &signal, const gsl::vector &sou
 
          GetFrame(signal, frame_index,params.frame_shift, &signal_frame, NULL);
          GetFrame(source_signal_iaif, frame_index, params.frame_shift, &glottal_frame, NULL);
-         double ff;
          gsl::vector candidates(3);
 
          FundamentalFrequency(params, glottal_frame, signal_frame, &ff, &candidates);
@@ -136,7 +135,7 @@ int GetGci(const Param &params, const gsl::vector &signal, const gsl::vector &so
 int GetGain(const Param &params, const gsl::vector &signal, gsl::vector *gain_ptr) {
 
 
-   double E_REF = 0.00001;
+   //double E_REF = 0.00001;
 	gsl::vector frame = gsl::vector(params.frame_length);
 	gsl::vector gain = gsl::vector(params.number_of_frames);
 	int frame_index;
@@ -364,13 +363,14 @@ int InverseFilter(const Param &params, const AnalysisData &data, gsl::matrix *po
 
 int Find_nearest_pulse_index(const int &sample_index, const gsl::vector &gci_inds, const Param &params, const double &f0){
 
-   int i,j,k;
+   int j;
+   //int i,k;
    int pulse_index = -1; // Return value initialization
 
    int dist, min_dist, ppos;
    min_dist = INT_MAX;
    /* Find the shortest distance between sample index and gcis */
-   for(j=1;j<gci_inds.size()-1;j++){
+   for(j=1;j<(int)gci_inds.size()-1;j++){
       ppos = gci_inds(j);
       dist = abs(sample_index-ppos);
       if (dist > min_dist){
@@ -399,7 +399,7 @@ int Find_nearest_pulse_index(const int &sample_index, const gsl::vector &gci_ind
       /* Prevent illegal reads*/
       if (prev_index < 0)
          prev_index = 0;
-      if (next_index > gci_inds.size()-1)
+      if (next_index > (int)gci_inds.size()-1)
          next_index = gci_inds.size()-1;
 
       prev_gci = gci_inds(prev_index);
@@ -415,7 +415,7 @@ int Find_nearest_pulse_index(const int &sample_index, const gsl::vector &gci_ind
       }
 
       /* break if out of range */
-      if (new_pulse_index-1 < 0 || new_pulse_index+1 > gci_inds.size()-1) {
+      if (new_pulse_index-1 < 0 || new_pulse_index+1 > (int)gci_inds.size()-1) {
          break;
       } else {
          pulse_index = new_pulse_index;

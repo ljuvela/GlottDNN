@@ -16,7 +16,50 @@
 #include "Filters.h"
 #include "SynthesisFunctions.h"
 
+void PostFilter(const double &postfilter_coefficient, const int &fs, gsl::matrix *lsf) {
 
+
+   size_t POWER_SPECTRUM_FRAME_LEN = 4096;
+	size_t frame_index,i;
+	gsl::vector lsf_vec(lsf->get_rows());
+   gsl::vector poly_vec(lsf->get_rows()+1);
+   gsl::vector r(lsf->get_rows()+1);
+   ComplexVector poly_fft(POWER_SPECTRUM_FRAME_LEN/2+1);
+   gsl::vector fft_mag;
+   gsl::vector_int peak_indices;
+   gsl::vector peak_values;
+   int POWER_SPECTRUM_WIN = 20;//rint(20*16000/fs); // Originally hard-coded as 20 samples, should be fs adaptive?
+
+   std::cout << "Using LPC postfiltering with a coefficient of " << postfilter_coefficient << std::endl;
+
+	/* Loop for every index of the LSF matrix */
+	for(frame_index=0;frame_index<lsf->get_cols();frame_index++) {
+
+		/* Convert LSF to LPC */
+		Lsf2Poly(lsf->get_col_vec(frame_index),&poly_vec);
+
+		/* Compute power spectrum */
+		FFTRadix2(poly_vec,POWER_SPECTRUM_FRAME_LEN,&poly_fft);
+      fft_mag = poly_fft.getAbs();
+      for(i=0;i<fft_mag.size();i++)
+         fft_mag(i) = 1.0/pow(fft_mag(i),2);
+
+		/* Modification of the power spectrum */
+		FindPeaks(fft_mag, 0.0, &peak_indices, &peak_values);
+		SharpenPowerSpectrumPeaks(peak_indices, postfilter_coefficient, POWER_SPECTRUM_WIN, &fft_mag);
+
+		/* Construct autocorrelation r */
+		poly_fft.setReal(fft_mag);
+		poly_fft.setAllImag(0.0);
+      IFFTRadix2(poly_fft,&r);
+
+      Levinson(r, &poly_vec);
+
+		/* Convert LPC back to LSF */
+      Poly2Lsf(poly_vec,&lsf_vec);
+      lsf->set_col_vec(frame_index,lsf_vec);
+	}
+}
 
 gsl::vector GetSinglePulse(const size_t &pulse_len, const double &energy, const gsl::vector &base_pulse) {
 
@@ -46,7 +89,6 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
 
    gsl::gaussian_random gauss_gen(rand_gen);
 
-
    switch (params.excitation_method) {
    case SINGLE_PULSE_EXCITATION:
       single_pulse_base = StdVector2GslVector(kDGLOTPULSE) ;
@@ -58,7 +100,6 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
       // Load pulses as features
       break;
    }
-
 
    size_t sample_index = 0;
    size_t frame_index;
@@ -148,6 +189,7 @@ void HarmonicModification(const Param &params, const SynthesisData &data, gsl::v
          ApplyWindowingFunction(COSINE, &frame);
          FFTRadix2(frame, NFFT, &frame_fft);
          fft_mag = frame_fft.getAbs();
+
          fft_phase = frame_fft.getAng();
 
          for(i=0;i<(int)fft_mag.size();i++) {
@@ -183,12 +225,12 @@ void HarmonicModification(const Param &params, const SynthesisData &data, gsl::v
          hnr_erb *= -1.0;
          Erb2Linear(hnr_erb, params.fs, &hnr_diff);
          // Modify magnitude
-         for(i=0;i<fft_mag.size();i++)
+         for(i=0;i<(int)fft_mag.size();i++)
             noise_vec(i) = random_gauss_gen.get();
 
          noise_vec *= noise_vec.size()/getEnergy(noise_vec);
 
-         for(i=0;i<fft_mag.size();i++) {
+         for(i=0;i<(int)fft_mag.size();i++) {
             //fft_mag(i) = pow(10,fft_mag(i)/20.0); // Convert to linear scale
             if(hnr_diff(i) > 0) {
                //fft_mag(i) *= noise_vec(i)*pow(10,hnr_diff(i)/20.0);
@@ -214,7 +256,7 @@ void HarmonicModification(const Param &params, const SynthesisData &data, gsl::v
 
 
 void SpectralMatchExcitation(const Param &params,const SynthesisData &data, gsl::vector *excitation_signal) {
-   /* Get analysis filters for generated excitation */
+   /* Get analysis filters for synthetic excitation */
    size_t frame_index;
    gsl::vector frame(params.frame_length);
    gsl::vector a_gen(params.lpc_order_glot+1);
@@ -223,14 +265,14 @@ void SpectralMatchExcitation(const Param &params,const SynthesisData &data, gsl:
    gsl::vector lsf_tar_interpolated(params.lpc_order_glot);
    gsl::vector lsf_gen_interpolated(params.lpc_order_glot);
    gsl::vector w;
-   gsl::matrix lsf_glot_generated(params.lpc_order_glot, params.number_of_frames);
+   gsl::matrix lsf_glot_syn(params.lpc_order_glot, params.number_of_frames);
    for(frame_index=0;frame_index<(size_t)params.number_of_frames;frame_index++) {
       GetFrame(*excitation_signal,frame_index,rint(params.frame_shift/params.speed_scale),&frame,NULL);
       ApplyWindowingFunction(params.default_windowing_function,&frame);
       //LPC(frame,params.lpc_order_glot,&A);
       ArAnalysis(params.lpc_order_glot, 0.0, NONE, w, frame, &a_gen);
       Poly2Lsf(a_gen,&lsf_gen);
-      lsf_glot_generated.set_col_vec(frame_index,lsf_gen);
+      lsf_glot_syn.set_col_vec(frame_index,lsf_gen);
    }
 
    /* Spectral match excitation */
@@ -244,7 +286,7 @@ void SpectralMatchExcitation(const Param &params,const SynthesisData &data, gsl:
 
       if(sample_index % UPDATE_INTERVAL == 0) { //TODO: interpolation of parameters between frames according to update_interval
          frame_index_double = params.speed_scale * sample_index / (params.signal_length-1) * (params.number_of_frames-1);
-         InterpolateLinear(lsf_glot_generated,frame_index_double,&lsf_gen_interpolated);
+         InterpolateLinear(lsf_glot_syn,frame_index_double,&lsf_gen_interpolated);
          InterpolateLinear(data.lsf_glot,frame_index_double,&lsf_tar_interpolated);
          Lsf2Poly(lsf_gen_interpolated,&a_gen);
          Lsf2Poly(lsf_tar_interpolated,&a_tar);
