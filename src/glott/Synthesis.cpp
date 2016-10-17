@@ -63,8 +63,8 @@ int main(int argc, char *argv[]) {
    if(params.use_postfiltering)
       PostFilter(params.postfilter_coefficient, params.fs, &data.lsf_vocal_tract);
 
-  // if(params.use_trajectory_smoothing)
-   //   ParameterSmoothing(params, &data);
+   if(params.use_trajectory_smoothing)
+      ParameterSmoothing(params, &data);
 
 
    CreateExcitation(params, data, &(data.excitation_signal));

@@ -1274,15 +1274,84 @@ void Erb2Linear(const gsl::vector &vector_erb, const int &fs,  gsl::vector *vect
 }
 
 
-void MedianFilter(const gsl::vector &x, const size_t filterlen, gsl::vector *y) {
+void MedianFilter(const gsl::vector &x, const size_t &filterlen, gsl::vector *y) {
 
+   /* Resize or allocate as needed */
+   y->resize(x.size());
 
+   size_t i,j;
+   int start;
+   gsl::vector val_buffer(filterlen);
+   for (i=0;i<x.size();i++) {
+      start = i-filterlen/2;
+      for (j=0;j<val_buffer.size();j++) {
+         if (start+(int)j < 0 || start+(int)j > (int)x.size()-1 )
+            val_buffer(j) = 0;
+         else
+            val_buffer(j) = x(start+j);
+      }
+      /* Set median of buffer as output */
+      (*y)(i) = val_buffer.median();
+   }
 }
 
-void MovingAverageFilter(const int len, gsl::vector *y) {
-   int i;
-   gsl::vector y_copy(*y);
+void MedianFilter(const size_t &filterlen, gsl::vector *y) {
+   gsl::vector x(*y);
+   MedianFilter(x,filterlen,y);
+}
 
+/**
+ * Median filter matrix along rows  (time dimension)
+ *
+ * author: ljuvela
+ */
+void MedianFilter(const size_t &filterlen, gsl::matrix *mat) {
+   gsl::vector vec(mat->get_cols());
+   for (size_t n=0;n<mat->get_rows();n++) {
+      vec = mat->get_row_vec(n);
+      MedianFilter(filterlen, &vec);
+      mat->set_row_vec(n, vec);
+   }
+}
+
+void MovingAverageFilter(const gsl::vector &x, const size_t &filterlen, gsl::vector *y) {
+   /* Resize or allocate as needed */
+   y->resize(x.size());
+
+   size_t i,j;
+   int start;
+   gsl::vector val_buffer(filterlen);
+   for (i=0;i<x.size();i++) {
+      start = i-filterlen/2;
+      for (j=0;j<val_buffer.size();j++) {
+         if (start+(int)j < 0 || start+(int)j > (int)x.size()-1 )
+            val_buffer(j) = 0;
+         else
+            val_buffer(j) = x(start+j);
+      }
+      /* Set mean of buffer as output */
+      (*y)(i) = val_buffer.mean();
+   }
+}
+
+
+void MovingAverageFilter(const size_t &filterlen, gsl::vector *y) {
+   gsl::vector x(*y);
+   MovingAverageFilter(x,filterlen,y);
+}
+
+/**
+ * Moving average filter matrix along rows  (time dimension)
+ *
+ * author: ljuvela
+ */
+void MovingAverageFilter(const size_t &filterlen, gsl::matrix *mat) {
+   gsl::vector vec(mat->get_cols());
+   for (size_t n=0;n<mat->get_rows();n++) {
+      vec = mat->get_row_vec(n);
+      MovingAverageFilter(filterlen, &vec);
+      mat->set_row_vec(n, vec);
+   }
 }
 
 

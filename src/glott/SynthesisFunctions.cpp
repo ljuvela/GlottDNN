@@ -62,16 +62,18 @@ void PostFilter(const double &postfilter_coefficient, const int &fs, gsl::matrix
 
 
 void ParameterSmoothing(const Param &params, SynthesisData *data) {
-   /*if(params.lsf_vt_smooth_len > 2) {
 
-
-   }
+   if(params.lsf_vt_smooth_len > 2)
+      MovingAverageFilter(params.lsf_vt_smooth_len, &(data->lsf_vocal_tract));
 
    if(params.lsf_glot_smooth_len > 2)
+      MovingAverageFilter(params.lsf_glot_smooth_len, &(data->lsf_glot));
 
    if(params.gain_smooth_len > 2)
+      MovingAverageFilter(params.gain_smooth_len, &(data->frame_energy));
 
-   if(params.hnr_smooth_len > 2)*/
+   if(params.hnr_smooth_len > 2)
+      MovingAverageFilter(params.hnr_smooth_len, &(data->hnr_glot));
 
 }
 

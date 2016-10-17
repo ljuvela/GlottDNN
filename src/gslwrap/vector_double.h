@@ -334,6 +334,12 @@ public:
 	// returns sqrt(v.t*v);
     double norm2() const;
 
+    double mean() const;
+    double median() const;
+
+    void sort();
+
+
 
 // **** Finding maximum and minimum elements of vectors
 

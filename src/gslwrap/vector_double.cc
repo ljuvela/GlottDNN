@@ -14,6 +14,9 @@
 //  along with this program; if not, write to the Free Software
 //  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
+
+#include <gsl/gsl_statistics_double.h>
+#include <gsl/gsl_sort_vector.h>
 #include<gslwrap/vector_double.h>
 #include<gslwrap/vector_double.h>
 
@@ -123,6 +126,18 @@ vector::norm2() const
 	vector t=*this;
 	return gsl_blas_dnrm2(t.gslobj());
 }
+
+double vector::mean() const {
+   return this->sum()/this->size();
+}
+
+double vector::median() const {
+   gsl::vector t_cpy(*this);
+   t_cpy.sort();
+   return gsl_stats_median_from_sorted_data(t_cpy.gsldata->data, t_cpy.gsldata->stride, t_cpy.gsldata->size);
+}
+
+void vector::sort() {gsl_sort_vector(this->gsldata);};
 
 void vector::load( const char *filename )
 {
