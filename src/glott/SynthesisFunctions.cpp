@@ -362,12 +362,19 @@ void FilterExcitation(const Param &params, const SynthesisData &data, gsl::vecto
          gain = GetFilteringGain(B, a_interp, data.excitation_signal, sample_index, params.frame_length, params.warping_lambda_vt); // Should this be from ecitation_signal or excitation_orig?
          //a_interp(0) = 0.0;
       }
-      sum = data.excitation_signal(sample_index)*gain;
-      for(i=1;i<GSL_MIN(params.lpc_order_vt+1,sample_index);i++) {
-         sum -=  (*signal)(sample_index-i)*a_interp(i);
+      /** Normal filtering **/
+      if(params.warping_lambda_vt == 0.0) {
+         sum = data.excitation_signal(sample_index)*gain;
+         for(i=1;i<GSL_MIN(params.lpc_order_vt+1,sample_index);i++) {
+            sum -=  (*signal)(sample_index-i)*a_interp(i);
+         }
+         (*signal)(sample_index) = sum;
+      /** Warped filtering **/
+      } else {
+      //TODO
       }
-      (*signal)(sample_index) = sum;
    }
+
 
 
 }

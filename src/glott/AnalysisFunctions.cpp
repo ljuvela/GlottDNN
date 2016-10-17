@@ -172,7 +172,7 @@ int GetGain(const Param &params, const gsl::vector &signal, gsl::vector *gain_pt
 int SpectralAnalysis(const Param &params, const AnalysisData &data, gsl::matrix *poly_vocal_tract) {
 
 	gsl::vector frame(params.frame_length);
-	gsl::vector pre_frame(params.lpc_order_vt,true);
+	gsl::vector pre_frame(params.lpc_order_vt*2,true);
 	gsl::vector lp_weight(params.frame_length + params.lpc_order_vt,true);
 	gsl::vector A(params.lpc_order_vt+1,true);
 	gsl::vector G(params.lpc_order_glot_iaif,true);
@@ -180,7 +180,7 @@ int SpectralAnalysis(const Param &params, const AnalysisData &data, gsl::matrix 
 	//gsl::vector lip_radiation(2);lip_radiation(0) = 1.0; lip_radiation(1) = 0.99;
    gsl::vector frame_pre_emph(params.frame_length);
    gsl::vector frame_full; // frame + preframe
-   gsl::vector residual_full; // residual with preframe
+   gsl::vector residual(params.frame_length);
 
 	std::cout << "Spectral analysis ...";
 
@@ -200,13 +200,25 @@ int SpectralAnalysis(const Param &params, const AnalysisData &data, gsl::matrix 
          /* First-loop envelope */
 			ArAnalysis(params.lpc_order_vt,params.warping_lambda_vt, params.lp_weighting_function, lp_weight, frame_pre_emph, &A);
 
+         //if(frame_index == 20) {
+         //   ConcatenateFrames(pre_frame, frame, &frame_full);
+         //   WFilter(A,B,frame_full,params.warping_lambda_vt,&residual);
+         //   VPrint1(frame);
+         //VPrint2(residual);
+         //   VPrint3(lp_weight);
+         //}
+
 			/* Second-loop envelope (if IAIF is used) */
 			if(params.use_iterative_gif) {
             ConcatenateFrames(pre_frame, frame, &frame_full);
-            Filter(A,B,frame_full,&residual_full);
+            if(params.warping_lambda_vt != 0.0) {
+               Filter(A,B,frame_full,&residual);
+            } else {
+                WFilter(A,B,frame_full,params.warping_lambda_vt,&residual);
+            }
 
-            ApplyWindowingFunction(params.default_windowing_function, &residual_full);
-            ArAnalysis(params.lpc_order_glot_iaif,0.0, NONE, lp_weight, residual_full.subvector(params.lpc_order_vt,params.frame_length), &G);
+            ApplyWindowingFunction(params.default_windowing_function, &residual);
+            ArAnalysis(params.lpc_order_glot_iaif,0.0, NONE, lp_weight, residual, &G);
 
             Filter(G,B,frame,&frame_pre_emph); // Iterated pre-emphasis
             ApplyWindowingFunction(params.default_windowing_function, &frame_pre_emph);

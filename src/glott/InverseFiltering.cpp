@@ -16,9 +16,9 @@
 gsl::vector_int GetFrameGcis(const Param &params, const int frame_index, const gsl::vector_int &gci_inds) {
 
 	/* Get frame sample range */
-	int sample_index = round((double)params.signal_length*(double)frame_index/(double)params.number_of_frames);
-	int minind = sample_index - round(params.frame_length/2);
-	int maxind = sample_index + round(params.frame_length/2) - 1 ;
+	int center_index = params.frame_shift*frame_index;
+	int minind = center_index - round(params.frame_length/2);
+	int maxind = center_index + round(params.frame_length/2) - 1 ;
 	size_t min_gci_ind, max_gci_ind;
 
 	/* Find the range of gci inds */
@@ -47,7 +47,6 @@ void LpWeightAme(const Param &params, const gsl::vector_int &gci_inds,
 
 	gsl::vector_int inds = GetFrameGcis(params, frame_index, gci_inds);
 
-
 	if(!weight->is_set()) {
 		*weight = gsl::vector(params.frame_length + params.lpc_order_vt);
 	} else {
@@ -68,7 +67,7 @@ void LpWeightAme(const Param &params, const gsl::vector_int &gci_inds,
 
 	double d = 0.000001;
 	//int nramp = DEFAULT_NRAMP;
-	int nramp = 10;
+	int nramp = 12;
 
 	/* Sanity check */
 	if(dq + pq > 1.0)
