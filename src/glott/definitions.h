@@ -67,6 +67,14 @@ public:
    double pitch_scale;
    bool use_postfiltering;
    double postfilter_coefficient;
+   bool use_trajectory_smoothing;
+   int lsf_vt_smooth_len;
+   int lsf_glot_smooth_len;
+   int gain_smooth_len;
+   int hnr_smooth_len;
+   double noise_gain_unvoiced;
+   double noise_gain_voiced;
+   double noise_low_freq_limit_voiced;
    //double f0_check_range;
    ExcitationMethod excitation_method;
 };

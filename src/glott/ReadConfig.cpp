@@ -199,6 +199,32 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
    if (ConfigLookupBool("USE_POSTFILTERING", cfg, default_config, &(params->use_postfiltering)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
+   if (ConfigLookupBool("USE_TRAJECTORY_SMOOTHING", cfg, default_config, &(params->use_trajectory_smoothing)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
+	if (ConfigLookupInt("LSF_VT_SMOOTH_LEN", cfg, default_config, &(params->lsf_vt_smooth_len)) == EXIT_FAILURE)
+		return EXIT_FAILURE;
+
+	if (ConfigLookupInt("LSF_GLOT_SMOOTH_LEN", cfg, default_config, &(params->lsf_glot_smooth_len)) == EXIT_FAILURE)
+		return EXIT_FAILURE;
+
+	if (ConfigLookupInt("GAIN_SMOOTH_LEN", cfg, default_config, &(params->gain_smooth_len)) == EXIT_FAILURE)
+		return EXIT_FAILURE;
+
+	if (ConfigLookupInt("HNR_SMOOTH_LEN", cfg, default_config, &(params->hnr_smooth_len)) == EXIT_FAILURE)
+		return EXIT_FAILURE;
+
+   if (ConfigLookupDouble("NOISE_GAIN_VOICED", cfg, default_config, &(params->noise_gain_voiced)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
+   if (ConfigLookupDouble("NOISE_LOW_FREQ_LIMIT_VOICED", cfg, default_config, &(params->noise_low_freq_limit_voiced)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
+   if (ConfigLookupDouble("NOISE_GAIN_UNVOICED", cfg, default_config, &(params->noise_gain_unvoiced)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
+
+
    //if (ConfigLookupDouble("F0_CHECK_RANGE", cfg, default_config, &(params->f0_check_range)) == EXIT_FAILURE)
    //      return EXIT_FAILURE;
 

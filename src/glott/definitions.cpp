@@ -66,6 +66,15 @@ Param::Param() {
 	pitch_scale = 1.0;
 	use_postfiltering = false;
 	postfilter_coefficient = 0.4;
+   use_trajectory_smoothing = false;
+   lsf_vt_smooth_len = 3;
+   lsf_glot_smooth_len = 5;
+   gain_smooth_len = 5;
+   hnr_smooth_len = 15;
+   noise_gain_unvoiced = 1.0;
+   noise_gain_voiced = 1.0;
+   noise_low_freq_limit_voiced = 2500.0;
+
 }
 
 Param::~Param() {

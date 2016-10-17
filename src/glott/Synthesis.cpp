@@ -61,10 +61,11 @@ int main(int argc, char *argv[]) {
    if(ReadSynthesisData(filename, &params, &data) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-   //ParameterSmoothing()
-
    if(params.use_postfiltering)
       PostFilter(params.postfilter_coefficient, params.fs, &data.lsf_vocal_tract);
+
+   if(params.use_trajectory_smoothing)
+//      ParameterSmoothing(params, &data);
 
 
    CreateExcitation(params, data, &(data.excitation_signal));
