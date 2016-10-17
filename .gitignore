@@ -1,4 +1,7 @@
 .DS_Store
+./*~
+./src/glott/*~
+./src/gslwrap/*~
 src/.DS_Store
 .cproject
 .project
@@ -7,3 +10,7 @@ src/Makefile
 src/glott/Makefile
 autom4te.cache/*
 autom4te.cache/requests
+src/libgslwrap.a
+src/gslwrap/*.o
+src/glott/*.o
+./p*.dat
