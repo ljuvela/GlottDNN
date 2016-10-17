@@ -1279,7 +1279,11 @@ void MedianFilter(const gsl::vector &x, const size_t filterlen, gsl::vector *y) 
 
 }
 
-void MovingAverageFilter();
+void MovingAverageFilter(const int len, gsl::vector *y) {
+   int i;
+   gsl::vector y_copy(*y);
+
+}
 
 
 int GetFrame(const gsl::vector &signal, const int &frame_index, const int &frame_shift,gsl::vector *frame, gsl::vector *pre_frame) {

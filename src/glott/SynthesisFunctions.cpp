@@ -62,14 +62,17 @@ void PostFilter(const double &postfilter_coefficient, const int &fs, gsl::matrix
 
 
 void ParameterSmoothing(const Param &params, SynthesisData *data) {
-  /* if(params.lsf_vt_smooth_len > 2)
+   /*if(params.lsf_vt_smooth_len > 2) {
+
+
+   }
 
    if(params.lsf_glot_smooth_len > 2)
 
    if(params.gain_smooth_len > 2)
 
-   if(params.hnr_smooth_len > 2)
-*/
+   if(params.hnr_smooth_len > 2)*/
+
 }
 
 gsl::vector GetSinglePulse(const size_t &pulse_len, const double &energy, const gsl::vector &base_pulse) {
