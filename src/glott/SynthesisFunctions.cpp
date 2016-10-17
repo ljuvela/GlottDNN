@@ -359,8 +359,8 @@ void FilterExcitation(const Param &params, const SynthesisData &data, gsl::vecto
          frame_index_double = params.speed_scale * sample_index / (params.signal_length-1) * (params.number_of_frames-1);
          InterpolateLinear(data.lsf_vocal_tract,frame_index_double,&lsf_interp);
          Lsf2Poly(lsf_interp,&a_interp);
-         gain = GetFilteringGain(B, a_interp, data.excitation_signal, sample_index, params.frame_length, params.warping_lambda_vt); // Should this be from ecitation_signal or excitation_orig?
-         //a_interp(0) = 0.0;
+         // Should this be from ecitation_signal or excitation_orig?
+         gain = GetFilteringGain(B, a_interp, data.excitation_signal, sample_index, params.frame_length, params.warping_lambda_vt);
       }
       /** Normal filtering **/
       if(params.warping_lambda_vt == 0.0) {
@@ -374,9 +374,6 @@ void FilterExcitation(const Param &params, const SynthesisData &data, gsl::vecto
       //TODO
       }
    }
-
-
-
 }
 
 
