@@ -5,10 +5,6 @@
  *      Author: ljuvela
  */
 
-
-
-
-
 /***********************************************/
 /*                 INCLUDE                     */
 /***********************************************/
@@ -35,7 +31,6 @@
 
 #include "Utils.h"
 
-
 /*******************************************************************/
 /*                          MAIN                                   */
 /*******************************************************************/
@@ -60,6 +55,10 @@ int main(int argc, char *argv[]) {
    SynthesisData data;
    if(ReadSynthesisData(filename, &params, &data) == EXIT_FAILURE)
       return EXIT_FAILURE;
+
+   /* Check LSF stability and fix if needed */
+   StabilizeLsf(&data.lsf_vocal_tract);
+   StabilizeLsf(&data.lsf_glot);
 
    if(params.use_postfiltering)
       PostFilter(params.postfilter_coefficient, params.fs, &data.lsf_vocal_tract);
