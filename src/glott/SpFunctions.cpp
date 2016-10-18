@@ -1499,11 +1499,16 @@ void SharpenPowerSpectrumPeaks(const gsl::vector_int &peak_indices, const double
  *
  * author: ljuvela, (adapted from traitio)
  */
-void StabilizeLsf(gsl::vector *lsf) {
+int StabilizeLsf(gsl::vector *lsf) {
 
    /* Minimum LSF separation */
    double LSF_EPSILON = 0.005;
    bool ok = false;
+   size_t nof_fixes = 0;
+   //std::cout << *lsf << std::endl;
+
+   /* Sort guarantees interlacing property */
+   lsf->sort();
 
    /* Repeat until LSF is fixed */
    while(ok == false) {
@@ -1526,6 +1531,7 @@ void StabilizeLsf(gsl::vector *lsf) {
          } else if((*lsf)(i) > M_PI-LSF_EPSILON) {
             (*lsf)(i) = M_PI-LSF_EPSILON;
             ok = false;
+
          }
          if(gsl_isnan((*lsf)(i))) {
             if(i == 0)
@@ -1535,6 +1541,7 @@ void StabilizeLsf(gsl::vector *lsf) {
             else
                (*lsf)(i) = (*lsf)(i-1)+(*lsf)(i+1)/2.0;
             ok = false;
+
          }
       }
 
@@ -1542,28 +1549,35 @@ void StabilizeLsf(gsl::vector *lsf) {
       /* Check and correct non-increasing values or coefficients too close */
       for(i=0;i<lsf->size()-1;i++) {
          if((*lsf)(i) >(*lsf)(i+1)) {
-            mean = (*lsf)(i)+(*lsf)(i+1)/2.0;
+            mean = ((*lsf)(i)+(*lsf)(i+1))/2.0;
             (*lsf)(i) = mean - LSF_EPSILON/2.0;
             (*lsf)(i+1) = mean + LSF_EPSILON/2.0;
             ok = false;
-         } else if((*lsf)(i) > (*lsf)(i+1)-LSF_EPSILON/10.0) {
-            mean = (*lsf)(i)+(*lsf)(i+1)/2.0;
+         } else if((*lsf)(i+1) - (*lsf)(i) < LSF_EPSILON/10.0) {
+            mean = ((*lsf)(i)+(*lsf)(i+1))/2.0;
             (*lsf)(i)  = mean - LSF_EPSILON/2.0;
             (*lsf)(i+1) = mean + LSF_EPSILON/2.0;
             ok = false;
          }
       }
       if (!ok)
-         std::cout << "Warning: fixed invalid LSF values" << std::endl;
+         nof_fixes++;
    } // eof: while not ok
+   return nof_fixes;
 }
 
 void StabilizeLsf(gsl::matrix *lsf_mat) {
 
+   size_t nof_fixes = 0;
    gsl::vector lsf_vec(lsf_mat->get_rows());
    for (size_t n=0;n<lsf_mat->get_cols();n++) {
       lsf_vec = lsf_mat->get_col_vec(n);
-      StabilizeLsf(&lsf_vec);
+      if( StabilizeLsf(&lsf_vec) > 0)
+         nof_fixes++;
       lsf_mat->set_col_vec(n, lsf_vec);
    }
+   if (nof_fixes == 1)
+      std::cout << "Warning: fixed LSFs in " << nof_fixes << " frames" << std::endl;
+   if (nof_fixes > 1)
+      std::cout << "Warning: fixed LSFs in " << nof_fixes << " frames" << std::endl;
 }
