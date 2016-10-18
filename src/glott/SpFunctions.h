@@ -40,7 +40,6 @@ void FFTRadix2(const gsl::vector &x, ComplexVector *X);
 void FFTRadix2(const gsl::vector &x, size_t nfft, ComplexVector *X);
 void IFFTRadix2(const ComplexVector &X, gsl::vector *x);
 void WFilter(const gsl::vector &A, const gsl::vector &B,const gsl::vector &signal,const double &lambda, gsl::vector *result);
-void WarpingAlphas2Sigmas(double *alp, double *sigm, double lambda, int dim);
 void WarpingAlphas2Sigmas(const gsl::vector &alp, const double &lambda, gsl::vector *sigm);
 void OverlapAdd(const gsl::vector &frame, const size_t center_index, gsl::vector *target);
 double getMean(const gsl::vector &vec);
