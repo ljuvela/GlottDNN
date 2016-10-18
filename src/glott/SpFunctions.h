@@ -61,7 +61,7 @@ double GetFilteringGain(const gsl::vector &b, const gsl::vector &a,
                         const size_t &frame_length, const double &warping_lambda);
 void SharpenPowerSpectrumPeaks(const gsl::vector_int &peak_indices, const double &gamma, const int &power_spectrum_win, gsl::vector *fft_pow);
 void StabilizeLsf(gsl::matrix *lsf);
-void StabilizeLsf(gsl::vector *lsf);
+int StabilizeLsf(gsl::vector *lsf);
 void MedianFilter(const gsl::vector &x, const size_t &filterlen, gsl::vector *y);
 void MedianFilter(const size_t &filterlen, gsl::vector *x);
 void MedianFilter(const size_t &filterlen, gsl::matrix *mat);
