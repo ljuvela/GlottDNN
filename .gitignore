@@ -14,3 +14,14 @@ src/libgslwrap.a
 src/gslwrap/*.o
 src/glott/*.o
 ./p*.dat
+./wav/*.exc.wav
+./wav/*.syn.wav
+./wav/*.F0
+./wav/*.Gain
+./wav/*.GlottalExcitation
+./wav/*.HNR
+./wav/*.LSF
+./wav/*.LSFsource
+./wav/*.PLS
+./src/Analysis
+./src/Synthesis
