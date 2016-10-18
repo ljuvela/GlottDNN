@@ -4,7 +4,7 @@
 #include <cstring>
 #include <string>
 #include <cstdio>
-#include <stdio.h>
+//#include <stdio.h>
 #include <gslwrap/vector_double.h>
 #include <gslwrap/matrix_double.h>
 #include "definitions.h"

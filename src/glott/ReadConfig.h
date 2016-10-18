@@ -2,6 +2,7 @@
 #define READCONFIG_H_
 
 #include <libconfig.h++>
+#include "definitions.h"
 
 int ReadConfig(const char *filename, const bool default_config, Param *params);
 

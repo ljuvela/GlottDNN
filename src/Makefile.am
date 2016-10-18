@@ -27,9 +27,9 @@ Analysis_SOURCES = glott/Analysis.cpp Filters.h \
 					glott/PitchEstimation.h glott/PitchEstimation.cpp \
 					glott/AnalysisFunctions.h glott/AnalysisFunctions.cpp \
 					glott/Utils.h glott/Utils.cpp
-					
+
 Analysis_LDADD = libgslwrap.a
-					
+
 Synthesis_SOURCES = glott/Synthesis.cpp Filters.h \
 					glott/definitions.h glott/definitions.cpp \
 					glott/ReadConfig.h glott/ReadConfig.cpp \
@@ -37,7 +37,8 @@ Synthesis_SOURCES = glott/Synthesis.cpp Filters.h \
 					glott/InverseFiltering.h glott/InverseFiltering.cpp \
 					glott/ComplexVector.h glott/ComplexVector.cpp \
 					glott/SpFunctions.h glott/SpFunctions.cpp \
+					glott/DnnClass.h glott/DnnClass.cpp \
 					glott/SynthesisFunctions.h glott/SynthesisFunctions.cpp \
 					glott/Utils.h glott/Utils.cpp
-					
+
 Synthesis_LDADD = libgslwrap.a

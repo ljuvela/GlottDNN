@@ -27,6 +27,7 @@
 #include "FileIo.h"
 #include "ReadConfig.h"
 #include "SpFunctions.h"
+#include "DnnClass.h"
 #include "SynthesisFunctions.h"
 
 #include "Utils.h"
@@ -74,6 +75,11 @@ int main(int argc, char *argv[]) {
    SpectralMatchExcitation(params, data, (&data.excitation_signal));
 
    FilterExcitation(params, data, &(data.signal));
+
+
+   Dnn excDnn;
+   //excDnn.ReadInfo("./config/foo");
+   //excDnn.ReadData(filename);
 
    if(WriteWavFile(filename, ".exc.wav", data.excitation_signal, params.fs) == EXIT_FAILURE)
        return EXIT_FAILURE;

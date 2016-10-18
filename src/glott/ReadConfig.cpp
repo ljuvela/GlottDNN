@@ -277,8 +277,8 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
 
 
 int ReadConfig(const char *filename, const bool default_config, Param *params) {
-	libconfig::Config cfg;
 
+   libconfig::Config cfg;
 	/* Read the file. If there is an error, report it and exit. */
 	try
 	{
