@@ -308,6 +308,7 @@ void SpectralMatchExcitation(const Param &params,const SynthesisData &data, gsl:
    gsl::vector lsf_gen_interpolated(params.lpc_order_glot);
    gsl::vector w;
    gsl::matrix lsf_glot_syn(params.lpc_order_glot, params.number_of_frames);
+   double gain_target_db;
    for(frame_index=0;frame_index<(size_t)params.number_of_frames;frame_index++) {
       GetFrame(*excitation_signal,frame_index,rint(params.frame_shift/params.speed_scale),&frame,NULL);
       ApplyWindowingFunction(params.default_windowing_function,&frame);
@@ -332,7 +333,11 @@ void SpectralMatchExcitation(const Param &params,const SynthesisData &data, gsl:
          InterpolateLinear(data.lsf_glot,frame_index_double,&lsf_tar_interpolated);
          Lsf2Poly(lsf_gen_interpolated,&a_gen);
          Lsf2Poly(lsf_tar_interpolated,&a_tar);
-         gain = GetFilteringGain(a_gen, a_tar, excitation_orig, sample_index, params.frame_length, 0.0); // Should this be from ecitation_signal or excitation_orig?
+         //TODO: Add interpolation to frame_energy.
+         gain_target_db = InterpolateLinear(data.frame_energy(floor(frame_index_double)),
+                                          data.frame_energy(ceil(frame_index_double)),frame_index_double);
+         gain = GetFilteringGain(a_gen, a_tar, excitation_orig, gain_target_db,
+                                    sample_index, params.frame_length, 0.0); // Should this be from ecitation_signal or excitation_orig?
          a_tar(0) = 0.0;
       }
       sum = 0.0;
@@ -348,10 +353,17 @@ void SpectralMatchExcitation(const Param &params,const SynthesisData &data, gsl:
 void FilterExcitation(const Param &params, const SynthesisData &data, gsl::vector *signal) {
 
    int sample_index,i;
-   double gain = 1.0, sum, frame_index_double;
+   double gain = 1.0, gain_target_db, sum, frame_index_double;
    gsl::vector lsf_interp(params.lpc_order_vt);
    gsl::vector a_interp(params.lpc_order_vt+1);
    gsl::vector B(1);B(0)=1.0;
+   /* Initialize warping-specific variables */
+   gsl::vector sigma(params.lpc_order_vt+3,true);
+   gsl::vector rmem(params.lpc_order_vt+3,true);
+   int mlen = params.lpc_order_vt+2;
+   int bdim = params.lpc_order_vt+1;
+   double tmpr;
+
    int UPDATE_INTERVAL = rint(params.fs*0.005); // Hard-coded 5ms update interval
    signal->copy(data.excitation_signal);
 
@@ -361,8 +373,15 @@ void FilterExcitation(const Param &params, const SynthesisData &data, gsl::vecto
          frame_index_double = params.speed_scale * sample_index / (params.signal_length-1) * (params.number_of_frames-1);
          InterpolateLinear(data.lsf_vocal_tract,frame_index_double,&lsf_interp);
          Lsf2Poly(lsf_interp,&a_interp);
-         // Should this be from ecitation_signal or excitation_orig?
-         gain = GetFilteringGain(B, a_interp, data.excitation_signal, sample_index, params.frame_length, params.warping_lambda_vt);
+         if(params.warping_lambda_vt != 0.0)
+            WarpingAlphas2Sigmas(a_interp, params.warping_lambda_vt, &sigma);
+
+         gain_target_db = InterpolateLinear(data.frame_energy(floor(frame_index_double)),
+                        data.frame_energy(ceil(frame_index_double)),frame_index_double);
+         // Should this be from ecitation_signal or excitation_orig? //TODO: Add interpolation to frame_energy.
+
+         gain = GetFilteringGain(B, a_interp, data.excitation_signal, gain_target_db,
+                                 sample_index, params.frame_length, params.warping_lambda_vt);
       }
       /** Normal filtering **/
       if(params.warping_lambda_vt == 0.0) {
@@ -373,7 +392,22 @@ void FilterExcitation(const Param &params, const SynthesisData &data, gsl::vecto
          (*signal)(sample_index) = sum;
       /** Warped filtering **/
       } else {
-      //TODO
+         sum = data.excitation_signal(sample_index)*gain;
+         /* Update feedbackward sum */
+	    	for(i=0;i<bdim;i++) {
+	    		sum -= sigma(i)*rmem(i);
+	    	}
+	    	sum /= sigma(bdim);
+
+         /* Set signal */
+         (*signal)(sample_index) = sum;
+
+	    	/* Update inner states */
+	    	for(i=0;i<mlen;i++) {
+	    		tmpr = rmem(i) + params.warping_lambda_vt*(rmem(i+1) - sum);
+	    		rmem(i) = sum;
+	    		sum = tmpr;
+	    	}
       }
    }
 }

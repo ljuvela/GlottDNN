@@ -92,6 +92,11 @@ void Filter(const std::vector<double> &b, const gsl::vector a, const gsl::vector
 	Filter(b_vec, a, x, y);
 }
 
+double InterpolateLinear(const double &val1, const double &val2, double interp_x) {
+   interp_x = interp_x-floor(interp_x);
+   return val1 + interp_x*(val2-val1);
+}
+
 void InterpolateLinear(const gsl::matrix &mat, const double frame_index, gsl::vector *i_vector) {
    if (i_vector->is_set()) {
       i_vector->resize(mat.get_rows());
@@ -685,6 +690,26 @@ void WarpingAlphas2Sigmas(double *alp, double *sigm, double lambda, int dim) {
 	sigm[0] = S;
 	sigm[dim+1] = 1 - lambda*S;
 }
+
+void WarpingAlphas2Sigmas(const gsl::vector &alp, const double &lambda, gsl::vector *sigm) {
+
+	int q;
+	double S=0,Sp;
+   int dim = (int)alp.size()-1;
+   if(!sigm->is_set())
+      (*sigm) = gsl::vector(dim+3,true);
+
+	(*sigm)(dim) = lambda*alp(dim)/alp(0);
+	Sp = alp(dim)/alp(0);
+	for(q=dim;q>1;q--) {
+		S = alp(q-1)/alp(0) - lambda*Sp;
+		(*sigm)(q-1) = lambda*S + Sp;
+		Sp = S;
+	}
+	(*sigm)(0) = S;
+	(*sigm)(dim+1) = 1.0 - lambda*S;
+}
+
 
 void Roots(const gsl::vector &x, const size_t ncoef, ComplexVector *r) {
 
@@ -1393,7 +1418,7 @@ double getSquareSum(const gsl::vector &vec) {
 
 
 double GetFilteringGain(const gsl::vector &b, const gsl::vector &a,
-                        const gsl::vector &signal, const size_t &center_index,
+                        const gsl::vector &signal, const double &target_gain_db, const size_t &center_index,
                         const size_t &frame_length, const double &warping_lambda) {
 
 /* Initialize */
@@ -1429,7 +1454,7 @@ double GetFilteringGain(const gsl::vector &b, const gsl::vector &a,
    else
       WFilter(b,a,frame_full,warping_lambda,&result);
 
-	return getEnergy(frame) * (double)fmin(1/getEnergy(result),50.0); // prevent large values from divide by zero
+	return LogEnergy2FrameEnergy(target_gain_db, result.size()) * (double)fmin(1/getEnergy(result),50.0); // prevent large values from divide by zero
 
 
 }

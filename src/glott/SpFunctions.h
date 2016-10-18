@@ -13,6 +13,7 @@
 
 void Interpolate(const gsl::vector &vector, gsl::vector *i_vector);
 void InterpolateNearest(const gsl::vector &vector, const size_t interpolated_size, gsl::vector *i_vector);
+double InterpolateLinear(const double &val1, const double &val2, double interp_x);
 void InterpolateLinear(const gsl::matrix &mat, const double frame_index, gsl::vector *i_vector);
 void InterpolateLinear(const gsl::vector &vector, const size_t interpolated_size, gsl::vector *i_vector);
 void InterpolateLinear(const gsl::vector &x_orig, const gsl::vector &y_orig, const gsl::vector &x_interp, gsl::vector *y_interp);
@@ -40,6 +41,7 @@ void FFTRadix2(const gsl::vector &x, size_t nfft, ComplexVector *X);
 void IFFTRadix2(const ComplexVector &X, gsl::vector *x);
 void WFilter(const gsl::vector &A, const gsl::vector &B,const gsl::vector &signal,const double &lambda, gsl::vector *result);
 void WarpingAlphas2Sigmas(double *alp, double *sigm, double lambda, int dim);
+void WarpingAlphas2Sigmas(const gsl::vector &alp, const double &lambda, gsl::vector *sigm);
 void OverlapAdd(const gsl::vector &frame, const size_t center_index, gsl::vector *target);
 double getMean(const gsl::vector &vec);
 double getMeanF0(const gsl::vector &fundf);
@@ -56,7 +58,7 @@ void Linear2Erb(const gsl::vector &linvec, const int &fs, gsl::vector *erbvec);
 void Erb2Linear(const gsl::vector &vector_erb, const int &fs,  gsl::vector *vector_lin);
 int GetFrame(const gsl::vector &signal, const int &frame_index, const int &frame_shift,gsl::vector *frame, gsl::vector *pre_frame);
 double GetFilteringGain(const gsl::vector &b, const gsl::vector &a,
-                        const gsl::vector &signal, const size_t &center_index,
+                        const gsl::vector &signal, const double &target_gain_db, const size_t &center_index,
                         const size_t &frame_length, const double &warping_lambda);
 void SharpenPowerSpectrumPeaks(const gsl::vector_int &peak_indices, const double &gamma, const int &power_spectrum_win, gsl::vector *fft_pow);
 void StabilizeLsf(gsl::matrix *lsf);
