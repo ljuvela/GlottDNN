@@ -209,7 +209,7 @@ void HarmonicModification(const Param &params, const SynthesisData &data, gsl::v
       /** HNR modification only in voiced frames **/
       if(data.fundf(frame_index) > 0) {
          GetFrame(excitation_orig, frame_index, rint(params.frame_shift/params.speed_scale), &frame, NULL);
-         ApplyWindowingFunction(COSINE, &frame);
+         ApplyWindowingFunction(HANN, &frame);
          FFTRadix2(frame, NFFT, &frame_fft);
          fft_mag = frame_fft.getAbs();
 
@@ -255,7 +255,8 @@ void HarmonicModification(const Param &params, const SynthesisData &data, gsl::v
          for(i=0;i<noise_vec.size();i++)
             noise_vec(i) = random_gauss_gen.get();
 
-         ApplyWindowingFunction(COSINE,&noise_vec);
+
+         //ApplyWindowingFunction(COSINE,&noise_vec);
 
          FFTRadix2(noise_vec, NFFT, &noise_vec_fft);
 
@@ -279,17 +280,20 @@ void HarmonicModification(const Param &params, const SynthesisData &data, gsl::v
 
          IFFTRadix2(noise_vec_fft,&noise_vec);
 
+
+         ApplyWindowingFunction(HANN,&noise_vec);
+
          for(i=0;i<frame.size();i++)
             frame(i) += noise_vec(i);
 
 
-         ApplyWindowingFunction(COSINE, &frame);
+        // ApplyWindowingFunction(COSINE, &frame);
       } else {
          GetFrame(excitation_orig, frame_index, rint(params.frame_shift/params.speed_scale), &frame, NULL);
          ApplyWindowingFunction(HANN, &frame);
       }
-         frame /= 0.5*(double)frame.size()/(double)params.frame_shift;
-         OverlapAdd(frame,frame_index*rint(params.frame_shift/params.speed_scale),excitation_signal);
+      frame /= 0.5*(double)frame.size()/(double)params.frame_shift;
+      OverlapAdd(frame,frame_index*rint(params.frame_shift/params.speed_scale),excitation_signal);
    }
    std::cout << " done." << std::endl;
 }

@@ -14,6 +14,7 @@
 #include "definitions.h"
 #include "SpFunctions.h"
 #include "QmfFunctions.h"
+#include "Utils.h"
 
 
 
@@ -54,7 +55,7 @@ void Qmf::GetSubBands(const gsl::vector &frame, const gsl::vector &H0, const gsl
 	Filter(H1,B,tempframe,&x22);
 
 	// Downsampling
-	int start = L/2;
+	int start = L/2+L;
 	int stop = start+N;
 	int ii = 0;
 	for(i=start;i<stop;i=i+2) {
@@ -136,7 +137,7 @@ void Qmf::CombinePoly(const gsl::vector &a_qmf1, const gsl::vector &a_qmf2,
 	ffthigh.reverse(); // High-band has mirrored frequency
 
 	/* Scale power of ffthigh according to QMF gain */
-   ffthigh *= elow/ehigh * pow(10,qmf_gain/20.0);
+   ffthigh *= elow/ehigh * powf(10,qmf_gain/20.0);
 
 	/** Combine PSD vectors **/
 	for(i=0;i<nfft/2;i++)

@@ -68,5 +68,6 @@ void MedianFilter(const size_t &filterlen, gsl::matrix *mat);
 void MovingAverageFilter(const gsl::vector &x, const size_t &filterlen, gsl::vector *y);
 void MovingAverageFilter(const size_t &filterlen, gsl::vector *x);
 void MovingAverageFilter(const size_t &filterlen, gsl::matrix *mat);
+void Leja(gsl::vector *lsfvec);
 
 #endif /* SRC_GLOTT_SPFUNCTIONS_H_ */

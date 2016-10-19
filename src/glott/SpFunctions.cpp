@@ -783,8 +783,8 @@ void Lsf2Poly(const gsl::vector &lsf_vec, gsl::vector *poly_vec) {
    }
 
    if (l > 50) {
-      //leja(fi_p);
-      //leja(fi_q);
+      Leja(&fi_p);
+      Leja(&fi_q);
    }
 
    /* Construct vectors P and Q */
@@ -1540,3 +1540,131 @@ void StabilizeLsf(gsl::matrix *lsf_mat) {
    if (nof_fixes > 1)
       std::cout << "Warning: fixed LSFs in " << nof_fixes << " frames" << std::endl;
 }
+
+/** Leja ordering of LSFs for numerically accurate polynomial computation
+ * [?]
+ *  author: @mairaksi
+ **/
+void Leja(gsl::vector *lsfvec) {
+
+	int i,j,l;
+	int n_lsf = lsfvec->size();
+
+	gsl::matrix a_mat(n_lsf+1,2*n_lsf);
+
+	gsl_complex z, a_out;
+	double zi, zj;
+
+	for(j=0;j<n_lsf;j++) {
+		z = gsl_complex_polar(1.0,(*lsfvec)(j));
+
+		for(i=0;i<n_lsf+1;i++) {
+			a_mat(i,2*j) = GSL_REAL(z);
+			a_mat(i,2*j+1) = GSL_IMAG(z);
+		}
+	}
+	// Set First row as absolute values, find index of max value
+	int ind = 0;
+	//xmax = ABS(a_mat[0][0]);
+	double x;
+	double xmax = sqrt(pow(a_mat(0,0),2)+pow(a_mat(0,1),2));
+	for(j=0;j<n_lsf;j++) {
+		//x = ABS(a_mat[0][j]);
+		x = sqrt(pow(a_mat(0,2*j),2)+pow(a_mat(0,2*j+1),2));
+		if(x > xmax) {
+			ind = j;
+			x = xmax;
+		}
+		//a_mat[0][j] = gsl_complex_rect(x,0);
+      a_mat(0,2*j) = x; // Set real
+      a_mat(0,2*j+1) = 0.0; // Set imag
+	}
+
+	// If max of first row was not at index 0, switch indexes
+	if(ind != 0) {
+		for(i=0;i<n_lsf+1;i++) {
+			//a_tmp = a_mat[i][0];
+			zi = a_mat(i,0);
+			zj = a_mat(i,1);
+
+			//a_mat[i][0] = a_mat[i][ind];
+			a_mat(i,0) = a_mat(i,2*ind);
+			a_mat(i,1) = a_mat(i,2*ind+1);
+
+			//a_mat[i][ind] = a_tmp;
+			a_mat(i,2*ind) = zi;
+			a_mat(i,2*ind+1) = zj;
+		}
+	}
+	//a_out = a_mat[n-1][0];
+	a_out = gsl_complex_rect(a_mat(n_lsf-1,0),a_mat(n_lsf-1,1));
+
+	for(j=1;j<n_lsf;j++) {
+		z = gsl_complex_rect(a_mat(1,2*j),a_mat(1,2*j+1));
+		x = gsl_complex_abs(gsl_complex_sub(z,a_out));
+
+		a_mat(1,2*j) = x;
+		a_mat(1,2*j+1) = 0.0;
+	}
+
+	double product;
+	for(l=1;l<n_lsf-1;l++) {
+		ind = l;
+
+
+		for(j=l;j<n_lsf;j++) {
+			product = 1.0;
+			for(i=0;i<l;i++) {
+            //product *= REAL(a_mat[i][j]);
+            product *= a_mat(i,2*j);
+         }
+			if(j==l) {
+				x = product;
+			} else {
+				if(product > x) { // Find index of max value of prod
+					x = product;
+					ind = j;
+				}
+			}
+		}
+		if(ind != l) {
+			for(i=0;i<n_lsf+1;i++) {
+				zi = a_mat(i,2*l); // Real
+				zj = a_mat(i,2*l+1); // Imag
+
+				//a_mat[i][l] = a_mat[i][ind];
+				a_mat(i,2*l) = a_mat(i,2*ind);
+				a_mat(i,2*l+1) = a_mat(i,2*ind+1);
+
+				a_mat(i,2*ind) = zi;
+				a_mat(i,2*ind+1) = zj;
+			}
+		}
+
+		a_out = gsl_complex_rect(a_mat(n_lsf-1,2*l),a_mat(n_lsf-1,2*l+1)); // a_mat[n_lsf-1,l]
+
+		for(j=l+1;j<n_lsf;j++) {
+				z = gsl_complex_rect(a_mat(l+1,2*j),a_mat(l+1,2*j+1)); // a_mat[l+1,j]
+
+			//x = gsl_complex_abs(gsl_complex_sub(a_mat[l+1][j],a_out));
+			x = gsl_complex_abs(gsl_complex_sub(z,a_out));
+
+			//a_mat[l+1][j] = gsl_complex_rect(x,0);
+			a_mat(l+1,2*j) = x;
+			a_mat(l+1,2*j+1) = 0.0;
+
+		}
+	}
+
+	for(i=0;i<n_lsf;i++) {
+		z = gsl_complex_rect(a_mat(n_lsf,2*i),a_mat(n_lsf,2*i+1)); // a_mat[n_lsf,i]
+		x = gsl_complex_arg(z);
+		if(x<0)
+			x = 2*M_PI+x;
+
+		(*lsfvec)(i) = x;
+	}
+}
+
+
+
