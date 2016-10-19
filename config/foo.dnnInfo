@@ -1,2 +1,2 @@
-LAYERS =       [1, 2, 3, 4];
-ACTIVATIONS = ["L", "S", "S", "L"]; # S=Sigmoid, L=Linear
+LAYERS =       [3, 3, 3];
+ACTIVATIONS = ["L", "S", "L"]; # S=Sigmoid, L=Linear

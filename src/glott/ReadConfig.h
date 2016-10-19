@@ -4,6 +4,10 @@
 #include <libconfig.h++>
 #include "definitions.h"
 
+int ConfigLookupInt(const char *config_string, const libconfig::Config &cfg, const bool default_config, int *val);
+int ConfigLookupDouble(const char *config_string, const libconfig::Config &cfg, const bool default_config, double *val);
+int ConfigLookupBool(const char *config_string, const libconfig::Config &cfg, const bool default_config, bool *val);
+int ConfigLookupCString(const char *config_string, const libconfig::Config &cfg, const bool default_config, char **val);
 int ReadConfig(const char *filename, const bool default_config, Param *params);
 
 /*

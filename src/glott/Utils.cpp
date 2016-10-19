@@ -1,5 +1,6 @@
 #include <gslwrap/vector_double.h>
 #include <vector>
+#include <cassert>
 #include "definitions.h"
 #include "Utils.h"
 
@@ -11,6 +12,32 @@ gsl::vector StdVector2GslVector(const std::vector<double> &stdvec) {
 
    return gslvec;
 }
+
+
+gsl::matrix ElementProduct(const gsl::matrix &A, const gsl::matrix &B) {
+   assert(A.size1() == B.size1());
+   assert(A.size2() == B.size2());
+   gsl::matrix C(A);
+
+   for(size_t i=0; i<A.size1();i++)
+      for(size_t j=0; j<A.size2(); j++)
+         C(i,j) = A(i,j)*B(i,j);
+
+   return C;
+}
+
+gsl::matrix ElementDivision(const gsl::matrix &A, const gsl::matrix &B) {
+   assert(A.size1() == B.size1());
+   assert(A.size2() == B.size2());
+   gsl::matrix C(A);
+
+   for(size_t i=0; i<A.size1();i++)
+      for(size_t j=0; j<A.size2(); j++)
+         C(i,j) = A(i,j)/B(i,j);
+
+   return C;
+}
+
 
 /*********************************************************************/
 /*                       TEST FUNCTIONS                              */
