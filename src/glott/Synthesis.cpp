@@ -69,9 +69,9 @@ int main(int argc, char *argv[]) {
 
    CreateExcitation(params, data, &(data.excitation_signal));
 
-   HarmonicModification(params, data, (&data.excitation_signal));
-
    SpectralMatchExcitation(params, data, (&data.excitation_signal));
+
+   HarmonicModification(params, data, (&data.excitation_signal));
 
    FilterExcitation(params, data, &(data.signal));
 

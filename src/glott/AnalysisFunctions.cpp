@@ -247,6 +247,7 @@ int SpectralAnalysisQmf(const Param &params, const AnalysisData &data, gsl::matr
    gsl::vector lp_weight_downsampled(frame_qmf1.size() + params.lpc_order_vt_qmf1);
    gsl::vector B(1);B(0) = 1.0;
 
+
    gsl::vector H0 = Qmf::LoadFilter(kCUTOFF05PI);
    gsl::vector H1 = Qmf::GetMatchingFilter(H0);
 
@@ -285,7 +286,7 @@ int SpectralAnalysisQmf(const Param &params, const AnalysisData &data, gsl::matr
             e1 += DBL_MIN;
          if(e2 == 0.0)
             e2 += DBL_MIN;
-         gain_qmf = 20*log10(e1/e2);
+         gain_qmf = 20*log10(e2/e1);
 
 
          /** Low-band analysis **/
@@ -302,14 +303,14 @@ int SpectralAnalysisQmf(const Param &params, const AnalysisData &data, gsl::matr
       /** Unvoiced analysis (Low-band = LPC, High-band = LPC, no pre-emphasis) **/
       } else {
          Qmf::GetSubBands(frame, H0, H1, &frame_qmf1, &frame_qmf2);
+
          e1 = getEnergy(frame_qmf1);
          e2 = getEnergy(frame_qmf2);
          if(e1 == 0.0)
             e1 += DBL_MIN;
          if(e2 == 0.0)
             e2 += DBL_MIN;
-         gain_qmf = 20*log10(e1/e2);
-
+         gain_qmf = 20*log10(e2/e1);
 
          /** Low-band analysis **/
          ApplyWindowingFunction(params.default_windowing_function,&frame_qmf1);
@@ -319,6 +320,7 @@ int SpectralAnalysisQmf(const Param &params, const AnalysisData &data, gsl::matr
          ApplyWindowingFunction(params.default_windowing_function,&frame_qmf2);
          ArAnalysis(params.lpc_order_vt_qmf2,0.0,NONE, lp_weight_downsampled, frame_qmf2, &A_qmf2);
       }
+
       Qmf::CombinePoly(A_qmf1,A_qmf2,gain_qmf,(int)frame_qmf1.size(),&A);
 
       poly_vocal_tract->set_col_vec(frame_index,A);
@@ -579,7 +581,7 @@ void HnrAnalysis(const Param &params, const gsl::vector &source_signal, const gs
       /** HNR Analysis only for voiced frames (zero for unvoiced frames) **/
       if(fundf(frame_index) > 0) {
          GetFrame(source_signal, frame_index, params.frame_shift, &frame, NULL);
-         ApplyWindowingFunction(COSINE, &frame);
+         ApplyWindowingFunction(HANN, &frame);
          FFTRadix2(frame, NFFT, &frame_fft);
          fft_mag = frame_fft.getAbs();
          for(i=0;i<(int)fft_mag.size();i++) {
