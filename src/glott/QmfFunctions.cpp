@@ -18,15 +18,6 @@
 
 
 
-gsl::vector Qmf::LoadFilter(const std::vector<double> &saved_filter) {
-   gsl::vector filter(saved_filter.size());
-   size_t i;
-   for(i=0;i<filter.size();i++)
-      filter(i) = saved_filter[i];
-
-   return filter;
-}
-
 gsl::vector Qmf::GetMatchingFilter(const gsl::vector &H0) {
 	size_t i;
    gsl::vector H1(H0.size());

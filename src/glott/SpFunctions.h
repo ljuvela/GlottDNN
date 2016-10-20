@@ -24,6 +24,7 @@ void Filter(const gsl::vector b, const std::vector<double> &a, const gsl::vector
 void Filter(const std::vector<double> &b, const gsl::vector a, const gsl::vector &x, gsl::vector *y);
 gsl::vector Conv(const gsl::vector &conv1, const gsl::vector &conv2);
 void ApplyWindowingFunction(const WindowingFunctionType &window_function, gsl::vector *frame);
+void ApplyPsolaWindow(const WindowingFunctionType &window_function, const double &t0_previous, const double &t0_next, gsl::vector *frame);
 void Autocorrelation(const gsl::vector &frame, const int &order, gsl::vector *r);
 void Levinson(const gsl::vector &r, gsl::vector *A);
 void Lsf2Poly(const gsl::vector &lsf_vec, gsl::vector *poly_vec);

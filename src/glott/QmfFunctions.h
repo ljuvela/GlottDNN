@@ -7,8 +7,6 @@
 
 namespace Qmf {
 
-gsl::vector LoadFilter(const std::vector<double> &saved_filter); // TODO: StdVector2GslVector
-
 gsl::vector GetMatchingFilter(const gsl::vector &H0);
 
 void GetSubBands(const gsl::vector &frame, const gsl::vector &H0, const gsl::vector &H1,

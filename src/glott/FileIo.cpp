@@ -54,7 +54,7 @@ int WriteWavFile(const char *basename, const char *extension, const gsl::vector 
 
    double scale = GSL_MAX(signal.max(),-signal.min());
    if (scale > 1.0)
-      std::cout << "Warning: Signal maximum value is: " << scale << std::endl;
+      std::cout << "Warning: Signal maximum value is: " << scale << ". Re-scaling signal." << std::endl;
    else
       scale = 1.0;
 
@@ -101,7 +101,7 @@ int ReadWavFile (const char *fname, gsl::vector *signal, Param *params) {
 		(*signal)(i) = buffer[i];
 
 	/* set file parameters */
-	params->number_of_frames = ceil(signal->size()/params->frame_shift);
+	params->number_of_frames = (int)ceil((double)signal->size()/(double)params->frame_shift);
 	params->signal_length = signal->size();
 
 	/* Get basename (without extension) for saving parameters later*/
@@ -128,7 +128,7 @@ int ReadWavFile (const char *fname, gsl::vector *signal, Param *params) {
 int EvalFileLength(const char *filename, DataType data_format) {
 
 	FILE *file;
-	char s[300];
+	char *s = new char[300];
 	int fileSize = 0;
 
 	/* Open file */
@@ -147,6 +147,7 @@ int EvalFileLength(const char *filename, DataType data_format) {
 		fileSize = ftell(file)/sizeof(double);
 	}
 	fclose(file);
+	delete[] s;
 
 	return fileSize;
 }

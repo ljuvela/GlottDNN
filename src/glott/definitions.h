@@ -66,6 +66,7 @@ public:
    double speed_scale;
    double pitch_scale;
    bool use_postfiltering;
+   bool use_spectral_matching;
    double postfilter_coefficient;
    bool use_trajectory_smoothing;
    int lsf_vt_smooth_len;
@@ -78,7 +79,6 @@ public:
    //double f0_check_range;
    ExcitationMethod excitation_method;
 };
-
 
 
 /* Define analysis data variable struct*/
@@ -108,6 +108,7 @@ public:
 	//gsl::matrix lsf_vt_qmf2;
 	//gsl::vector gain_qmf;
 };
+
 
 /* Define analysis data variable struct*/
 struct SynthesisData {

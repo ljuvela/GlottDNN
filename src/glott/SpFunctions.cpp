@@ -322,6 +322,70 @@ void ApplyWindowingFunction(const WindowingFunctionType &window_function, gsl::v
 	}
 }
 
+///FIXME: Does not work as intended yet (@mairaksi)
+void ApplyPsolaWindow(const WindowingFunctionType &window_function, const double &t0_previous,
+                        const double &t0_next, gsl::vector *frame) {
+
+   double n_dbl = (double)frame->size();
+   //int n = (int)frame->size();
+   size_t MINIMUM_W_LENGTH = size_t(0.1*n_dbl);
+   double t0 = (double)frame->size()/2.0;
+   int start;
+   double n_temp;
+   size_t i;
+   std::cout << "prev t0: " << (int)t0_previous << "cur t0: " << (int)t0 << "nx t0: " << (int)t0_next << std::endl;
+	switch(window_function) {
+	case HANN :
+      /* Left-hand side */
+      if (t0 <= t0_previous) { /* Use normal windowing */
+         for(i=0;i<t0;i++)
+            (*frame)(i) *= 0.5*(1.0-cos(2.0*M_PI*((double)i)/((n_dbl)-1.0)));
+      } else { /*  */
+         //n_temp = GSL_MAX(2*t0_previous,2*MINIMUM_W_LENGTH);
+         n_temp = 2*t0_previous;
+         start = t0-(n_temp/2);
+         for(i=0;i<start;i++)
+            (*frame)(i) = 0.0;
+         for(i=start;i<t0;i++)
+            (*frame)(i) *= 0.5*(1.0-cos(2.0*M_PI*((double)(i-start))/((n_temp)-1.0)));
+      }
+
+		/* Right-hand side */
+      if(t0 <= t0_next) {
+         for(i=t0;i<frame->size();i++)
+            (*frame)(i) *= 0.5*(1.0-cos(2.0*M_PI*((double)i)/((n_dbl)-1.0)));
+      } else { //TODO: FIX PROBLEM
+         //n_temp = GSL_MAX(2*t0_next,2*MINIMUM_W_LENGTH);
+         n_temp = 2*t0_next;
+         start = frame->size() - t0_next ;
+         double val;
+         for(i=start;i<frame->size();i++) {
+            val = 0.5*(1.0-cos(2.0*M_PI*((double)(i-start+t0_next))/((n_temp)-1.0)));
+            (*frame)(i) *= val;
+         }
+      }
+
+      //for(i=0;i<frame->size();i++)
+		//	(*frame)(i) *= 0.5*(1.0-cos(2.0*M_PI*((double)i)/((n)-1.0)));
+		break;
+
+
+	/*case HAMMING :
+		for(i=0;i<frame->size();i++)
+			(*frame)(i) *= 0.53836 - 0.46164*(cos(2.0*M_PI*((double)i)/((n)-1.0)));
+		break;
+	case BLACKMAN :
+		for(i=0;i<frame->size();i++)
+			(*frame)(i) *= 0.42-0.5*cos(2.0*M_PI*((double)i)/((n)-1))+0.08*cos(4.0*M_PI*((double)i)/((n)-1.0));
+		break;
+	case COSINE :
+		for(i=0;i<frame->size();i++)
+			(*frame)(i) *= sqrt(0.5*(1.0-cos(2.0*M_PI*((double)i)/((n)-1.0))));
+		break;*/
+	}
+}
+
+
 void Autocorrelation(const gsl::vector &frame, const int &order, gsl::vector *r) {
 	if(!r->is_set()) {
 		*r = gsl::vector(order+1);
@@ -490,8 +554,7 @@ void IFFTRadix2(const ComplexVector &X, gsl::vector *x) {
    free(data);
 }
 
-void FastAutocorr(const gsl::vector &x, gsl::vector *ac)
-{
+void FastAutocorr(const gsl::vector &x, gsl::vector *ac) {
    size_t i;
    size_t N = x.size();
    size_t nfft = NextPow2(2*N-1);
@@ -1161,10 +1224,6 @@ gsl::vector_int FindHarmonicPeaks(const gsl::vector &fft_mag, const double &f0, 
 
    return peak_inds;
 }
-
-
-
-
 
 
 /** Stabilize a polynomial by computing the FFT autocorrelation of
