@@ -54,7 +54,7 @@ int WriteWavFile(const char *basename, const char *extension, const gsl::vector 
 
    double scale = GSL_MAX(signal.max(),-signal.min());
    if (scale > 1.0)
-      std::cout << "Warning: Signal maximum value is: " << scale << std::endl;
+      std::cout << "Warning: Signal maximum value is: " << scale << ". Re-scaling signal." << std::endl;
    else
       scale = 1.0;
 

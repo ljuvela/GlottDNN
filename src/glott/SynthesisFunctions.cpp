@@ -84,7 +84,7 @@ gsl::vector GetSinglePulse(const size_t &pulse_len, const double &energy, const 
    //InterpolateSpline(base_pulse, pulse_len, &pulse);
    Interpolate(base_pulse, &pulse);
    pulse *= energy/getEnergy(pulse);
-   ApplyWindowingFunction(HANN, &pulse);
+   //ApplyWindowingFunction(HANN, &pulse);
 
    /* Window length normalization */
 
@@ -119,9 +119,14 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
 
    size_t sample_index = 0;
    size_t frame_index;
+   size_t frame_index_nx;
+   size_t frame_index_pr = 0;
    gsl::vector pulse;
+   gsl::vector p2;
    gsl::vector noise(params.frame_shift*2);
    double T0, energy;
+   double t0_pr;
+   double t0_nx;
    size_t pulse_len;
    while (sample_index < (size_t)params.signal_length) {
       frame_index = rint(params.speed_scale * sample_index / (params.signal_length-1) * (params.number_of_frames-1));
@@ -129,12 +134,28 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
       if(data.fundf(frame_index) > 0) {
 
          T0 = params.fs/data.fundf(frame_index);
+
+         /*  Experimental for accurate PSOLA */
+         //frame_index_nx = rint(params.speed_scale * (sample_index+T0) / (params.signal_length-1) * (params.number_of_frames-1));;
+         //if(data.fundf(frame_index_nx) > 0)
+         //   t0_nx = params.fs/data.fundf(frame_index_nx);
+         //else
+         //   t0_nx = (double)params.frame_shift;
+         //if(data.fundf(frame_index_pr) > 0)
+         //   t0_pr = params.fs/data.fundf(frame_index_pr);
+         //else
+         //   t0_pr = (double)params.frame_shift;
+
          pulse_len = rint(2*T0);
          energy = LogEnergy2FrameEnergy(data.frame_energy(frame_index),pulse_len);
 
          switch (params.excitation_method) {
          case SINGLE_PULSE_EXCITATION:
             pulse = GetSinglePulse(pulse_len, energy, single_pulse_base);
+            ApplyWindowingFunction(HANN, &pulse);
+            //p2 = gsl::vector(pulse.size());
+            //p2.set_all(1.0);
+            //ApplyPsolaWindow(HANN, t0_pr, t0_nx, &p2);
             break;
          case DNN_GENERATED_EXCITATION:
             //pulse = GetDnnPulse();
@@ -145,10 +166,8 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
             std::cout << "PAF" << std::endl;
             break;
          }
-
-
          OverlapAdd(pulse,sample_index,excitation_signal);
-
+         //OverlapAdd(p2,sample_index,excitation_signal);
          sample_index += rint(T0);
 
       /** Unvoiced excitation **/
@@ -166,6 +185,7 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
 
          sample_index += params.frame_shift;
       }
+      //frame_index_pr = frame_index;
    }
 }
 
