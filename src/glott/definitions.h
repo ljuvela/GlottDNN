@@ -66,6 +66,7 @@ public:
    double speed_scale;
    double pitch_scale;
    bool use_postfiltering;
+   bool use_spectral_matching;
    double postfilter_coefficient;
    bool use_trajectory_smoothing;
    int lsf_vt_smooth_len;

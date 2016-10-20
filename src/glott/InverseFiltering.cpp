@@ -13,6 +13,17 @@
 #include "InverseFiltering.h"
 #include "Utils.h"
 
+/**
+ * Function GetFrameGcis
+ *
+ * Get frame-specific GCI indeces from the full-signal GCI index vector
+
+ * @param params : Reference to the Analysis parameter struct
+ * @param frame_index : Current frame index
+ * @param gci_inds : Reference to GCI index vector for full signal
+ * @return frame_gci_inds : Frame-specific GCI index vector (index count starts from 0)
+ * author: @ljuvela
+ **/
 gsl::vector_int GetFrameGcis(const Param &params, const int frame_index, const gsl::vector_int &gci_inds) {
 
 	/* Get frame sample range */
@@ -132,10 +143,13 @@ void GetLpWeight(const Param &params, const LpWeightingFunction &weight_type,
  * Calculate Warped Weighted Linear Prediction (WWLP) coefficients using
  * autocorrelation method.
  *
- * @param frame pointer to the samples
- * @param a pointer to coefficiets (length p = LP degree)
- * @param Wn pointer to WWLP weighting function
- * @param lambda warping coefficient
+ * @param weigh_function : reference to the WWLP weighting function
+ * @param warping_lambda : warping coefficient
+ * @param weight_type : If NONE, compute solution with Levinson (more efficient)
+ * @param lp_order : AR prediction order
+ * @param frame : reference to the samples
+ * @param A : pointer to coefficiets (write to)
+ * author: @mairaksi
  */
 void WWLP(const gsl::vector &weight_function, const double &warping_lambda, const LpWeightingFunction weight_type,
 		const int &lp_order, const gsl::vector &frame, gsl::vector *A) {
@@ -150,7 +164,7 @@ void WWLP(const gsl::vector &weight_function, const double &warping_lambda, cons
 
    gsl::matrix Y(p+1,frame.size()+p,true); // Delayed and weighted versions of the signal
 
-   // Matrix Dw
+   // Matrix Y
    for(j=0;j<frame.size();j++) { // Set first (unwarped) row
       if(weight_type == 0) {
          Y(0,j) = frame(j);
@@ -168,10 +182,9 @@ void WWLP(const gsl::vector &weight_function, const double &warping_lambda, cons
          }
       }
    }
-   // Rfull = Dw*Dw'
    gsl::matrix Rfull = Y*(Y.transpose());
 
-   /// Use generic Ra=b solver if LP weighting is used
+   /** Use generic Ra=b solver if LP weighting is used **/
    if(weight_type != NONE) {
       // Autocorrelation matrix R (R = (YT*Y)/N, size p*p) and vector b (size p)
       double sum = 0.0;
@@ -209,21 +222,23 @@ void WWLP(const gsl::vector &weight_function, const double &warping_lambda, cons
       // Stabilize polynomial
       StabilizePoly(frame.size(),A);
 
-
-   /// Use Levinson if no LP weighting
+   /** Use Levinson if no LP weighting **/
    } else {
       Levinson(Rfull.get_col_vec(0), A);
    }
-
-
-
-
-    // Stabilize unstable filter by scaling the poles along the unit circle
-   //AC_stabilize(A,frame->size);
-   //Pole_stabilize(a);
-
 }
 
+/**
+ * Function LPC
+ *
+ * Calculate conventional Linear Prediction (LPC) coefficients using
+ * autocorrelation method and Levinson-Durbin recursion.
+ *
+ * @param frame : reference to the samples
+ * @param lpc_order : prediction order
+ * @param A : pointer to coefficients
+ * author: @mairaksi
+ */
 void LPC(const gsl::vector &frame, const int &lpc_order, gsl::vector *A) {
 	gsl::vector r;
 	Autocorrelation(frame,lpc_order,&r);
@@ -296,14 +311,11 @@ void SedreamsGciDetection(const gsl::vector &residual, const gsl::vector &mean_b
          }
       }
    }
-
    /* If no GCIs found, set gci_inds as empty and return */
 	if (ii == 0){
       (*gci_inds) = gsl::vector_int();
 		return ;
 	}
-
-
    (*gci_inds) = gsl::vector_int(ii);
 
 	/* Locate IAIF residual minima at the intervals and set them as GCI*/

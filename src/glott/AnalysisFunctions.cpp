@@ -294,7 +294,7 @@ int SpectralAnalysisQmf(const Param &params, const AnalysisData &data, gsl::matr
          Qmf::Decimate(lp_weight,2,&lp_weight_downsampled);
 
          ApplyWindowingFunction(params.default_windowing_function,&frame_qmf1);
-         ArAnalysis(params.lpc_order_vt_qmf1,0.0,NONE, lp_weight_downsampled, frame_qmf1, &A_qmf1);
+         ArAnalysis(params.lpc_order_vt_qmf1,0.0,params.lp_weighting_function, lp_weight_downsampled, frame_qmf1, &A_qmf1);
 
          /** High-band analysis **/
          ApplyWindowingFunction(params.default_windowing_function,&frame_qmf2);

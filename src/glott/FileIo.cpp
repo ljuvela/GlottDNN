@@ -101,7 +101,7 @@ int ReadWavFile (const char *fname, gsl::vector *signal, Param *params) {
 		(*signal)(i) = buffer[i];
 
 	/* set file parameters */
-	params->number_of_frames = ceil(signal->size()/params->frame_shift);
+	params->number_of_frames = (int)ceil((double)signal->size()/(double)params->frame_shift);
 	params->signal_length = signal->size();
 
 	/* Get basename (without extension) for saving parameters later*/

@@ -202,6 +202,10 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
    if (ConfigLookupBool("USE_TRAJECTORY_SMOOTHING", cfg, default_config, &(params->use_trajectory_smoothing)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
+   if (ConfigLookupBool("USE_SPECTRAL_MATCHING", cfg, default_config, &(params->use_spectral_matching)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
+
 	if (ConfigLookupInt("LSF_VT_SMOOTH_LEN", cfg, default_config, &(params->lsf_vt_smooth_len)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 

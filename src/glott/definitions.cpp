@@ -65,6 +65,7 @@ Param::Param() {
 	speed_scale = 1.0;
 	pitch_scale = 1.0;
 	use_postfiltering = false;
+	use_spectral_matching = true;
 	postfilter_coefficient = 0.4;
    use_trajectory_smoothing = false;
    lsf_vt_smooth_len = 3;
