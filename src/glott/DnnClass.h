@@ -43,6 +43,9 @@ struct DnnParams {
    int hnr_order;
    double warping_lambda_vt;
    int fs;
+
+   size_t getInputDimension() ;
+
 };
 
 class Dnn {
@@ -52,7 +55,8 @@ public:
    void addLayer(const DnnLayer &layer);
    int ReadInfo(const char *basename);
    int ReadData(const char *basename);
-   void ForwardPass(const gsl::vector &input, gsl::vector *output);
+   const gsl::vector & getOutput();
+   void setInput(const SynthesisData &data, const size_t &frame_index);
 
 private:
    std::list<DnnLayer> layer_list;
@@ -66,6 +70,8 @@ private:
    double input_max_value;
    gsl::matrix output_mean;
    gsl::matrix output_std;
+   gsl::matrix input_matrix;
+   gsl::vector output_vector;
    DnnParams input_params;
 
    DnnActivationFunction ActivationParse(std::string &str);

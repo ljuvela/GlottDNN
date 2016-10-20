@@ -72,14 +72,12 @@ int main(int argc, char *argv[]) {
 
    SpectralMatchExcitation(params, data, (&data.excitation_signal));
 
-   HarmonicModification(params, data, (&data.excitation_signal));
+  HarmonicModification(params, data, (&data.excitation_signal));
 
    FilterExcitation(params, data, &(data.signal));
 
 
-   Dnn excDnn;
-   //excDnn.ReadInfo("./dnnweights/dnn_nancy16khz/foo");
-   //excDnn.ReadData(filename);
+
 
    if(WriteWavFile(filename, ".exc.wav", data.excitation_signal, params.fs) == EXIT_FAILURE)
        return EXIT_FAILURE;

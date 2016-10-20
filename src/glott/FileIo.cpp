@@ -305,6 +305,10 @@ int ReadSynthesisData(const char *basename, Param *params, SynthesisData *data) 
       if (ReadGslMatrix(basename, ".HNR", params->data_type, params->hnr_order, &(data->hnr_glot)) == EXIT_FAILURE)
          return EXIT_FAILURE;
 
+   if (1) // TODO: add conditional
+      if (ReadGslMatrix(basename, ".PLS", params->data_type, params->paf_pulse_length, &(data->excitation_pulses)) == EXIT_FAILURE)
+         return EXIT_FAILURE;
+
    /* Read number of frames & compute signal length */
    params->number_of_frames = (int)(data->fundf.size());
    if(params->number_of_frames != (int)data->frame_energy.size() ||

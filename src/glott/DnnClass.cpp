@@ -32,13 +32,13 @@ DnnLayer::~DnnLayer() {};
 void DnnLayer::ForwardPass(const gsl::matrix &input) {
 
    // Check correct size
-   size_t in_size = W.size1();
-   size_t out_size = W.size2();
+   size_t in_size = W.size2();
+   size_t out_size = W.size1();
    assert(in_size == input.size1());
 
 
    // Matrix multiplication
-   layer_output = this->W * input;
+   layer_output = (this->W * input) + this->b;
 
    // Activation Function
    switch(this->activation_function) {
@@ -74,34 +74,74 @@ DnnParams::DnnParams() {
    fs= 0;
 }
 
+
+size_t DnnParams::getInputDimension() {
+     size_t input_dim = 0;
+     input_dim += lpc_order_vt;
+     input_dim += lpc_order_glot;
+     input_dim += hnr_order;
+     input_dim += f0_order;
+     input_dim += gain_order;
+     return input_dim;
+}
+
 Dnn::Dnn() {
    input_min_value = 0.1;
    input_max_value = 0.9;
 }
 
-void Dnn::ForwardPass(const gsl::vector &input, gsl::vector *output) {
-
-
-   gsl::matrix input_mat(input.size(),1);
-   input_mat.set_col_vec(0, input);
+const gsl::vector & Dnn::getOutput() {
 
 
    // input normalization
   // 0.1 + 0.8*(gsl_vector_get(inputdata,i+stack*NPAR) - min)/(max-min);
-   input_mat = input_min_value + (input_max_value-input_min_value)*ElementDivision(input_mat - input_data_min, input_data_max - input_data_min);
+   input_matrix = input_min_value + (input_max_value-input_min_value)*ElementDivision(input_matrix - input_data_min, input_data_max - input_data_min);
 
-   gsl::matrix &input_ref = input_mat;
+   gsl::matrix &input_ref = input_matrix;
    for(DnnLayer layer : this->layer_list) {
       layer.ForwardPass(input_ref);
       input_ref = layer.getOutput();
    }
 
-   output->resize(input_ref.get_rows());
    size_t i;
-   for(i=0;i<output->size();i++)
-      (*output)(i) = input_ref(i,0);
+   for(i=0;i<output_vector.size();i++)
+      output_vector(i) = input_ref(i,0);
 
    // output scaling
+
+   return output_vector;
+
+}
+
+void Dnn::setInput(const SynthesisData &data, const size_t &frame_index) {
+
+   input_matrix.set_dimensions(this->input_params.getInputDimension(),1);
+
+   size_t i,ind=0;
+   //f0
+   if (this->input_params.f0_order > 0)
+      for (i=0;i<input_params.f0_order;i++)
+         input_matrix(ind++,0) = data.fundf(frame_index);
+
+   //gain
+   if (this->input_params.gain_order > 0)
+      for (i=0;i<input_params.gain_order;i++)
+         input_matrix(ind++,0) = data.frame_energy(frame_index);
+
+   //hnr
+   if (this->input_params.hnr_order > 0)
+      for (i=0;i<input_params.hnr_order;i++)
+         input_matrix(ind++,0) = data.hnr_glot(i,frame_index);
+
+   // lsf_glot
+   if (this->input_params.lpc_order_glot > 0)
+      for (i=0;i<input_params.lpc_order_glot;i++)
+         input_matrix(ind++,0) = data.lsf_glot(i,frame_index);
+
+   // lsf_vt
+   if (this->input_params.lpc_order_vt > 0)
+      for (i=0;i<input_params.lpc_order_vt;i++)
+         input_matrix(ind++,0) = data.lsf_vocal_tract(i,frame_index);
 
 }
 
@@ -174,6 +214,11 @@ int Dnn::ReadInfo(const char *basename) {
    ConfigLookupInt("SAMPLING_FREQUENCY", cfg, false, &(input_params.fs));
    ConfigLookupDouble("WARPING_LAMBDA_VT", cfg, false, &(input_params.warping_lambda_vt));
 
+   if (input_params.getInputDimension() != layer_sizes[0]) {
+      std::cerr << "Error: Dnn parameter dimensions do not sum up to input dimension "  <<  std::endl;
+      return EXIT_FAILURE;
+   }
+
    return EXIT_SUCCESS;
 }
 
@@ -184,7 +229,7 @@ int Dnn::ReadData(const char *basename) {
    fname_str += basename;
    fname_str += ".dnnData";
 
-   fname_str = "./dnnweights/dnn_nancy16khz/test.dat";
+   fname_str = "./dnnweights/dnn_nancy16khz/foo.dat";
    std::cout << "Reading file " << fname_str  << std::endl;
 
    std::ifstream file(fname_str, std::ios::in | std::ios::binary);
@@ -206,15 +251,12 @@ int Dnn::ReadData(const char *basename) {
       in_size = this->layer_sizes[layer_index];
       out_size = this->layer_sizes[layer_index+1];
       expected_length += in_size*out_size + out_size;
-      std::cout << in_size << " x " << out_size << std::endl;
    }
    expected_length += 2*(this->layer_sizes[0]);
 
    n_values = file_size / sizeof(double);
    double *file_data = new double[n_values];
    file.read(reinterpret_cast<char*>(file_data), file_size);
-
-   std::cout << "Expected length: " << expected_length << " N_values: " << n_values << std::endl;
 
    gsl::matrix W;
    gsl::matrix b;
@@ -224,16 +266,15 @@ int Dnn::ReadData(const char *basename) {
       in_size = this->layer_sizes[layer_index];
       out_size = this->layer_sizes[layer_index+1];
       W = gsl::matrix(out_size, in_size);
-      b = gsl::matrix(in_size, 1);
+      b = gsl::matrix(out_size, 1);
 
       for(i=0;i<out_size;i++)
          for(j=0;j<in_size;j++)
             W(i,j) = file_data[ind++];
 
-      for(i=0;i<in_size;i++)
+      for(i=0;i<out_size;i++)
          b(i,0) = file_data[ind++];
 
-      //std::cout << W  << " " << b << std::endl;
 
       this->addLayer(DnnLayer(W,b, this->activation_functions[layer_index]));
 
@@ -250,6 +291,10 @@ int Dnn::ReadData(const char *basename) {
       this->input_data_max(i,0) = file_data[ind++];
 
    delete[] file_data;
+
+   // Allocate input and output
+   input_matrix = gsl::matrix(layer_sizes[0],1, true);
+   output_vector = gsl::vector(out_size,true);
 
 
    return EXIT_SUCCESS;

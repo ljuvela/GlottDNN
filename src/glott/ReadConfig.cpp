@@ -231,6 +231,7 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
 
 	/* Read enum style configurations */
 	char *cstring = NULL;
+
 	/* Data Format */
 	if (ConfigLookupCString("DATA_TYPE", cfg, default_config, &(cstring)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
@@ -243,6 +244,7 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
 		return EXIT_FAILURE;
 	}
 	delete[] cstring;
+
 	/* Signal Polarity */
 	if (ConfigLookupCString("SIGNAL_POLARITY", cfg, default_config, &(cstring)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
@@ -257,6 +259,7 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
 		return EXIT_FAILURE;
 	}
 	delete[] cstring;
+
 	/* LP weighting function */
 	if (ConfigLookupCString("LP_WEIGHTING_FUNCTION", cfg, default_config, &(cstring)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
@@ -271,6 +274,22 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
 		return EXIT_FAILURE;
 	}
 	delete[] cstring;
+
+	/* Excitation method */
+	if (ConfigLookupCString("EXCITATION_METHOD", cfg, default_config, &(cstring)) == EXIT_FAILURE)
+	   return EXIT_FAILURE;
+	if (!std::strcmp("SINGLE_PULSE",cstring)){
+	   params->excitation_method = SINGLE_PULSE_EXCITATION;
+	} else if (!std::strcmp("DNN_GENERATED",cstring)) {
+	   params->excitation_method = DNN_GENERATED_EXCITATION;
+	} else if (!std::strcmp("PULSES_AS_FEATURES",cstring)) {
+	   params->excitation_method = PULSES_AS_FEATURES_EXCITATION;
+	} else {
+	   delete[] cstring;
+	   return EXIT_FAILURE;
+	}
+	delete[] cstring;
+
 
 	return EXIT_SUCCESS;
 }

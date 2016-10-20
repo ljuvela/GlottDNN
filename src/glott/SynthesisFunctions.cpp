@@ -14,6 +14,8 @@
 #include "SpFunctions.h"
 #include "InverseFiltering.h"
 #include "Filters.h"
+#include "FileIo.h"
+#include "DnnClass.h"
 #include "SynthesisFunctions.h"
 
 void PostFilter(const double &postfilter_coefficient, const int &fs, gsl::matrix *lsf) {
@@ -98,6 +100,63 @@ gsl::vector GetSinglePulse(const size_t &pulse_len, const double &energy, const 
    return pulse;
 }
 
+gsl::vector GetExternalPulse(const size_t &pulse_len, const double &energy, const size_t &frame_index, const gsl::matrix &external_pulses) {
+
+   // Declare and initialize
+   gsl::vector pulse(pulse_len,true);
+
+   // Copy pulse starting from middle of external pulse
+   int mid = round(external_pulses.size1()/2.0);
+   int ind;
+   for (size_t i=0; i<pulse_len;i++) {
+      ind = mid-round(pulse_len/2.0)+i;
+      if (ind >= 0 && ind < (int)external_pulses.size1())
+         pulse(i) = external_pulses(ind , frame_index);
+   }
+
+   // Window pulse
+   pulse *= energy/getEnergy(pulse);
+   ApplyWindowingFunction(HANN, &pulse);
+
+   /* Window length normalization */
+//   gsl::vector ones(pulse_len);
+//   ones.set_all(1.0);
+//   ApplyWindowingFunction(HANN, &ones);
+//   pulse *= pulse_len / pow(ones.norm2(),2);
+
+   return pulse;
+}
+
+gsl::vector GetDnnPulse(const size_t &pulse_len, const double &energy, const size_t &frame_index, const SynthesisData &data,  Dnn &excDnn) {
+
+   gsl::vector pulse(pulse_len);
+   excDnn.setInput(data, frame_index);
+   const gsl::vector &dnn_pulse = excDnn.getOutput();
+
+   // Copy pulse starting from middle of external pulse
+   int mid = round(dnn_pulse.size()/2.0);
+   int ind;
+   for (size_t i=0; i<pulse_len;i++) {
+      ind = mid-round(pulse_len/2.0)+i;
+      if (ind >= 0 && ind < (int)dnn_pulse.size())
+         pulse(i) = dnn_pulse(ind);
+   }
+
+   // Window pulse
+   pulse *= energy/getEnergy(pulse);
+   // TODO: window type switch
+   ApplyWindowingFunction(COSINE, &pulse);
+   if(frame_index == 20)
+      VPrint1(dnn_pulse);
+   if(frame_index == 22)
+         VPrint2(dnn_pulse);
+
+   VPrint3(dnn_pulse);
+
+   return pulse;
+
+}
+
 void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vector *excitation_signal) {
 
    gsl::vector single_pulse_base;
@@ -105,15 +164,21 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
 
    gsl::gaussian_random gauss_gen(rand_gen);
 
+   Dnn excDnn;
+
+   // Load excitation pulses
    switch (params.excitation_method) {
    case SINGLE_PULSE_EXCITATION:
       single_pulse_base = StdVector2GslVector(kDGLOTPULSE) ;
       break;
    case DNN_GENERATED_EXCITATION:
       // Load DNN
+      excDnn.ReadInfo("./dnnweights/dnn_nancy16khz/foo");
+      excDnn.ReadData("");
       break;
    case PULSES_AS_FEATURES_EXCITATION:
       // Load pulses as features
+
       break;
    }
 
@@ -138,11 +203,10 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
             break;
          case DNN_GENERATED_EXCITATION:
             //pulse = GetDnnPulse();
-            std::cout << "DNN" << std::endl;
+            pulse = GetDnnPulse(pulse_len, energy, frame_index, data, excDnn);
             break;
          case PULSES_AS_FEATURES_EXCITATION:
-            //pulse = GetPafPulse();
-            std::cout << "PAF" << std::endl;
+            pulse = GetExternalPulse(pulse_len, energy, frame_index, data.excitation_pulses);
             break;
          }
 
