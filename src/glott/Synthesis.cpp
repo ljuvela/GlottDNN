@@ -66,7 +66,6 @@ int main(int argc, char *argv[]) {
    if(params.use_trajectory_smoothing)
       ParameterSmoothing(params, &data);
 
-
    CreateExcitation(params, data, &(data.excitation_signal));
 
    if(params.use_spectral_matching)
@@ -85,4 +84,5 @@ int main(int argc, char *argv[]) {
 
    std::cout << "Finished synthesis" << std::endl;
 
+   return EXIT_SUCCESS;
 }

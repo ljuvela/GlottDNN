@@ -128,7 +128,7 @@ int ReadWavFile (const char *fname, gsl::vector *signal, Param *params) {
 int EvalFileLength(const char *filename, DataType data_format) {
 
 	FILE *file;
-	char s[300];
+	char *s = new char[300];
 	int fileSize = 0;
 
 	/* Open file */
@@ -147,6 +147,7 @@ int EvalFileLength(const char *filename, DataType data_format) {
 		fileSize = ftell(file)/sizeof(double);
 	}
 	fclose(file);
+	delete[] s;
 
 	return fileSize;
 }

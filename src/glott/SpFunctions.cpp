@@ -322,6 +322,7 @@ void ApplyWindowingFunction(const WindowingFunctionType &window_function, gsl::v
 	}
 }
 
+///FIXME: Does not work as intended yet (@mairaksi)
 void ApplyPsolaWindow(const WindowingFunctionType &window_function, const double &t0_previous,
                         const double &t0_next, gsl::vector *frame) {
 
@@ -553,8 +554,7 @@ void IFFTRadix2(const ComplexVector &X, gsl::vector *x) {
    free(data);
 }
 
-void FastAutocorr(const gsl::vector &x, gsl::vector *ac)
-{
+void FastAutocorr(const gsl::vector &x, gsl::vector *ac) {
    size_t i;
    size_t N = x.size();
    size_t nfft = NextPow2(2*N-1);
@@ -1224,10 +1224,6 @@ gsl::vector_int FindHarmonicPeaks(const gsl::vector &fft_mag, const double &f0, 
 
    return peak_inds;
 }
-
-
-
-
 
 
 /** Stabilize a polynomial by computing the FFT autocorrelation of

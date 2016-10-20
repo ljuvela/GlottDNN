@@ -247,8 +247,7 @@ int SpectralAnalysisQmf(const Param &params, const AnalysisData &data, gsl::matr
    gsl::vector lp_weight_downsampled(frame_qmf1.size() + params.lpc_order_vt_qmf1);
    gsl::vector B(1);B(0) = 1.0;
 
-
-   gsl::vector H0 = Qmf::LoadFilter(kCUTOFF05PI);
+   gsl::vector H0 = StdVector2GslVector(kCUTOFF05PI); // Load hard-coded low-pass filter
    gsl::vector H1 = Qmf::GetMatchingFilter(H0);
 
 	gsl::vector lp_weight(params.frame_length + params.lpc_order_vt,true);

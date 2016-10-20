@@ -81,7 +81,6 @@ public:
 };
 
 
-
 /* Define analysis data variable struct*/
 struct AnalysisData {
 	AnalysisData();
@@ -109,6 +108,7 @@ public:
 	//gsl::matrix lsf_vt_qmf2;
 	//gsl::vector gain_qmf;
 };
+
 
 /* Define analysis data variable struct*/
 struct SynthesisData {

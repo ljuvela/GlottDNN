@@ -107,6 +107,7 @@ void LpWeightAme(const Param &params, const gsl::vector_int &gci_inds,
 	}
 }
 
+
 void LpWeightSte(const Param &params, const gsl::vector &frame, gsl::vector *weight) {
 	if(!weight->is_set()) {
 		*weight = gsl::vector(params.frame_length + params.lpc_order_vt);
@@ -115,8 +116,19 @@ void LpWeightSte(const Param &params, const gsl::vector &frame, gsl::vector *wei
 			weight->resize(params.frame_length + params.lpc_order_vt);
 		}
 	}
-	weight->set_all(1.0);
+	weight->set_all(0.0);
+	int M = params.lpc_order_vt;
+	int lag = 1;
+   int i,j;
+	for(i=0;i<(int)weight->size();i++) {
+		for(j=GSL_MAX(i-lag-M+1,0);j<GSL_MIN(i-lag+1,(int)frame.size());j++) {
+			(*weight)(i) += frame(j)*frame(j);
+		}
+		if((*weight)(i) == 0.0)
+         (*weight)(i) += DBL_EPSILON; // Ensure non-zero weight
+	}
 }
+
 
 void GetLpWeight(const Param &params, const LpWeightingFunction &weight_type,
 						const gsl::vector_int &gci_inds, const gsl::vector &frame,
@@ -227,6 +239,7 @@ void WWLP(const gsl::vector &weight_function, const double &warping_lambda, cons
       Levinson(Rfull.get_col_vec(0), A);
    }
 }
+
 
 /**
  * Function LPC
