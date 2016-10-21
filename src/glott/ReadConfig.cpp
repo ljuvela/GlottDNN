@@ -227,6 +227,8 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
    if (ConfigLookupDouble("NOISE_GAIN_UNVOICED", cfg, default_config, &(params->noise_gain_unvoiced)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
+	if (ConfigLookupCString("DNN_WEIGHT_PATH", cfg, default_config, &(params->dnn_path_basename)) == EXIT_FAILURE)
+		return EXIT_FAILURE;
 
 
    //if (ConfigLookupDouble("F0_CHECK_RANGE", cfg, default_config, &(params->f0_check_range)) == EXIT_FAILURE)
@@ -293,6 +295,22 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
 	   return EXIT_FAILURE;
 	}
 	delete[] cstring;
+
+   /* PSOLA window for synthesis */
+	if (ConfigLookupCString("PSOLA_WINDOW", cfg, default_config, &(cstring)) == EXIT_FAILURE)
+	   return EXIT_FAILURE;
+	if (!std::strcmp("NONE",cstring)){
+	   params->psola_windowing_function = RECT;
+	} else if (!std::strcmp("COSINE",cstring)) {
+	   params->psola_windowing_function = COSINE;
+	} else if (!std::strcmp("HANN",cstring)) {
+	   params->psola_windowing_function = HANN;
+	} else {
+	   delete[] cstring;
+	   return EXIT_FAILURE;
+	}
+	delete[] cstring;
+
 
 
 	return EXIT_SUCCESS;

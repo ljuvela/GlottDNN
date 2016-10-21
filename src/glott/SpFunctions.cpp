@@ -319,6 +319,12 @@ void ApplyWindowingFunction(const WindowingFunctionType &window_function, gsl::v
 		for(i=0;i<frame->size();i++)
 			(*frame)(i) *= sqrt(0.5*(1.0-cos(2.0*M_PI*((double)i)/((n)-1.0))));
 		break;
+	case HANNING : // Hann window with non-zero edges
+      for(i=0;i<frame->size();i++)
+			(*frame)(i) *= 0.5*(1.0-cos(2.0*M_PI*((double)i+1.0)/((n+2.0)-1.0)));
+		break;
+   case RECT :
+      break;
 	}
 }
 

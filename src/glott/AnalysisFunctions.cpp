@@ -337,8 +337,8 @@ int SpectralAnalysisQmf(const Param &params, const AnalysisData &data, gsl::matr
 int InverseFilter(const Param &params, const AnalysisData &data, gsl::matrix *poly_glott, gsl::vector *source_signal) {
    size_t frame_index;
 	gsl::vector frame(params.frame_length,true);
-	gsl::vector pre_frame(params.lpc_order_vt,true);
-   gsl::vector frame_full(params.frame_length+params.lpc_order_vt); // Pre-frame + frame
+	gsl::vector pre_frame(2*params.lpc_order_vt,true);
+   gsl::vector frame_full(frame.size() + pre_frame.size()); // Pre-frame + frame
    gsl::vector frame_residual(params.frame_length);
    gsl::vector a_glott(params.lpc_order_glot+1);
    gsl::vector b(1);b(0) = 1.0;
@@ -580,7 +580,7 @@ void HnrAnalysis(const Param &params, const gsl::vector &source_signal, const gs
       /** HNR Analysis only for voiced frames (zero for unvoiced frames) **/
       if(fundf(frame_index) > 0) {
          GetFrame(source_signal, frame_index, params.frame_shift, &frame, NULL);
-         ApplyWindowingFunction(HANN, &frame);
+         ApplyWindowingFunction(params.default_windowing_function, &frame);
          FFTRadix2(frame, NFFT, &frame_fft);
          fft_mag = frame_fft.getAbs();
          for(i=0;i<(int)fft_mag.size();i++) {
