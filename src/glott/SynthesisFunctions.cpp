@@ -86,7 +86,6 @@ gsl::vector GetSinglePulse(const size_t &pulse_len, const double &energy, const 
    //InterpolateSpline(base_pulse, pulse_len, &pulse);
    Interpolate(base_pulse, &pulse);
    pulse *= energy/getEnergy(pulse);
-   //ApplyWindowingFunction(HANN, &pulse);
 
    /* Window length normalization */
 
@@ -116,7 +115,6 @@ gsl::vector GetExternalPulse(const size_t &pulse_len, const double &energy, cons
 
    // Window pulse
    pulse *= energy/getEnergy(pulse);
-   ApplyWindowingFunction(HANN, &pulse);
 
    /* Window length normalization */
 //   gsl::vector ones(pulse_len);
@@ -145,13 +143,6 @@ gsl::vector GetDnnPulse(const size_t &pulse_len, const double &energy, const siz
    // Window pulse
    pulse *= energy/getEnergy(pulse);
    // TODO: window type switch
-   ApplyWindowingFunction(COSINE, &pulse);
-   if(frame_index == 20)
-      VPrint1(dnn_pulse);
-   if(frame_index == 22)
-         VPrint2(dnn_pulse);
-
-   VPrint3(dnn_pulse);
 
    return pulse;
 
@@ -173,25 +164,26 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
       break;
    case DNN_GENERATED_EXCITATION:
       // Load DNN
-      excDnn.ReadInfo("./dnnweights/dnn_nancy16khz/foo");
-      excDnn.ReadData("");
+      excDnn.ReadInfo(params.dnn_path_basename);
+      excDnn.ReadData(params.dnn_path_basename);
       break;
    case PULSES_AS_FEATURES_EXCITATION:
       // Load pulses as features
 
       break;
    }
+   /*  Experimental for accurate PSOLA */
+   //size_t frame_index_nx;
+   //size_t frame_index_pr = 0;
+   //double t0_pr;
+   //double t0_nx;
 
-   size_t sample_index = 0;
-   size_t frame_index;
-   size_t frame_index_nx;
-   size_t frame_index_pr = 0;
+   size_t frame_index, sample_index = 0;
    gsl::vector pulse;
    gsl::vector p2;
    gsl::vector noise(params.frame_shift*2);
    double T0, energy;
-   double t0_pr;
-   double t0_nx;
+
    size_t pulse_len;
    while (sample_index < (size_t)params.signal_length) {
       frame_index = rint(params.speed_scale * sample_index / (params.signal_length-1) * (params.number_of_frames-1));
@@ -225,11 +217,14 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
          case DNN_GENERATED_EXCITATION:
             //pulse = GetDnnPulse();
             pulse = GetDnnPulse(pulse_len, energy, frame_index, data, excDnn);
+            ApplyWindowingFunction(params.psola_windowing_function, &pulse);
             break;
          case PULSES_AS_FEATURES_EXCITATION:
             pulse = GetExternalPulse(pulse_len, energy, frame_index, data.excitation_pulses);
+            ApplyWindowingFunction(params.psola_windowing_function, &pulse);
             break;
          }
+
          OverlapAdd(pulse,sample_index,excitation_signal);
          //OverlapAdd(p2,sample_index,excitation_signal);
          sample_index += rint(T0);
@@ -259,7 +254,6 @@ void HarmonicModification(const Param &params, const SynthesisData &data, gsl::v
 
 
    /* Variables */
-   int hnr_channels = params.hnr_order;
    gsl::vector frame(params.frame_length_long);
    ComplexVector frame_fft;
    size_t NFFT = 8192; // Long FFT
@@ -328,15 +322,15 @@ void HarmonicModification(const Param &params, const SynthesisData &data, gsl::v
          InterpolateLinear(harmonic_index, lower_env_values, x_interp, &fft_lower_env); // P0
          InterpolateLinear(harmonic_index, upper_env_values, x_interp, &fft_upper_env);
          Erb2Linear(data.hnr_glot.get_col_vec(frame_index), params.fs, &hnr_interp);
-         for(i=0;i<fft_lower_env_target.size();i++)
+         for(i=0;i<(int)fft_lower_env_target.size();i++)
             fft_lower_env_target(i) = fft_upper_env(i) + hnr_interp(i); // Ptar
 
          /* Convert to linear scale */
-         for(i=0;i<fft_lower_env_target.size();i++) {
+         for(i=0;i<(int)fft_lower_env_target.size();i++) {
             fft_noise(i) = pow(10,fft_lower_env_target(i)/20.0) - pow(10,fft_lower_env(i)/20.0);
          }
 
-         for(i=0;i<noise_vec.size();i++)
+         for(i=0;i<(int)noise_vec.size();i++)
             noise_vec(i) = random_gauss_gen.get();
 
 
@@ -347,8 +341,8 @@ void HarmonicModification(const Param &params, const SynthesisData &data, gsl::v
          size_t noise_low_freq_limit_ind = rint(NFFT*params.noise_low_freq_limit_voiced/params.fs);
 
 
-         for(i=0;i<fft_mag.size();i++) {
-            if(i < noise_low_freq_limit_ind) {
+         for(i=0;i<(int)fft_mag.size();i++) {
+            if(i < (int)noise_low_freq_limit_ind) {
                noise_vec_fft.setReal(i,0.0);
                noise_vec_fft.setImag(i,0.0);
             } else {
@@ -367,7 +361,7 @@ void HarmonicModification(const Param &params, const SynthesisData &data, gsl::v
 
          ApplyWindowingFunction(HANN,&noise_vec);
 
-         for(i=0;i<frame.size();i++)
+         for(i=0;i<(int)frame.size();i++)
             frame(i) += noise_vec(i);
 
 

@@ -14,6 +14,7 @@
 #include <fstream>
 #include <cassert>
 #include <cmath>
+#include <libconfig.h++>
 #include "ReadConfig.h"
 #include "Utils.h"
 #include "DnnClass.h"
@@ -27,13 +28,13 @@ DnnLayer::DnnLayer(const gsl::matrix &W_init, const gsl::matrix &b_init, const D
    this->layer_output = gsl::matrix(W_init.get_rows(), 1, true);
 }
 
-DnnLayer::~DnnLayer() {};
+DnnLayer::~DnnLayer() {}
 
 void DnnLayer::ForwardPass(const gsl::matrix &input) {
 
    // Check correct size
    size_t in_size = W.size2();
-   size_t out_size = W.size1();
+   //size_t out_size = W.size1();
    assert(in_size == input.size1());
 
 
@@ -117,7 +118,7 @@ void Dnn::setInput(const SynthesisData &data, const size_t &frame_index) {
 
    input_matrix.set_dimensions(this->input_params.getInputDimension(),1);
 
-   size_t i,ind=0;
+   int i,ind=0;
    //f0
    if (this->input_params.f0_order > 0)
       for (i=0;i<input_params.f0_order;i++)
@@ -171,7 +172,7 @@ int Dnn::ReadInfo(const char *basename) {
    std::string fname_str;
    fname_str += basename;
    fname_str += ".dnnInfo";
-   std::cout << "Reading file " << fname_str  << std::endl;
+   std::cout << "Using excitation DNN specified in file " << fname_str  << std::endl;
 
    libconfig::Config cfg;
 
@@ -195,14 +196,20 @@ int Dnn::ReadInfo(const char *basename) {
 
    const libconfig::Setting &layers = cfg.lookup("LAYERS");
    num_layers = layers.getLength();
-   for (libconfig::Setting const &layer : layers)
-      this->layer_sizes.push_back(layer);
+   //for (libconfig::Setting const &layer : layers)
+   //   this->layer_sizes.push_back(layer);
+   for (size_t i=0;i<num_layers; i++) {
+      this->layer_sizes.push_back(layers[i]);
+   }
+
 
 
    const libconfig::Setting &activations = cfg.lookup("ACTIVATIONS");
    std::vector<std::string> strs;
-   for (libconfig::Setting const &af : activations) {
-      strs.push_back(af);
+   //for (libconfig::Setting const &af : activations) {
+   for (size_t i=0;i<num_layers; i++) {
+      //strs.push_back(af);
+      strs.push_back(activations[i]);
       this->activation_functions.push_back(ActivationParse(strs.back()));
    }
 
@@ -214,7 +221,7 @@ int Dnn::ReadInfo(const char *basename) {
    ConfigLookupInt("SAMPLING_FREQUENCY", cfg, false, &(input_params.fs));
    ConfigLookupDouble("WARPING_LAMBDA_VT", cfg, false, &(input_params.warping_lambda_vt));
 
-   if (input_params.getInputDimension() != layer_sizes[0]) {
+   if (input_params.getInputDimension() != (size_t)layer_sizes[0]) {
       std::cerr << "Error: Dnn parameter dimensions do not sum up to input dimension "  <<  std::endl;
       return EXIT_FAILURE;
    }
@@ -229,12 +236,11 @@ int Dnn::ReadData(const char *basename) {
    fname_str += basename;
    fname_str += ".dnnData";
 
-   fname_str = "./dnnweights/dnn_nancy16khz/foo.dat";
-   std::cout << "Reading file " << fname_str  << std::endl;
+   //std::cout << "Reading file " << fname_str  << std::endl;
 
    std::ifstream file(fname_str, std::ios::in | std::ios::binary);
    if (!file)
-      EXIT_FAILURE;
+      return EXIT_FAILURE;
 
    std::streampos file_size;
    size_t n_values;
@@ -246,7 +252,7 @@ int Dnn::ReadData(const char *basename) {
 
    // Check file length
    size_t expected_length = 0;
-   size_t in_size, out_size;
+   size_t in_size, out_size=0;
    for (size_t layer_index=0; layer_index<this->num_layers-1 ; layer_index++) {
       in_size = this->layer_sizes[layer_index];
       out_size = this->layer_sizes[layer_index+1];

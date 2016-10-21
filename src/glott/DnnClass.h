@@ -9,6 +9,7 @@
 #define SRC_GLOTT_DNNCLASS_H_
 
 #include <list>
+#include <libconfig.h++>
 
 enum DnnActivationFunction {SIGMOID, TANH, RELU, LINEAR};
 

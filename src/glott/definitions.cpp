@@ -15,12 +15,14 @@ Param::Param() {
    /* String parameters */
 	external_f0_filename = NULL;
 	external_gci_filename = NULL;
+	dnn_path_basename = NULL;
 	basename = NULL;
 	/* Enum parameters */
 	default_windowing_function = HANN;
 	signal_polarity = POLARITY_DEFAULT;
    lp_weighting_function = AME;
    excitation_method = SINGLE_PULSE_EXCITATION;
+   psola_windowing_function = COSINE;
    /* Other parameters */
 	fs = 16000;
 	frame_length = 400;
@@ -85,6 +87,8 @@ Param::~Param() {
 		delete[] external_gci_filename;
 	if (basename)
 	   delete[] basename;
+   if (dnn_path_basename)
+      delete[] dnn_path_basename;
 }
 
 AnalysisData::AnalysisData() {}

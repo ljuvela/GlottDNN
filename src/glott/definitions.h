@@ -9,7 +9,7 @@
 enum DataType {ASCII, BINARY};
 enum SignalPolarity {POLARITY_DEFAULT, POLARITY_INVERT, POLARITY_DETECT};
 enum LpWeightingFunction {NONE, AME, STE};
-enum WindowingFunctionType {HANN, HAMMING, BLACKMAN, COSINE};
+enum WindowingFunctionType {HANN, HAMMING, BLACKMAN, COSINE, HANNING, RECT};
 enum ExcitationMethod {SINGLE_PULSE_EXCITATION, DNN_GENERATED_EXCITATION, PULSES_AS_FEATURES_EXCITATION};
 
 /* Structures */
@@ -30,6 +30,7 @@ public:
 	char *external_f0_filename;
 	bool use_external_gci;
 	char *external_gci_filename;
+	char *dnn_path_basename;
 	DataType data_type;
 	bool qmf_subband_analysis;
 	SignalPolarity signal_polarity;
@@ -41,6 +42,7 @@ public:
 	double ame_duration_quotient;
 	double ame_position_quotient;
 	WindowingFunctionType default_windowing_function;
+	WindowingFunctionType psola_windowing_function;
 	char *basename;
 	double max_pulse_len_diff;
 	int paf_pulse_length;
