@@ -119,8 +119,11 @@ int AnalysisData::AllocateData(const Param &params) {
 
 int AnalysisData::SaveData(const Param &params) {
 
-   if (params.extract_gain)
-      WriteGslVector(params.basename, ".Gain", params.data_type, frame_energy);
+   if (params.extract_gain) {
+      gsl::vector_float fe(frame_energy);
+      //WriteGslVector(params.basename, ".Gain", params.data_type, frame_energy);
+      WriteGslVector(params.basename, ".Gain", params.data_type, fe);
+   }
    if (params.extract_lsf_vt)
       WriteGslMatrix(params.basename, ".LSF", params.data_type, lsf_vocal_tract);
    if (params.extract_lsf_glot)

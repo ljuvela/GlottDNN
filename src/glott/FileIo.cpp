@@ -6,6 +6,7 @@
 #include <cstdio>
 //#include <stdio.h>
 #include <gslwrap/vector_double.h>
+#include <gslwrap/vector_float.h>
 #include <gslwrap/matrix_double.h>
 #include "definitions.h"
 
@@ -230,6 +231,29 @@ int ReadGslMatrix(const char *basename, const char *extension, const DataType fo
 }
 
 int WriteGslVector(const char *basename, const char *extension, const DataType &format, const gsl::vector &vector) {
+   std::string filename;
+   filename += basename;
+   filename += extension;
+   FILE *fid = NULL;
+   fid = fopen(filename.c_str(), "w");
+   if(fid==NULL){
+      std::cerr << "Error: could not create file " << filename << std::endl;
+      return EXIT_FAILURE;
+   }
+   switch (format) {
+   case ASCII:
+      vector.fprintf(fid, "%.7f");
+      break;
+   case BINARY:
+      vector.fwrite(fid);
+      break;
+   }
+
+   fclose(fid);
+   return EXIT_SUCCESS;
+}
+
+int WriteGslVectorFloat(const char *basename, const char *extension, const DataType &format, const gsl::vector_float &vector) {
    std::string filename;
    filename += basename;
    filename += extension;
