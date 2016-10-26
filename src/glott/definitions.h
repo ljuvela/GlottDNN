@@ -27,10 +27,16 @@ public:
 	int lpc_order_glot;
 	int hnr_order;
 	bool use_external_f0;
-	char *external_f0_filename;
 	bool use_external_gci;
-	char *external_gci_filename;
-	char *dnn_path_basename;
+	//char *external_f0_filename;
+	//char *external_gci_filename;
+	//char *dnn_path_basename;
+	//char *data_directory;
+	std::string external_f0_filename;
+	std::string external_gci_filename;
+	std::string dnn_path_basename;
+	std::string data_directory;
+	std::string basename;
 	DataType data_type;
 	bool qmf_subband_analysis;
 	SignalPolarity signal_polarity;
@@ -43,7 +49,7 @@ public:
 	double ame_position_quotient;
 	WindowingFunctionType default_windowing_function;
 	WindowingFunctionType psola_windowing_function;
-	char *basename;
+
 	double max_pulse_len_diff;
 	int paf_pulse_length;
 	bool use_pulse_interpolation;

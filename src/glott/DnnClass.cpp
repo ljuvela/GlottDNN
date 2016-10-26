@@ -83,6 +83,7 @@ size_t DnnParams::getInputDimension() {
      input_dim += hnr_order;
      input_dim += f0_order;
      input_dim += gain_order;
+
      return input_dim;
 }
 
@@ -222,7 +223,7 @@ int Dnn::ReadInfo(const char *basename) {
    ConfigLookupDouble("WARPING_LAMBDA_VT", cfg, false, &(input_params.warping_lambda_vt));
 
    if (input_params.getInputDimension() != (size_t)layer_sizes[0]) {
-      std::cerr << "Error: Dnn parameter dimensions do not sum up to input dimension "  <<  std::endl;
+      std::cerr << "Error: Dnn parameter dimensions (" << input_params.getInputDimension() << ") do not sum up to input dimension (" << layer_sizes[0] <<")"  <<  std::endl;
       return EXIT_FAILURE;
    }
 
@@ -235,8 +236,6 @@ int Dnn::ReadData(const char *basename) {
    std::string fname_str;
    fname_str += basename;
    fname_str += ".dnnData";
-
-   //std::cout << "Reading file " << fname_str  << std::endl;
 
    std::ifstream file(fname_str, std::ios::in | std::ios::binary);
    if (!file)
@@ -258,9 +257,10 @@ int Dnn::ReadData(const char *basename) {
       out_size = this->layer_sizes[layer_index+1];
       expected_length += in_size*out_size + out_size;
    }
-   expected_length += 2*(this->layer_sizes[0]);
+   //expected_length += 2*(this->layer_sizes[0]);
 
    n_values = file_size / sizeof(double);
+   assert(n_values == expected_length);
    double *file_data = new double[n_values];
    file.read(reinterpret_cast<char*>(file_data), file_size);
 
@@ -274,17 +274,47 @@ int Dnn::ReadData(const char *basename) {
       W = gsl::matrix(out_size, in_size);
       b = gsl::matrix(out_size, 1);
 
-      for(i=0;i<out_size;i++)
-         for(j=0;j<in_size;j++)
+//      for(i=0;i<out_size;i++)
+//         for(j=0;j<in_size;j++)
+//            W(i,j) = file_data[ind++];
+
+
+      for(j=0;j<in_size;j++)
+         for(i=0;i<out_size;i++)
             W(i,j) = file_data[ind++];
 
       for(i=0;i<out_size;i++)
          b(i,0) = file_data[ind++];
 
-
       this->addLayer(DnnLayer(W,b, this->activation_functions[layer_index]));
 
    }
+
+   delete[] file_data;
+
+    /* Read input max and min*/
+
+   /* Filename processing */
+     fname_str = basename;
+     fname_str += ".dnnMinMax";
+
+     file = std::ifstream(fname_str, std::ios::in | std::ios::binary);
+     if (!file)
+        return EXIT_FAILURE;
+
+     // File size
+     file.seekg(0, std::ios::end);
+     file_size = file.tellg();
+     file.seekg(0, std::ios::beg);
+
+     // Check file length
+     expected_length = 2*(this->layer_sizes[0]);
+
+     ind=0;
+     n_values = file_size / sizeof(double);
+     assert(n_values == expected_length);
+     file_data = new double[n_values];
+     file.read(reinterpret_cast<char*>(file_data), file_size);
 
    // Read input data min values
    this->input_data_min = gsl::matrix(layer_sizes[0],1);

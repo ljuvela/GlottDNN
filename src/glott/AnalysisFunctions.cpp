@@ -55,7 +55,7 @@ int GetF0(const Param &params, const gsl::vector &signal, const gsl::vector &sou
 	if(params.use_external_f0) {
 		std::cout << "using external F0 file: " << params.external_f0_filename << " ...";
 		gsl::vector fundf_ext;
-		if(ReadGslVector(params.external_f0_filename, params.data_type, &fundf_ext) == EXIT_FAILURE)
+		if(ReadGslVector(params.external_f0_filename.c_str(), params.data_type, &fundf_ext) == EXIT_FAILURE)
          return EXIT_FAILURE;
 
 		if(fundf_ext.size() != (size_t)params.number_of_frames) {
@@ -113,7 +113,7 @@ int GetGci(const Param &params, const gsl::vector &signal, const gsl::vector &so
 	if(params.use_external_gci) {
 		std::cout << "Reading GCI information from external file: " << params.external_gci_filename << " ...";
 		gsl::vector gcis;
-		if(ReadGslVector(params.external_gci_filename, params.data_type, &gcis) == EXIT_FAILURE)
+		if(ReadGslVector(params.external_gci_filename.c_str(), params.data_type, &gcis) == EXIT_FAILURE)
          return EXIT_FAILURE;
 
 		*gci_inds = gsl::vector_int(gcis.size());
@@ -473,8 +473,11 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
                paf_pulse(j) = source_signal(i);
          }
       }
-      pulses_mat->set_col_vec(frame_index, paf_pulse);
+      /* Normalize energy */
+      paf_pulse /= getEnergy(paf_pulse);
 
+      /* Save to matrix */
+      pulses_mat->set_col_vec(frame_index, paf_pulse);
    }
 }
 

@@ -1,6 +1,5 @@
 #!/bin/sh
 
 # run analysis program
-./src/Analysis ./wav/arctic_fe.wav ./config/config_default.cfg
-#/Users/ljuvela/git/GlottDNN/src/Synthesis ./wav/arctic_fe /Users/ljuvela/git/GlottDNN/test/config_dirwav
-./src/Synthesis ./wav/arctic_fe ./config/config_default.cfg
+./src/Analysis ./data/slt16/wav/arctic_fe.wav ./config/config_default.cfg
+./src/Synthesis ./data/slt16/wav/arctic_fe.wav ./config/config_default.cfg
