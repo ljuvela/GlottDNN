@@ -77,7 +77,8 @@ Param::Param() {
    noise_gain_unvoiced = 1.0;
    noise_gain_voiced = 1.0;
    noise_low_freq_limit_voiced = 2500.0;
-
+   filter_update_interval_vt = 80;
+   filter_update_interval_specmatch = 80;
 }
 
 Param::~Param() {

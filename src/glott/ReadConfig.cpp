@@ -230,6 +230,15 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
 	if (ConfigLookupCString("DNN_WEIGHT_PATH", cfg, default_config, &(params->dnn_path_basename)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 
+   double update_interval_ms;
+	if (ConfigLookupDouble("FILTER_UPDATE_INTERVAL_VT", cfg, default_config, &(update_interval_ms)) == EXIT_FAILURE)
+		return EXIT_FAILURE;
+	params->filter_update_interval_vt = (int)round(update_interval_ms/1000.0*(double)params->fs);
+
+	if (ConfigLookupDouble("FILTER_UPDATE_INTERVAL_SPECMATCH", cfg, default_config, &(update_interval_ms)) == EXIT_FAILURE)
+		return EXIT_FAILURE;
+	params->filter_update_interval_specmatch = (int)round(update_interval_ms/1000.0*(double)params->fs);
+
 
    //if (ConfigLookupDouble("F0_CHECK_RANGE", cfg, default_config, &(params->f0_check_range)) == EXIT_FAILURE)
    //      return EXIT_FAILURE;

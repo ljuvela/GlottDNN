@@ -75,6 +75,8 @@ public:
    int lsf_glot_smooth_len;
    int gain_smooth_len;
    int hnr_smooth_len;
+   int filter_update_interval_vt;
+   int filter_update_interval_specmatch;
    double noise_gain_unvoiced;
    double noise_gain_voiced;
    double noise_low_freq_limit_voiced;
