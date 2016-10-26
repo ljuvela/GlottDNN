@@ -4,7 +4,7 @@
 #include <cstring>
 #include <string>
 #include <cstdio>
-//#include <stdio.h>
+#include <libgen.h>
 #include <gslwrap/vector_double.h>
 #include <gslwrap/matrix_double.h>
 #include "definitions.h"
@@ -34,12 +34,12 @@ void create_file (const char * fname, int format)
 	*/
 } /* create_file */
 
-int WriteWavFile(const char *basename, const char *extension, const gsl::vector &signal, const int &fs) {
+int WriteWavFile(const std::string &fname_str, const gsl::vector &signal, const int &fs) {
 
    /* Filename processing */
-   std::string fname_str;
-   fname_str += basename;
-   fname_str += extension;
+//   std::string fname_str;
+//   fname_str += basename;
+//   fname_str += extension;
    std::cout << "Writing file " << fname_str  << std::endl;
 
    /* Filename processing */
@@ -69,7 +69,7 @@ int WriteWavFile(const char *basename, const char *extension, const gsl::vector 
    return EXIT_SUCCESS;
 }
 
-int ReadWavFile (const char *fname, gsl::vector *signal, Param *params) {
+int ReadWavFile(const char *fname, gsl::vector *signal, Param *params) {
 
 	SndfileHandle file ;
 
@@ -105,10 +105,12 @@ int ReadWavFile (const char *fname, gsl::vector *signal, Param *params) {
 	params->signal_length = signal->size();
 
 	/* Get basename (without extension) for saving parameters later*/
+
    std::string str(fname);
+   size_t firstindex;
+   firstindex = str.find_last_of("/");
    size_t lastindex = str.find_last_of(".");
-   params->basename = new char[lastindex+1]();
-   strncpy(params->basename, fname, lastindex);
+   params->basename = str.substr(firstindex+1,lastindex-firstindex-1);
 
    free(buffer);
 
@@ -152,10 +154,10 @@ int EvalFileLength(const char *filename, DataType data_format) {
 	return fileSize;
 }
 
-int ReadGslVector(const char *filename, const DataType format, gsl::vector *vector_ptr){
+int ReadGslVector(const std::string &filename, const DataType format, gsl::vector *vector_ptr){
 	/* Get file length */
 	int size;
-	size = EvalFileLength(filename, format);
+	size = EvalFileLength(filename.c_str(), format);
 	if (size < 0)
 		return EXIT_FAILURE;
 
@@ -166,7 +168,7 @@ int ReadGslVector(const char *filename, const DataType format, gsl::vector *vect
 	   vector_ptr->resize(size);
 
 	FILE *inputfile = NULL;
-	inputfile = fopen(filename, "r");
+	inputfile = fopen(filename.c_str(), "r");
 	if(inputfile==NULL){
 		std::cerr << "Error opening file " << filename << std::endl;
 		return EXIT_FAILURE;
@@ -181,17 +183,11 @@ int ReadGslVector(const char *filename, const DataType format, gsl::vector *vect
 	return EXIT_SUCCESS;
 }
 
-int ReadGslVector(const char *basename, const char *extension, const DataType format, gsl::vector *vector_ptr) {
-   std::string filename;
-   filename += basename;
-   filename += extension;
-   return ReadGslVector(filename.c_str(), format, vector_ptr);
-}
 
-int ReadGslMatrix(const char *filename, const DataType format, const size_t n_rows,  gsl::matrix *matrix_ptr) {
+int ReadGslMatrix(const std::string &filename, const DataType format, const size_t n_rows,  gsl::matrix *matrix_ptr) {
 	/* Get file length */
 	int size;
-	size = EvalFileLength(filename, format);
+	size = EvalFileLength(filename.c_str(), format);
 	if (size < 0)
 		return EXIT_FAILURE;
 
@@ -205,7 +201,7 @@ int ReadGslMatrix(const char *filename, const DataType format, const size_t n_ro
 	gsl::matrix matrix_temp(n_cols, n_rows);
 
 	FILE *inputfile = NULL;
-	inputfile = fopen(filename, "r");
+	inputfile = fopen(filename.c_str(), "r");
 	if(inputfile==NULL){
 		std::cerr << "Error opening file " << filename << std::endl;
 		return EXIT_FAILURE;
@@ -222,17 +218,14 @@ int ReadGslMatrix(const char *filename, const DataType format, const size_t n_ro
 	return EXIT_SUCCESS;
 }
 
-int ReadGslMatrix(const char *basename, const char *extension, const DataType format, const size_t n_rows,  gsl::matrix *matrix_ptr) {
-   std::string filename;
-   filename += basename;
-   filename += extension;
-   return ReadGslMatrix(filename.c_str(), format, n_rows, matrix_ptr);
-}
+int WriteGslVector(const std::string &filename, const DataType &format, const gsl::vector &vector) {
 
-int WriteGslVector(const char *basename, const char *extension, const DataType &format, const gsl::vector &vector) {
-   std::string filename;
-   filename += basename;
-   filename += extension;
+//   filename += dir;
+//   if (filename.back() != '/')
+//      filename += '/';
+//   filename += basename;
+//   filename += extension;
+
    FILE *fid = NULL;
    fid = fopen(filename.c_str(), "w");
    if(fid==NULL){
@@ -252,11 +245,16 @@ int WriteGslVector(const char *basename, const char *extension, const DataType &
    return EXIT_SUCCESS;
 }
 
-int WriteGslMatrix(const char *basename, const char *extension, const DataType &format, const gsl::matrix &mat) {
 
-   std::string filename;
-   filename += basename;
-   filename += extension;
+int WriteGslMatrix(const std::string &filename, const DataType &format, const gsl::matrix &mat) {
+
+
+//   filename += dir;
+//   if (filename.back() != '/')
+//      filename += '/';
+//   filename += basename;
+//   filename += extension;
+
    FILE *fid = NULL;
    fid = fopen(filename.c_str(), "w");
    if(fid==NULL){
@@ -287,27 +285,38 @@ int WriteGslMatrix(const char *basename, const char *extension, const DataType &
    return EXIT_SUCCESS;
 }
 
-int ReadSynthesisData(const char *basename, Param *params, SynthesisData *data) {
+int ReadSynthesisData(const char *filename, Param *params, SynthesisData *data) {
 
-   if (ReadGslVector(basename, ".F0", params->data_type, &(data->fundf)) == EXIT_FAILURE)
+
+   /* Get basename (without extension) for saving parameters later*/
+
+   std::string str(filename);
+   size_t firstindex;
+   firstindex = str.find_last_of("/");
+   size_t lastindex = str.find_last_of(".");
+   if (lastindex <= firstindex)
+      lastindex = str.size();
+   params->basename = str.substr(firstindex+1,lastindex-firstindex-1);
+
+   if (ReadGslVector(params->data_directory + "/f0/" + params->basename + ".F0", params->data_type, &(data->fundf)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-   if (ReadGslVector(basename, ".Gain", params->data_type, &(data->frame_energy)) == EXIT_FAILURE)
+   if (ReadGslVector(params->data_directory + "/gain/" + params->basename + ".Gain", params->data_type, &(data->frame_energy)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-   if (ReadGslMatrix(basename, ".LSF", params->data_type, params->lpc_order_vt, &(data->lsf_vocal_tract)) == EXIT_FAILURE)
+   if (ReadGslMatrix(params->data_directory + "/lsf/" + params->basename + ".LSF", params->data_type, params->lpc_order_vt, &(data->lsf_vocal_tract)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
    if (1) // TODO: add conditional
-      if (ReadGslMatrix(basename, ".LSFsource", params->data_type, params->lpc_order_glot, &(data->lsf_glot)) == EXIT_FAILURE)
+      if (ReadGslMatrix(params->data_directory + "/lsfg/" + params->basename + ".LSFglot", params->data_type, params->lpc_order_glot, &(data->lsf_glot)) == EXIT_FAILURE)
          return EXIT_FAILURE;
 
    if (1) // TODO: add conditional
-      if (ReadGslMatrix(basename, ".HNR", params->data_type, params->hnr_order, &(data->hnr_glot)) == EXIT_FAILURE)
+      if (ReadGslMatrix(params->data_directory + "/hnr/" + params->basename + ".HNR", params->data_type, params->hnr_order, &(data->hnr_glot)) == EXIT_FAILURE)
          return EXIT_FAILURE;
 
    if (1) // TODO: add conditional
-      if (ReadGslMatrix(basename, ".PLS", params->data_type, params->paf_pulse_length, &(data->excitation_pulses)) == EXIT_FAILURE)
+      if (ReadGslMatrix(params->data_directory + "/paf/" + params->basename + ".PAF", params->data_type, params->paf_pulse_length, &(data->excitation_pulses)) == EXIT_FAILURE)
          return EXIT_FAILURE;
 
    /* Read number of frames & compute signal length */

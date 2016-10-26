@@ -86,8 +86,6 @@ int main(int argc, char *argv[]) {
          return EXIT_FAILURE;
    }
 
-   //create_file(fname, SF_FORMAT_WAV | SF_FORMAT_PCM_16) ;
-
    /* Read sound file and allocate data */
    AnalysisData data;
 
@@ -141,6 +139,7 @@ int main(int argc, char *argv[]) {
 
    /* Write analyzed features to files */
    data.SaveData(params);
+
 
    /* Finish */
    std::cout << "Finished analysis." << std::endl << std::endl;

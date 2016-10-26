@@ -164,8 +164,8 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
       break;
    case DNN_GENERATED_EXCITATION:
       // Load DNN
-      excDnn.ReadInfo(params.dnn_path_basename);
-      excDnn.ReadData(params.dnn_path_basename);
+      excDnn.ReadInfo(params.dnn_path_basename.c_str());
+      excDnn.ReadData(params.dnn_path_basename.c_str());
       break;
    case PULSES_AS_FEATURES_EXCITATION:
       // Load pulses as features

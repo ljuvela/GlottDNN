@@ -77,13 +77,10 @@ int main(int argc, char *argv[]) {
 
    FilterExcitation(params, data, &(data.signal));
 
-
-
-
-   if(WriteWavFile(filename, ".exc.wav", data.excitation_signal, params.fs) == EXIT_FAILURE)
+   if(WriteWavFile(params.data_directory + "/exc/" + params.basename + ".exc.wav", data.excitation_signal, params.fs) == EXIT_FAILURE)
        return EXIT_FAILURE;
 
-   if(WriteWavFile(filename, ".syn.wav", data.signal, params.fs) == EXIT_FAILURE)
+   if(WriteWavFile(params.data_directory + "/syn/" + params.basename + ".syn.wav", data.signal, params.fs) == EXIT_FAILURE)
        return EXIT_FAILURE;
 
    std::cout << "Finished synthesis" << std::endl;

@@ -52,6 +52,7 @@ int ConfigLookupBool(const char *config_string, const libconfig::Config &cfg, co
 
 int ConfigLookupCString(const char *config_string, const libconfig::Config &cfg, const bool default_config, char **val) {
 	std::string sval;
+
 	if (cfg.lookupValue(config_string, sval) == false) {
 		if (default_config) {
 			std::cerr << "Could not find value: " << config_string << " in default config" << std::endl ;
@@ -64,6 +65,18 @@ int ConfigLookupCString(const char *config_string, const libconfig::Config &cfg,
 	return EXIT_SUCCESS;
 }
 
+int ConfigLookupString(const char *config_string, const libconfig::Config &cfg, const bool default_config, std::string &sval) {
+
+   if (cfg.lookupValue(config_string, sval) == false) {
+      if (default_config) {
+         std::cerr << "Could not find value: " << config_string << " in default config" << std::endl ;
+         return EXIT_FAILURE;
+      }
+   }
+   return EXIT_SUCCESS;
+}
+
+
 int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, Param *params) {
 
 	if (ConfigLookupInt("SAMPLING_FREQUENCY", cfg, default_config, &(params->fs)) == EXIT_FAILURE)
@@ -71,27 +84,28 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
 
    params->frame_length_long = (int)round(50/1000.0*(double)params->fs); // Hard coded value of 50ms.
 
+   double shift_ms = -1.0;
+   if (ConfigLookupDouble("FRAME_SHIFT", cfg, default_config, &(shift_ms)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+   if( default_config || shift_ms > 0)
+      params->frame_shift = (int)round(shift_ms/1000.0*(double)params->fs);
 
-	double shift_ms;
-	if (ConfigLookupDouble("FRAME_SHIFT", cfg, default_config, &(shift_ms)) == EXIT_FAILURE)
-		return EXIT_FAILURE;
-	params->frame_shift = (int)round(shift_ms/1000.0*(double)params->fs);
-
-	double frame_ms;
-	if (ConfigLookupDouble("FRAME_LENGTH", cfg, default_config, &(frame_ms)) == EXIT_FAILURE)
-		return EXIT_FAILURE;
-	params->frame_length = (int)round(frame_ms/1000.0*(double)params->fs);
+   double frame_ms = -1.0;
+   if (ConfigLookupDouble("FRAME_LENGTH", cfg, default_config, &(frame_ms)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+   if( default_config || frame_ms > 0)
+      params->frame_length = (int)round(frame_ms/1000.0*(double)params->fs);
 
 	if (ConfigLookupBool("USE_EXTERNAL_F0", cfg, default_config, &(params->use_external_f0)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 
-	if (ConfigLookupCString("EXTERNAL_F0_FILENAME", cfg, default_config, &(params->external_f0_filename)) == EXIT_FAILURE)
+	if (ConfigLookupString("EXTERNAL_F0_FILENAME", cfg, default_config, params->external_f0_filename) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 
 	if (ConfigLookupBool("USE_EXTERNAL_GCI", cfg, default_config, &(params->use_external_gci)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 
-	if (ConfigLookupCString("EXTERNAL_GCI_FILENAME", cfg, default_config, &(params->external_gci_filename)) == EXIT_FAILURE)
+	if (ConfigLookupString("EXTERNAL_GCI_FILENAME", cfg, default_config, params->external_gci_filename) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 
 	if (ConfigLookupDouble("GIF_PRE_EMPHASIS_COEFFICIENT", cfg, default_config, &(params->gif_pre_emphasis_coefficient)) == EXIT_FAILURE)
@@ -205,7 +219,6 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
    if (ConfigLookupBool("USE_SPECTRAL_MATCHING", cfg, default_config, &(params->use_spectral_matching)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-
 	if (ConfigLookupInt("LSF_VT_SMOOTH_LEN", cfg, default_config, &(params->lsf_vt_smooth_len)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 
@@ -227,7 +240,7 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
    if (ConfigLookupDouble("NOISE_GAIN_UNVOICED", cfg, default_config, &(params->noise_gain_unvoiced)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-	if (ConfigLookupCString("DNN_WEIGHT_PATH", cfg, default_config, &(params->dnn_path_basename)) == EXIT_FAILURE)
+	if (ConfigLookupString("DNN_WEIGHT_PATH", cfg, default_config, params->dnn_path_basename) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 
    double update_interval_ms;
@@ -239,86 +252,96 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
 		return EXIT_FAILURE;
 	params->filter_update_interval_specmatch = (int)round(update_interval_ms/1000.0*(double)params->fs);
 
+   if (ConfigLookupString("DATA_DIRECTORY", cfg, default_config, params->data_directory) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
+
 
    //if (ConfigLookupDouble("F0_CHECK_RANGE", cfg, default_config, &(params->f0_check_range)) == EXIT_FAILURE)
    //      return EXIT_FAILURE;
 
-
 	/* Read enum style configurations */
-	char *cstring = NULL;
+	std::string str = "";
 
 	/* Data Format */
-	if (ConfigLookupCString("DATA_TYPE", cfg, default_config, &(cstring)) == EXIT_FAILURE)
-		return EXIT_FAILURE;
-	if (!std::strcmp("ASCII",cstring)){
-		params->data_type = ASCII;
-	} else if (!std::strcmp("BINARY",cstring)) {
-		params->data_type = BINARY;
-	} else {
-		delete[] cstring;
-		return EXIT_FAILURE;
+	if (ConfigLookupString("DATA_TYPE", cfg, default_config, str) == EXIT_FAILURE)
+	   return EXIT_FAILURE;
+	if( default_config || str != "") {
+	   if (str == "ASCII")
+	      params->data_type = ASCII;
+	   else if (str == "BINARY")
+	      params->data_type = BINARY;
+	   else
+	      return EXIT_FAILURE;
 	}
-	delete[] cstring;
+
 
 	/* Signal Polarity */
-	if (ConfigLookupCString("SIGNAL_POLARITY", cfg, default_config, &(cstring)) == EXIT_FAILURE)
-		return EXIT_FAILURE;
-	if (!std::strcmp("DEFAULT",cstring)){
-		params->signal_polarity = POLARITY_DEFAULT;
-	} else if (!std::strcmp("INVERT",cstring)) {
-		params->signal_polarity = POLARITY_INVERT;
-	} else if (!std::strcmp("DETECT",cstring)) {
-		params->signal_polarity = POLARITY_DETECT;
-	} else {
-		delete[] cstring;
-		return EXIT_FAILURE;
+	str = "";
+	if (ConfigLookupString("SIGNAL_POLARITY", cfg, default_config, str) == EXIT_FAILURE)
+	   return EXIT_FAILURE;
+	if( default_config || str != "") {
+	   if (str == "DEFAULT")
+	      params->signal_polarity = POLARITY_DEFAULT;
+	   else if (str == "INVERT")
+	      params->signal_polarity = POLARITY_INVERT;
+	   else if (str == "DETECT")
+	      params->signal_polarity = POLARITY_DETECT;
+	   else
+	      return EXIT_FAILURE;
 	}
-	delete[] cstring;
+
+
 
 	/* LP weighting function */
-	if (ConfigLookupCString("LP_WEIGHTING_FUNCTION", cfg, default_config, &(cstring)) == EXIT_FAILURE)
-		return EXIT_FAILURE;
-	if (!std::strcmp("NONE",cstring)){
-		params->lp_weighting_function= NONE;
-	} else if (!std::strcmp("AME",cstring)) {
-		params->lp_weighting_function = AME;
-	} else if (!std::strcmp("STE",cstring)) {
-		params->lp_weighting_function = STE;
-	} else {
-		delete[] cstring;
-		return EXIT_FAILURE;
+	str = "";
+	if (ConfigLookupString("LP_WEIGHTING_FUNCTION", cfg, default_config, str) == EXIT_FAILURE)
+	   return EXIT_FAILURE;
+	if( default_config || str != "") {
+	   if (str == "NONE")
+	      params->lp_weighting_function= NONE;
+	   else if (str == "AME")
+	      params->lp_weighting_function = AME;
+	   else if (str == "STE")
+	      params->lp_weighting_function = STE;
+	   else
+	      return EXIT_FAILURE;
 	}
-	delete[] cstring;
+
+
 
 	/* Excitation method */
-	if (ConfigLookupCString("EXCITATION_METHOD", cfg, default_config, &(cstring)) == EXIT_FAILURE)
+	str = "";
+	if (ConfigLookupString("EXCITATION_METHOD", cfg, default_config, str) == EXIT_FAILURE)
 	   return EXIT_FAILURE;
-	if (!std::strcmp("SINGLE_PULSE",cstring)){
-	   params->excitation_method = SINGLE_PULSE_EXCITATION;
-	} else if (!std::strcmp("DNN_GENERATED",cstring)) {
-	   params->excitation_method = DNN_GENERATED_EXCITATION;
-	} else if (!std::strcmp("PULSES_AS_FEATURES",cstring)) {
-	   params->excitation_method = PULSES_AS_FEATURES_EXCITATION;
-	} else {
-	   delete[] cstring;
-	   return EXIT_FAILURE;
+	if( default_config || str != "") {
+	   if (str == "SINGLE_PULSE")
+	      params->excitation_method = SINGLE_PULSE_EXCITATION;
+	   else if (str == "DNN_GENERATED")
+	      params->excitation_method = DNN_GENERATED_EXCITATION;
+	   else if (str == "PULSES_AS_FEATURES")
+	      params->excitation_method = PULSES_AS_FEATURES_EXCITATION;
+	   else
+	      return EXIT_FAILURE;
 	}
-	delete[] cstring;
 
-   /* PSOLA window for synthesis */
-	if (ConfigLookupCString("PSOLA_WINDOW", cfg, default_config, &(cstring)) == EXIT_FAILURE)
+
+	/* PSOLA window for synthesis */
+	str = "";
+	if (ConfigLookupString("PSOLA_WINDOW", cfg, default_config, str) == EXIT_FAILURE)
 	   return EXIT_FAILURE;
-	if (!std::strcmp("NONE",cstring)){
-	   params->psola_windowing_function = RECT;
-	} else if (!std::strcmp("COSINE",cstring)) {
-	   params->psola_windowing_function = COSINE;
-	} else if (!std::strcmp("HANN",cstring)) {
-	   params->psola_windowing_function = HANN;
-	} else {
-	   delete[] cstring;
-	   return EXIT_FAILURE;
+	if( default_config || str != "") {
+	   if (str == "NONE")
+	      params->psola_windowing_function = RECT;
+	   else if (str == "COSINE")
+	      params->psola_windowing_function = COSINE;
+	   else if (str == "HANN")
+	      params->psola_windowing_function = HANN;
+	   else
+	      return EXIT_FAILURE;
 	}
-	delete[] cstring;
+
+
 
 
 
