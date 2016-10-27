@@ -53,6 +53,8 @@ int main(int argc, char *argv[]) {
          return EXIT_FAILURE;
    }
 
+
+
    SynthesisData data;
    if(ReadSynthesisData(filename, &params, &data) == EXIT_FAILURE)
       return EXIT_FAILURE;

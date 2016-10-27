@@ -452,8 +452,7 @@ void FilterExcitation(const Param &params, const SynthesisData &data, gsl::vecto
    int bdim = params.lpc_order_vt+1;
    double tmpr;
 
-   //int UPDATE_INTERVAL = rint(params.fs*0.005); // Hard-coded 5ms update interval
-   int UPDATE_INTERVAL = params.filter_update_interval_vt; // Hard-coded 5ms update interval
+   int UPDATE_INTERVAL = params.filter_update_interval_vt;
    signal->copy(data.excitation_signal);
 
    for(sample_index=0;sample_index<(int)signal->size();sample_index++) {
@@ -467,7 +466,6 @@ void FilterExcitation(const Param &params, const SynthesisData &data, gsl::vecto
 
          gain_target_db = InterpolateLinear(data.frame_energy(floor(frame_index_double)),
                         data.frame_energy(ceil(frame_index_double)),frame_index_double);
-         // Should this be from ecitation_signal or excitation_orig? //TODO: Add interpolation to frame_energy.
 
          gain = GetFilteringGain(B, a_interp, data.excitation_signal, gain_target_db,
                                  sample_index, params.frame_length, params.warping_lambda_vt);

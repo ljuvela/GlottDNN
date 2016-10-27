@@ -1,20 +1,22 @@
 # run flags
 make_dirs = True
-make_scp = False
+make_scp = True
 do_sptk_pitch_analysis = False
 do_reaper_pitch_analysis = True
-do_glott_vocoder_analysis = False
+do_glott_vocoder_analysis = True
 make_dnn_train_data = False
 make_dnn_infofile = False
 do_dnn_training = False
+do_glott_vocoder_synthesis = True
 
 # directories
 prjdir = '/Users/ljuvela/CODE/GlottDNN'
-datadir = prjdir + '/data/slt48'
+datadir = prjdir + '/data/slt16'
 
 # general parameters
-sampling_frequency = 48000
-warping_lambda = 0.42
+sampling_frequency = 16000
+warping_lambda = 0.00
+use_external_gci = True
 
 # programs
 reaper = 'reaper'
@@ -23,7 +25,7 @@ pitch = 'pitch -a 0 -s 48.0 -o 1 -p 240 -T 0.0 -L 50 -H 500 '
 x2x = 'x2x'
 Analysis = prjdir + '/src/Analysis'
 Synthesis = prjdir + '/src/Synthesis'
-config_default = prjdir + '/config/config_48.cfg'
+config_default = prjdir + '/config/config_default.cfg'
 
 # nn input params
 inputs = ['f0', 'gain', 'hnr', 'lsfg', 'lsf']
