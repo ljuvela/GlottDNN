@@ -237,10 +237,31 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
          }
          energy = LogEnergy2FrameEnergy(data.frame_energy(frame_index),noise.size());
 
-         noise *= params.noise_gain_unvoiced*energy/getEnergy(noise);
-         noise /= 0.5*(double)noise.size()/(double)params.frame_shift; // Compensate OLA gain
-         ApplyWindowingFunction(HANN,&noise);
-         OverlapAdd(noise,sample_index,excitation_signal);
+         switch (params.excitation_method) {
+         case SINGLE_PULSE_EXCITATION:
+            //pulse = GetSinglePulse(noise.size(), energy, single_pulse_base);
+            pulse = noise;
+            pulse *= params.noise_gain_unvoiced*energy/getEnergy(noise);
+            pulse /= 0.5*(double)noise.size()/(double)params.frame_shift; // Compensate OLA gain
+            ApplyWindowingFunction(HANN, &pulse);
+
+            break;
+         case DNN_GENERATED_EXCITATION:
+            //pulse = GetDnnPulse();
+            pulse = GetDnnPulse(noise.size(), energy, frame_index, data, excDnn);
+            ApplyWindowingFunction(params.psola_windowing_function, &pulse);
+            break;
+         case PULSES_AS_FEATURES_EXCITATION:
+            pulse = GetExternalPulse(noise.size(), energy, frame_index, data.excitation_pulses);
+            ApplyWindowingFunction(params.psola_windowing_function, &pulse);
+            break;
+         }
+
+//         noise *= params.noise_gain_unvoiced*energy/getEnergy(noise);
+//         noise /= 0.5*(double)noise.size()/(double)params.frame_shift; // Compensate OLA gain
+         //ApplyWindowingFunction(HANN,&noise);
+         //OverlapAdd(noise,sample_index,excitation_signal);
+         OverlapAdd(pulse,sample_index,excitation_signal);
 
          sample_index += params.frame_shift;
       }

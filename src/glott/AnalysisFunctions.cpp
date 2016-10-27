@@ -470,7 +470,7 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
 
          int center_index = gci_inds(pulse_index);
 
-         if(abs(center_index-(int)sample_index) > THRESH)
+         if(fundf(frame_index) == 0.0 || abs(center_index-(int)sample_index) > THRESH)
             center_index = sample_index;
 
          for(j=0;j<paf_pulse.size();j++) {
