@@ -81,7 +81,7 @@ void LpWeightAme(const Param &params, const gsl::vector_int &gci_inds,
 
 	double d = 0.000001;
 	//int nramp = DEFAULT_NRAMP;
-	int nramp = 12;
+	int nramp = 12 * (double)params.fs/(double)16000;
 
 	/* Sanity check */
 	if(dq + pq > 1.0)
