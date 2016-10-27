@@ -1,8 +1,13 @@
-#!/usr/bin/python 
+#!/usr/bin/python
+
+from __future__ import division
+
 import sys
 import os
 import numpy as np
 import random
+import wave
+import math
 
 # Config file 
 import config as conf
@@ -41,48 +46,27 @@ def write_dnn_infofile():
     file.write('WARPING_LAMBDA_VT = ' + str(conf.warping_lambda) + ';\n')
     file.close()
 
+def mkdir_p(dirpath):
+    if not os.path.exists(dirpath):
+        os.makedirs(dirpath)
 
 def make_directories():
     # Prepare environment 
-    dirpath = conf.datadir + '/wav'
-    if not os.path.exists(dirpath):
-        os.makedirs(dirpath)
-    dirpath = conf.datadir + '/raw'
-    if not os.path.exists(dirpath):
-        os.makedirs(dirpath)    
-    dirpath = conf.datadir + '/f0'
-    if not os.path.exists(dirpath):
-        os.makedirs(dirpath)
-    dirpath = conf.datadir + '/gain'
-    if not os.path.exists(dirpath):
-        os.makedirs(dirpath)
-    dirpath = conf.datadir + '/lsf'
-    if not os.path.exists(dirpath):
-        os.makedirs(dirpath)
-    dirpath = conf.datadir + '/lsfg'
-    if not os.path.exists(dirpath):
-        os.makedirs(dirpath)
-    dirpath = conf.datadir + '/hnr'
-    if not os.path.exists(dirpath):
-        os.makedirs(dirpath)
-    dirpath = conf.datadir + '/paf'
-    if not os.path.exists(dirpath):
-        os.makedirs(dirpath)        
-    dirpath = conf.datadir + '/scp'
-    if not os.path.exists(dirpath):
-        os.makedirs(dirpath)
-    dirpath = conf.datadir + '/exc'
-    if not os.path.exists(dirpath):
-        os.makedirs(dirpath)
-    dirpath = conf.datadir + '/syn'
-    if not os.path.exists(dirpath):
-        os.makedirs(dirpath)
+    mkdir_p(conf.datadir + '/wav')
+    mkdir_p(conf.datadir + '/raw')
+    mkdir_p(conf.datadir + '/f0')
+    mkdir_p(conf.datadir + '/f0')
+    mkdir_p(conf.datadir + '/gain')
+    mkdir_p(conf.datadir + '/lsf')
+    mkdir_p(conf.datadir + '/lsfg')
+    mkdir_p(conf.datadir + '/hnr')
+    mkdir_p(conf.datadir + '/paf')
+    mkdir_p(conf.datadir + '/scp')
+    mkdir_p(conf.datadir + '/exc')
+    mkdir_p(conf.datadir + '/syn')
     # Dnn directiories
-    if not os.path.exists(conf.train_data_dir):
-        os.makedirs(conf.train_data_dir)
-    if not os.path.exists(conf.weights_data_dir):
-        os.makedirs(conf.weights_data_dir)
-
+    mkdir_p(conf.train_data_dir)
+    mkdir_p(conf.weights_data_dir)
             
 def make_file_lists():
     scpfile = open(conf.datadir + '/scp/wav.scp','w') 
@@ -107,7 +91,47 @@ def sptk_pitch_analysis():
                     cmd = conf.x2x + ' +sf ' + rawfile + '|' \
                         + conf.pitch + ' | ' + conf.x2x + ' +fd >' + f0file
                     os.system(cmd)
+                    
     
+def reaper_pitch_analysis():
+    wavscp = conf.datadir + '/scp/wav.scp'
+    with open(wavscp,'r') as wavfiles:
+        for file in wavfiles:
+            wavfile = file.rstrip()
+            if os.path.isfile(wavfile):
+                # define paths
+                bname = os.path.splitext(os.path.basename(wavfile))[0]
+                f0tmp1 = conf.datadir + '/f0/' + bname + '.F0tmp1'
+                f0tmp2 = conf.datadir + '/f0/' + bname + '.F0tmp2'                
+                f0file = conf.datadir + '/f0/' + bname + '.F0'
+                
+                # analysis commands
+                cmd =  conf.reaper + ' -a -i ' + wavfile + ' -f ' + f0tmp1
+                os.system(cmd)
+                cmd = 'tail +8 ' + f0tmp1 + '| awk \'{print $3}\' | x2x +af | sopr -magic -1.0 -MAGIC 0.0  > ' + f0tmp2
+                os.system(cmd)
+            
+                # read the file
+                f0 = np.fromfile(f0tmp2, dtype=np.float32, count=-1, sep='')
+                n_frames = len(f0)
+
+                # calculate the sptk compatible number of frames 
+                wave_read = wave.open(wavfile,'r')
+                n_samples = wave_read.getnframes()
+                sample_rate = wave_read.getframerate()
+                n_frames_target =  int(math.ceil(n_samples/(0.005*sample_rate)))
+                wave_read.close
+ 
+                # zero pad and save f0
+                f0_true = np.zeros(n_frames_target, dtype= np.float32)
+                npad_start = 2
+                f0_true[npad_start:npad_start+n_frames] = f0
+                f0_true.astype(np.float64).tofile(f0file, sep='',format="%f")
+
+                # remove tmp
+                os.remove(f0tmp1)
+                os.remove(f0tmp2)
+
 def glott_vocoder_analysis():
     wavscp = conf.datadir + '/scp/wav.scp'
     with open(wavscp,'r') as wavfiles:
@@ -233,14 +257,15 @@ def main(argv):
         make_file_lists()
 
     # Reaper pitch estimation
-       # TODO
+    if conf.do_reaper_pitch_analysis:
+        reaper_pitch_analysis()
        
     # SPTK pitch estimation
-    if conf.do_analysis:
+    if conf.do_sptk_pitch_analysis:
         sptk_pitch_analysis()
     
     # GlottDNN Analysis
-    if conf.do_analysis:
+    if conf.do_glott_vocoder_analysis:
         glott_vocoder_analysis()
 
     # Package data for Theano

@@ -23,5 +23,6 @@ wav/*.HNR
 wav/*.LSF
 wav/*.LSFsource
 wav/*.PLS
+data/*
 src/Analysis
 src/Synthesis
