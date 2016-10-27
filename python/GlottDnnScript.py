@@ -148,10 +148,10 @@ def package_data():
             # allocate file data
             input_data = np.empty([n_frames[file_idx], sum(conf.input_dims)], dtype=np.float64)
             feat_start = 0
-            for (type, ext, dim) in zip( conf.inputs, conf.input_exts, conf.input_dims):
+            for (ftype, ext, dim) in zip( conf.inputs, conf.input_exts, conf.input_dims):
                 if dim > 0:
                     # read feat  data
-                    feat_file = conf.datadir + '/'+ type + '/' + bname + ext
+                    feat_file = conf.datadir + '/'+ ftype + '/' + bname + ext
                     feat = np.fromfile(feat_file, dtype=np.float64, count=-1, sep='')
                     # reshape
                     feat = np.reshape(feat, (-1,dim))
@@ -186,9 +186,9 @@ def package_data():
    
             # read input data
             feat_start = 0
-            for (type, ext, dim) in zip( conf.inputs, conf.input_exts, conf.input_dims):
+            for (ftype, ext, dim) in zip( conf.inputs, conf.input_exts, conf.input_dims):
                 if dim > 0:
-                    feat_file = conf.datadir + '/'+ type + '/' + bname + ext
+                    feat_file = conf.datadir + '/'+ ftype + '/' + bname + ext
                     feat = np.fromfile(feat_file, dtype=np.float64, count=-1, sep='')
                     feat = np.reshape(feat, (-1,dim))
                     input_data[:,feat_start:feat_start+dim ] = feat
@@ -200,9 +200,9 @@ def package_data():
            
             # read output data
             feat_start = 0
-            for (type, ext, dim) in zip( conf.outputs, conf.output_exts, conf.output_dims): 
+            for (ftype, ext, dim) in zip( conf.outputs, conf.output_exts, conf.output_dims): 
                 if dim > 0:
-                    feat_file = conf.datadir + '/'+ type + '/' + bname + ext
+                    feat_file = conf.datadir + '/'+ ftype + '/' + bname + ext
                     feat = np.fromfile(feat_file, dtype=np.float64, count=-1, sep='')
                     feat = np.reshape(feat, (-1,dim))
                     output_data[:,feat_start:feat_start+dim ] = feat

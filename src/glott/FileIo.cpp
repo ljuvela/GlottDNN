@@ -110,7 +110,8 @@ int ReadWavFile(const char *fname, gsl::vector *signal, Param *params) {
    size_t firstindex;
    firstindex = str.find_last_of("/");
    size_t lastindex = str.find_last_of(".");
-   params->basename = str.substr(firstindex+1,lastindex-firstindex-1);
+   //params->basename = std::string("Foo");
+   params->file_basename = str.substr(firstindex+1,lastindex-firstindex-1);
 
    free(buffer);
 
@@ -296,27 +297,28 @@ int ReadSynthesisData(const char *filename, Param *params, SynthesisData *data) 
    size_t lastindex = str.find_last_of(".");
    if (lastindex <= firstindex)
       lastindex = str.size();
-   params->basename = str.substr(firstindex+1,lastindex-firstindex-1);
 
-   if (ReadGslVector(params->data_directory + "/f0/" + params->basename + ".F0", params->data_type, &(data->fundf)) == EXIT_FAILURE)
+   params->file_basename = str.substr(firstindex+1,lastindex-firstindex-1);
+
+   if (ReadGslVector(params->data_directory + "/f0/" + params->file_basename + ".F0", params->data_type, &(data->fundf)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-   if (ReadGslVector(params->data_directory + "/gain/" + params->basename + ".Gain", params->data_type, &(data->frame_energy)) == EXIT_FAILURE)
+   if (ReadGslVector(params->data_directory + "/gain/" + params->file_basename + ".Gain", params->data_type, &(data->frame_energy)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-   if (ReadGslMatrix(params->data_directory + "/lsf/" + params->basename + ".LSF", params->data_type, params->lpc_order_vt, &(data->lsf_vocal_tract)) == EXIT_FAILURE)
+   if (ReadGslMatrix(params->data_directory + "/lsf/" + params->file_basename + ".LSF", params->data_type, params->lpc_order_vt, &(data->lsf_vocal_tract)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
    if (1) // TODO: add conditional
-      if (ReadGslMatrix(params->data_directory + "/lsfg/" + params->basename + ".LSFglot", params->data_type, params->lpc_order_glot, &(data->lsf_glot)) == EXIT_FAILURE)
+      if (ReadGslMatrix(params->data_directory + "/lsfg/" + params->file_basename + ".LSFglot", params->data_type, params->lpc_order_glot, &(data->lsf_glot)) == EXIT_FAILURE)
          return EXIT_FAILURE;
 
    if (1) // TODO: add conditional
-      if (ReadGslMatrix(params->data_directory + "/hnr/" + params->basename + ".HNR", params->data_type, params->hnr_order, &(data->hnr_glot)) == EXIT_FAILURE)
+      if (ReadGslMatrix(params->data_directory + "/hnr/" + params->file_basename + ".HNR", params->data_type, params->hnr_order, &(data->hnr_glot)) == EXIT_FAILURE)
          return EXIT_FAILURE;
 
    if (1) // TODO: add conditional
-      if (ReadGslMatrix(params->data_directory + "/paf/" + params->basename + ".PAF", params->data_type, params->paf_pulse_length, &(data->excitation_pulses)) == EXIT_FAILURE)
+      if (ReadGslMatrix(params->data_directory + "/paf/" + params->file_basename + ".PAF", params->data_type, params->paf_pulse_length, &(data->excitation_pulses)) == EXIT_FAILURE)
          return EXIT_FAILURE;
 
    /* Read number of frames & compute signal length */

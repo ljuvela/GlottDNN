@@ -399,6 +399,10 @@ void SpectralMatchExcitation(const Param &params,const SynthesisData &data, gsl:
       Poly2Lsf(a_gen,&lsf_gen);
       lsf_glot_syn.set_col_vec(frame_index,lsf_gen);
    }
+   if(params.use_trajectory_smoothing)
+      MovingAverageFilter(params.lsf_glot_smooth_len, &(lsf_glot_syn));
+
+
 
    /* Spectral match excitation */
    gsl::vector excitation_orig(excitation_signal->size());
@@ -406,11 +410,12 @@ void SpectralMatchExcitation(const Param &params,const SynthesisData &data, gsl:
 
    int sample_index,i;
    double gain = 1.0, sum, frame_index_double;
-   int UPDATE_INTERVAL = rint(params.fs*0.005); // Hard-coded 5ms update interval
+   //int UPDATE_INTERVAL = rint(params.fs*0.005); // Hard-coded 5ms update interval
+   int UPDATE_INTERVAL = params.filter_update_interval_specmatch; // Hard-coded 5ms update interval
    for(sample_index=0;sample_index<(int)excitation_signal->size();sample_index++) {
 
       if(sample_index % UPDATE_INTERVAL == 0) { //TODO: interpolation of parameters between frames according to update_interval
-         frame_index_double = params.speed_scale * sample_index / (params.signal_length-1) * (params.number_of_frames-1);
+         frame_index_double = params.speed_scale * (double)sample_index / (double)(params.signal_length-1) * (double)(params.number_of_frames-1);
          InterpolateLinear(lsf_glot_syn,frame_index_double,&lsf_gen_interpolated);
          InterpolateLinear(data.lsf_glot,frame_index_double,&lsf_tar_interpolated);
          Lsf2Poly(lsf_gen_interpolated,&a_gen);
@@ -446,13 +451,14 @@ void FilterExcitation(const Param &params, const SynthesisData &data, gsl::vecto
    int bdim = params.lpc_order_vt+1;
    double tmpr;
 
-   int UPDATE_INTERVAL = rint(params.fs*0.005); // Hard-coded 5ms update interval
+   //int UPDATE_INTERVAL = rint(params.fs*0.005); // Hard-coded 5ms update interval
+   int UPDATE_INTERVAL = params.filter_update_interval_vt; // Hard-coded 5ms update interval
    signal->copy(data.excitation_signal);
 
    for(sample_index=0;sample_index<(int)signal->size();sample_index++) {
 
       if(sample_index % UPDATE_INTERVAL == 0) {
-         frame_index_double = params.speed_scale * sample_index / (params.signal_length-1) * (params.number_of_frames-1);
+         frame_index_double = params.speed_scale * (double)sample_index / (double)(params.signal_length-1) * (double)(params.number_of_frames-1);
          InterpolateLinear(data.lsf_vocal_tract,frame_index_double,&lsf_interp);
          Lsf2Poly(lsf_interp,&a_interp);
          if(params.warping_lambda_vt != 0.0)

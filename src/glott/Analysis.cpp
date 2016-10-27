@@ -57,8 +57,8 @@
 #include <vector>
 #include <gslwrap/vector_double.h>
 
-#include "Filters.h"
 #include "definitions.h"
+#include "Filters.h""
 #include "FileIo.h"
 #include "ReadConfig.h"
 #include "SpFunctions.h"

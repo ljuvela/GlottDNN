@@ -36,7 +36,7 @@ public:
 	std::string external_gci_filename;
 	std::string dnn_path_basename;
 	std::string data_directory;
-	std::string basename;
+	std::string file_basename;
 	DataType data_type;
 	bool qmf_subband_analysis;
 	SignalPolarity signal_polarity;

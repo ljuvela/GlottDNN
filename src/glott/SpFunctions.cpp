@@ -1370,7 +1370,7 @@ void MovingAverageFilter(const gsl::vector &x, const size_t &filterlen, gsl::vec
    size_t i,j;
    int start;
    gsl::vector val_buffer(filterlen);
-   for (i=0;i<x.size();i++) {
+   for (i=filterlen/2;i<x.size()-filterlen/2;i++) {
       start = i-filterlen/2;
       for (j=0;j<val_buffer.size();j++) {
          if (start+(int)j < 0 || start+(int)j > (int)x.size()-1 )
@@ -1450,7 +1450,7 @@ double GetFilteringGain(const gsl::vector &b, const gsl::vector &a,
 	int p = GSL_MAX(a.size(),b.size());
 
 	gsl::vector frame(frame_length);
-	gsl::vector pre_frame(p);
+	gsl::vector pre_frame(3*p);
 	gsl::vector frame_full(frame_length + p);
 
 	/* Get samples to frame */

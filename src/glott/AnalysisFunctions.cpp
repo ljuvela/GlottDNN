@@ -186,20 +186,17 @@ int SpectralAnalysis(const Param &params, const AnalysisData &data, gsl::matrix 
 
    size_t frame_index;
 	for(frame_index=0;frame_index<(size_t)params.number_of_frames;frame_index++) {
+
       GetFrame(data.signal, frame_index, params.frame_shift, &frame, &pre_frame);
 		/** Voiced analysis **/
 		if(data.fundf(frame_index) != 0) {
-
 		   /* Estimate Weighted Linear Prediction weight */
 			GetLpWeight(params,params.lp_weighting_function,data.gci_inds, frame, frame_index, &lp_weight);
-
 			/* Pre-emphasis and windowing */
          Filter(std::vector<double>{1.0, -params.gif_pre_emphasis_coefficient},B, frame, &frame_pre_emph);
          ApplyWindowingFunction(params.default_windowing_function, &frame_pre_emph);
-
          /* First-loop envelope */
 			ArAnalysis(params.lpc_order_vt,params.warping_lambda_vt, params.lp_weighting_function, lp_weight, frame_pre_emph, &A);
-
          //if(frame_index == 20) {
          //   ConcatenateFrames(pre_frame, frame, &frame_full);
          //   WFilter(A,B,frame_full,params.warping_lambda_vt,&residual);
@@ -228,7 +225,8 @@ int SpectralAnalysis(const Param &params, const AnalysisData &data, gsl::matrix 
          /** Unvoiced analysis **/
 		} else {
 			ApplyWindowingFunction(params.default_windowing_function,&frame);
-			LPC(frame, params.lpc_order_vt, &A);
+			//LPC(frame, params.lpc_order_vt, &A);
+			ArAnalysis(params.lpc_order_vt,params.warping_lambda_vt, NONE, lp_weight, frame, &A);
 		}
 		poly_vocal_tract->set_col_vec(frame_index,A);
 	}

@@ -298,14 +298,14 @@ int Dnn::ReadData(const char *basename) {
      fname_str = basename;
      fname_str += ".dnnMinMax";
 
-     file = std::ifstream(fname_str, std::ios::in | std::ios::binary);
-     if (!file)
+     std::ifstream file2(fname_str, std::ios::in | std::ios::binary);
+     if (!file2)
         return EXIT_FAILURE;
 
      // File size
-     file.seekg(0, std::ios::end);
-     file_size = file.tellg();
-     file.seekg(0, std::ios::beg);
+     file2.seekg(0, std::ios::end);
+     file_size = file2.tellg();
+     file2.seekg(0, std::ios::beg);
 
      // Check file length
      expected_length = 2*(this->layer_sizes[0]);
@@ -314,7 +314,7 @@ int Dnn::ReadData(const char *basename) {
      n_values = file_size / sizeof(double);
      assert(n_values == expected_length);
      file_data = new double[n_values];
-     file.read(reinterpret_cast<char*>(file_data), file_size);
+     file2.read(reinterpret_cast<char*>(file_data), file_size);
 
    // Read input data min values
    this->input_data_min = gsl::matrix(layer_sizes[0],1);

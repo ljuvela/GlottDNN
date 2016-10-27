@@ -16,7 +16,7 @@ Param::Param() {
 	external_f0_filename = "";
 	external_gci_filename = "";
 	dnn_path_basename = "";
-	basename = "";
+	file_basename = "";
 	data_directory = "";
 	/* Enum parameters */
 	default_windowing_function = HANN;
@@ -130,25 +130,25 @@ int AnalysisData::SaveData(const Param &params) {
 
    if (params.extract_gain) {
       //WriteGslVector(params.basename, ".Gain", params.data_type, frame_energy);
-      WriteGslVector(basedir + "gain/" + std::string(params.basename) + ".Gain", params.data_type, frame_energy);
+      WriteGslVector(basedir + "gain/" + std::string(params.file_basename) + ".Gain", params.data_type, frame_energy);
    }
    if (params.extract_lsf_vt)
-      WriteGslMatrix(basedir + "lsf/" + std::string(params.basename) + ".LSF", params.data_type, lsf_vocal_tract);
+      WriteGslMatrix(basedir + "lsf/" + std::string(params.file_basename) + ".LSF", params.data_type, lsf_vocal_tract);
 //      WriteGslMatrix(params.basename, ".LSF", params.data_type, lsf_vocal_tract);
    if (params.extract_lsf_glot)
-      WriteGslMatrix(basedir + "lsfg/" + std::string(params.basename) + ".LSFglot", params.data_type, lsf_glot);
+      WriteGslMatrix(basedir + "lsfg/" + std::string(params.file_basename) + ".LSFglot", params.data_type, lsf_glot);
 //      WriteGslMatrix(params.basename, ".LSFsource", params.data_type, lsf_glot);
    if (params.extract_hnr)
-      WriteGslMatrix(basedir + "hnr/" + std::string(params.basename) + ".HNR", params.data_type, hnr_glot);
+      WriteGslMatrix(basedir + "hnr/" + std::string(params.file_basename) + ".HNR", params.data_type, hnr_glot);
 //      WriteGslMatrix(params.basename, ".HNR", params.data_type, hnr_glot);
    if (params.extract_pulses_as_features)
-      WriteGslMatrix(basedir + "paf/" + std::string(params.basename) + ".PAF", params.data_type, excitation_pulses);
+      WriteGslMatrix(basedir + "paf/" + std::string(params.file_basename) + ".PAF", params.data_type, excitation_pulses);
 //      WriteGslMatrix(params.basename, ".PLS", params.data_type, excitation_pulses);
    if (params.extract_f0)
-      WriteGslVector(basedir + "f0/" + std::string(params.basename) + ".F0", params.data_type, fundf);
+      WriteGslVector(basedir + "f0/" + std::string(params.file_basename) + ".F0", params.data_type, fundf);
 //      WriteGslVector(params.basename, ".F0", params.data_type, fundf);
    if (params.extract_glottal_excitation)
-      if(WriteWavFile(basedir + "exc/" + std::string(params.basename) + ".src.wav", source_signal, params.fs) == EXIT_FAILURE)
+      if(WriteWavFile(basedir + "exc/" + std::string(params.file_basename) + ".src.wav", source_signal, params.fs) == EXIT_FAILURE)
          return EXIT_FAILURE;
 
    return EXIT_SUCCESS;
