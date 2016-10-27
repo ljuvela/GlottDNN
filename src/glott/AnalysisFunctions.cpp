@@ -445,10 +445,12 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
    if (params.extract_pulses_as_features == false)
       return;
 
+   int THRESH = params.frame_length/2;
    size_t frame_index;
    for(frame_index=0;frame_index<(size_t)params.number_of_frames;frame_index++) {
       size_t sample_index = frame_index*params.frame_shift;
       size_t pulse_index = Find_nearest_pulse_index(sample_index, gci_inds, params, fundf(frame_index));
+
 
       size_t pulselen;
       pulselen = round(gci_inds(pulse_index+1)-gci_inds(pulse_index-1))+1;
@@ -465,8 +467,14 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
          InterpolateSpline(pulse_orig, pulselen, &paf_pulse);
       } else{
          /* No windowing, just center at mid gci */
+
+         int center_index = gci_inds(pulse_index);
+
+         if(abs(center_index-(int)sample_index) > THRESH)
+            center_index = sample_index;
+
          for(j=0;j<paf_pulse.size();j++) {
-            int i = gci_inds(pulse_index) - round(paf_pulse.size()/2) + j;
+            int i = center_index - round(paf_pulse.size()/2) + j;
             if (i >= 0 && i < (int)source_signal.size())
                paf_pulse(j) = source_signal(i);
          }

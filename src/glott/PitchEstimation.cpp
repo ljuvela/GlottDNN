@@ -111,6 +111,7 @@ void FundamentalFrequency(const Param &params, const gsl::vector &glottal_frame,
       if(signal_frame(i) * signal_frame(i+1) < 0)
          zero_crossings++;
 
+
    /* Calculate band energies */
    gsl::vector bp_gain;
    BandPassGain(signal_frame, params.fs, &bp_gain);
