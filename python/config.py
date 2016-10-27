@@ -1,16 +1,16 @@
 # run flags
-make_dirs = True
+make_dirs = False
 make_scp = False
 do_sptk_pitch_analysis = False
-do_reaper_pitch_analysis = True
+do_reaper_pitch_analysis = False
 do_glott_vocoder_analysis = False
-make_dnn_train_data = False
-make_dnn_infofile = False
+make_dnn_train_data = True
+make_dnn_infofile = True
 do_dnn_training = False
 
 # directories
-prjdir = '/Users/ljuvela/CODE/GlottDNN'
-datadir = prjdir + '/data/slt48'
+prjdir = '/u/76/mairaksi/unix/Documents/CODE/GlottDNN/'
+datadir = prjdir + '/data/nancy48'
 
 # general parameters
 sampling_frequency = 48000
@@ -19,11 +19,11 @@ warping_lambda = 0.42
 # programs
 reaper = 'reaper'
 sox = 'sox'
-pitch = 'pitch -a 0 -s 48.0 -o 1 -p 240 -T 0.0 -L 50 -H 500 '
-x2x = 'x2x'
+pitch = '/u/76/mairaksi/unix/Documents/SPTK-3.8/bin/pitch/pitch -a 0 -s 48.0 -o 1 -p 240 -T 0.0 -L 50 -H 500 '
+x2x = '/u/76/mairaksi/unix/Documents/SPTK-3.8/bin/x2x/x2x'
 Analysis = prjdir + '/src/Analysis'
 Synthesis = prjdir + '/src/Synthesis'
-config_default = prjdir + '/config/config_48.cfg'
+config_default = prjdir + '/config/config_48_2.cfg'
 
 # nn input params
 inputs = ['f0', 'gain', 'hnr', 'lsfg', 'lsf']

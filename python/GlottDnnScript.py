@@ -142,8 +142,11 @@ def glott_vocoder_analysis():
                 f0file = conf.datadir + '/f0/' + bname + '.F0'
                 config_user = 'config_user.cfg'
                 conf_file = open(config_user,'w');
-                conf_file.write('USE_EXTERNAL_F0 = true;\n')
-                conf_file.write('EXTERNAL_F0_FILENAME = \"' + f0file + '\";\n' )
+                if conf.do_sptk_pitch_analysis or do_reaper_pitch_analysis:
+                    conf_file.write('USE_EXTERNAL_F0 = true;\n')
+                    conf_file.write('EXTERNAL_F0_FILENAME = \"' + f0file + '\";\n' )
+                else:
+                    conf_file.write('USE_EXTERNAL_F0 = false;\n')
                 conf_file.write('SAMPLING_FREQUENCY = ' + str(conf.sampling_frequency) +';\n')
                 conf_file.write('WARPING_LAMBDA_VT = '+ str(conf.warping_lambda) +';\n')
                 conf_file.write('DATA_DIRECTORY = \"' + conf.datadir + '\";\n')
