@@ -412,6 +412,7 @@ void SpectralMatchExcitation(const Param &params,const SynthesisData &data, gsl:
    double gain = 1.0, sum, frame_index_double;
    //int UPDATE_INTERVAL = rint(params.fs*0.005); // Hard-coded 5ms update interval
    int UPDATE_INTERVAL = params.filter_update_interval_specmatch; // Hard-coded 5ms update interval
+
    for(sample_index=0;sample_index<(int)excitation_signal->size();sample_index++) {
 
       if(sample_index % UPDATE_INTERVAL == 0) { //TODO: interpolation of parameters between frames according to update_interval

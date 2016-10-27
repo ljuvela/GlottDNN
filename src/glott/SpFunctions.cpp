@@ -851,7 +851,7 @@ void Lsf2Poly(const gsl::vector &lsf_vec, gsl::vector *poly_vec) {
       }
    }
 
-   if (l > 50) {
+   if (l >= 50) {
       Leja(&fi_p);
       Leja(&fi_q);
    }
