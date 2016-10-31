@@ -151,6 +151,46 @@ void InterpolateLinear(const gsl::vector &vector, const size_t interpolated_size
 	delete[] y;
 }
 
+void InterpolateSpline(const gsl::vector &vector, const size_t interpolated_size, gsl::vector *i_vector) {
+
+   size_t len = vector.size();
+   if (i_vector->is_set()) {
+      i_vector->resize(interpolated_size);
+   } else {
+      *i_vector = gsl::vector(interpolated_size);
+   }
+
+   /* Read values to array */
+   double *x = new double[len];
+   double *y = new double[len];
+   size_t i;
+   for(i=0; i<len; i++) {
+      x[i] = i;
+      y[i] = vector(i);
+   }
+   gsl_interp_accel *acc = gsl_interp_accel_alloc();
+   gsl_spline *spline = gsl_spline_alloc(gsl_interp_cspline,len);
+   gsl_spline_init(spline, x, y, len);
+   double xi;
+   i = 0;
+
+   xi = x[0];
+   while(i<interpolated_size) {
+      (*i_vector)(i) = gsl_spline_eval(spline, xi, acc);
+      xi += (len-1)/(double)(interpolated_size-1);
+      if(xi > len-1)
+         xi = len-1;
+      i++;
+   }
+
+   /* Free memory */
+   gsl_spline_free(spline);
+   gsl_interp_accel_free(acc);
+   delete[] x;
+   delete[] y;
+}
+
+
 /** Interp1
  *
  */
@@ -197,44 +237,7 @@ void InterpolateLinear(const gsl::vector &x_orig, const gsl::vector &y_orig, con
 
 
 
-void InterpolateSpline(const gsl::vector &vector, const size_t interpolated_size, gsl::vector *i_vector) {
 
-   size_t len = vector.size();
-   if (i_vector->is_set()) {
-      i_vector->resize(interpolated_size);
-   } else {
-      *i_vector = gsl::vector(interpolated_size);
-   }
-
-   /* Read values to array */
-	double *x = new double[len];
-	double *y = new double[len];
-   size_t i;
-   for(i=0; i<len; i++) {
-      x[i] = i;
-      y[i] = vector(i);
-   }
-   gsl_interp_accel *acc = gsl_interp_accel_alloc();
-   gsl_spline *spline = gsl_spline_alloc(gsl_interp_cspline,len);
-   gsl_spline_init(spline, x, y, len);
-   double xi;
-   i = 0;
-
-   xi = x[0];
-   while(i<len) {
-      (*i_vector)(i) = gsl_spline_eval(spline, xi, acc);
-      xi += (len-1)/(double)(len-1);
-      if(xi > len-1)
-         xi = len-1;
-      i++;
-   }
-
-   /* Free memory */
-   gsl_spline_free(spline);
-   gsl_interp_accel_free(acc);
-   delete[] x;
-   delete[] y;
-}
 
 /**
  * Function Interpolate

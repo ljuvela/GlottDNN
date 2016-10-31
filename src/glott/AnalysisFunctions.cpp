@@ -453,9 +453,12 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
 
 
       size_t pulselen;
-      pulselen = round(gci_inds(pulse_index+1)-gci_inds(pulse_index-1))+1;
-      size_t j;
+      if (fundf(frame_index) > 0.0)
+         pulselen = round(gci_inds(pulse_index+1)-gci_inds(pulse_index-1))+1;
+      else
+         pulselen = params.frame_length;
 
+      size_t j;
       gsl::vector paf_pulse(params.paf_pulse_length);
       if (params.use_pulse_interpolation == true){
          gsl::vector pulse_orig(pulselen);
@@ -463,8 +466,9 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
             pulse_orig(j) = source_signal(gci_inds(pulse_index-1)+j);
          }
          /* Interpolation on windowed signal prevents Gibbs at edges */
-         ApplyWindowingFunction(COSINE, &paf_pulse);
-         InterpolateSpline(pulse_orig, pulselen, &paf_pulse);
+         ApplyWindowingFunction(COSINE, &pulse_orig);
+         InterpolateSpline(pulse_orig, params.paf_pulse_length, &paf_pulse);
+
       } else{
          /* No windowing, just center at mid gci */
 
