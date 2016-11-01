@@ -1526,7 +1526,8 @@ void SharpenPowerSpectrumPeaks(const gsl::vector_int &peak_indices, const double
 int StabilizeLsf(gsl::vector *lsf) {
 
    /* Minimum LSF separation */
-   double LSF_EPSILON = 0.005;
+   //double LSF_EPSILON = 0.005;
+   double LSF_EPSILON = 0.01;
    bool ok = false;
    size_t nof_fixes = 0;
    //std::cout << *lsf << std::endl;

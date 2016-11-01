@@ -294,31 +294,34 @@ int SpectralAnalysisQmf(const Param &params, const AnalysisData &data, gsl::matr
          ArAnalysis(params.lpc_order_vt_qmf1,0.0,params.lp_weighting_function, lp_weight_downsampled, frame_qmf1, &A_qmf1);
 
          /** High-band analysis **/
-         ApplyWindowingFunction(params.default_windowing_function,&frame_qmf2);
+         //ApplyWindowingFunction(params.default_windowing_function,&frame_qmf2);
          ArAnalysis(params.lpc_order_vt_qmf2,0.0,NONE, lp_weight_downsampled, frame_qmf2, &A_qmf2);
 
+
+         Qmf::CombinePoly(A_qmf1,A_qmf2,gain_qmf,(int)frame_qmf1.size(),&A);
       /** Unvoiced analysis (Low-band = LPC, High-band = LPC, no pre-emphasis) **/
       } else {
-         Qmf::GetSubBands(frame, H0, H1, &frame_qmf1, &frame_qmf2);
+         //Qmf::GetSubBands(frame, H0, H1, &frame_qmf1, &frame_qmf2);
 
-         e1 = getEnergy(frame_qmf1);
-         e2 = getEnergy(frame_qmf2);
-         if(e1 == 0.0)
-            e1 += DBL_MIN;
-         if(e2 == 0.0)
-            e2 += DBL_MIN;
-         gain_qmf = 20*log10(e2/e1);
+         //e1 = getEnergy(frame_qmf1);
+         //e2 = getEnergy(frame_qmf2);
+         //if(e1 == 0.0)
+         //   e1 += DBL_MIN;
+         //if(e2 == 0.0)
+         //   e2 += DBL_MIN;
+         //gain_qmf = 20*log10(e2/e1);
 
          /** Low-band analysis **/
-         ApplyWindowingFunction(params.default_windowing_function,&frame_qmf1);
-         ArAnalysis(params.lpc_order_vt_qmf1,0.0,NONE, lp_weight_downsampled, frame_qmf2, &A_qmf1);
+         //ApplyWindowingFunction(params.default_windowing_function,&frame_qmf1);
+         //ArAnalysis(params.lpc_order_vt_qmf1,0.0,NONE, lp_weight_downsampled, frame_qmf2, &A_qmf1);
 
          /** High-band analysis **/
-         ApplyWindowingFunction(params.default_windowing_function,&frame_qmf2);
-         ArAnalysis(params.lpc_order_vt_qmf2,0.0,NONE, lp_weight_downsampled, frame_qmf2, &A_qmf2);
+         //ApplyWindowingFunction(params.default_windowing_function,&frame_qmf2);
+         //ArAnalysis(params.lpc_order_vt_qmf2,0.0,NONE, lp_weight_downsampled, frame_qmf2, &A_qmf2);
+         ApplyWindowingFunction(params.default_windowing_function,&frame);
+         ArAnalysis(params.lpc_order_vt,0.0,NONE,lp_weight_downsampled, frame,&A);
       }
 
-      Qmf::CombinePoly(A_qmf1,A_qmf2,gain_qmf,(int)frame_qmf1.size(),&A);
 
       poly_vocal_tract->set_col_vec(frame_index,A);
       //Poly2Lsf(A_qmf1,&lsf_qmf1);
@@ -456,7 +459,9 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
       pulselen = round(gci_inds(pulse_index+1)-gci_inds(pulse_index-1))+1;
       size_t j;
 
-      gsl::vector paf_pulse(params.paf_pulse_length);
+      gsl::vector paf_pulse(params.paf_pulse_length,true);
+      gsl::vector pulse;
+
       if (params.use_pulse_interpolation == true){
          gsl::vector pulse_orig(pulselen);
          for(j=0;j<pulselen;j++) {
@@ -465,20 +470,62 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
          /* Interpolation on windowed signal prevents Gibbs at edges */
          ApplyWindowingFunction(COSINE, &paf_pulse);
          InterpolateSpline(pulse_orig, pulselen, &paf_pulse);
-      } else{
+      } else {
          /* No windowing, just center at mid gci */
-
+         int i, minind;
          int center_index = gci_inds(pulse_index);
+         /* Refine center index by finding the local minumum of HANN-windowed pulse */
+         if(fundf(frame_index) != 0.0) {
+            pulse = gsl::vector((int)rint(2.0*(double)params.fs/fundf(frame_index)),true);
+            for(j=0;j<pulse.size();j++) {
+               i = center_index - round(pulse.size()/2) + j;
+               if (i >= 0 && i < (int)source_signal.size())
+                  pulse(j) = source_signal(i);
+            }
+            ApplyWindowingFunction(HANNING, &pulse);
+            minind = pulse.min_index();
+            center_index += minind - pulse.size()/2;
+         }
 
-         if(abs(center_index-(int)sample_index) > THRESH)
+         if(fundf(frame_index) == 0.0 || abs(center_index-(int)sample_index) > THRESH)
             center_index = sample_index;
 
-         for(j=0;j<paf_pulse.size();j++) {
-            int i = center_index - round(paf_pulse.size()/2) + j;
-            if (i >= 0 && i < (int)source_signal.size())
-               paf_pulse(j) = source_signal(i);
+         if(params.psola_windowing_function == COSINE) {
+            int T;
+
+            if(fundf(frame_index) != 0.0) {
+               T = rint(2.0*(double)params.fs/fundf(frame_index));
+               if(T > paf_pulse.size())
+                  T = paf_pulse.size();
+            } else {
+               T = paf_pulse.size();
+            }
+
+
+            pulse = gsl::vector(T);
+            for(j=0;j<T;j++) {
+               i = center_index - round(pulse.size()/2) + j;
+               if (i >= 0 && i < (int)source_signal.size())
+                  pulse(j) = source_signal(i);
+            }
+            ApplyWindowingFunction(COSINE, &pulse);
+
+            for(j=0;j<pulse.size();j++) {
+              // if (i >= 0 && i < (int)source_signal.size())
+                  paf_pulse((paf_pulse.size()/2-pulse.size()/2)+j) = pulse(j);
+                  //paf_pulse(j) = source_signal(i);
+            }
+         } else {
+
+            for(j=0;j<paf_pulse.size();j++) {
+               i = center_index - round(paf_pulse.size()/2) + j;
+               if (i >= 0 && i < (int)source_signal.size())
+                  paf_pulse(j) = source_signal(i);
+            }
          }
       }
+
+
       /* Normalize energy */
       paf_pulse /= getEnergy(paf_pulse);
 

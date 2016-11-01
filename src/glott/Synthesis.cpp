@@ -53,30 +53,35 @@ int main(int argc, char *argv[]) {
          return EXIT_FAILURE;
    }
 
+
+
    SynthesisData data;
    if(ReadSynthesisData(filename, &params, &data) == EXIT_FAILURE)
       return EXIT_FAILURE;
+
+
+   if(params.use_postfiltering)
+      PostFilter(params.postfilter_coefficient, params.fs, &(data.lsf_vocal_tract));
+
+   if(params.use_trajectory_smoothing)
+      ParameterSmoothing(params, &data);
 
    /* Check LSF stability and fix if needed */
    StabilizeLsf(&(data.lsf_vocal_tract));
    StabilizeLsf(&(data.lsf_glot));
 
-   if(params.use_postfiltering)
-      PostFilter(params.postfilter_coefficient, params.fs, &(data.lsf_vocal_tract));
-
-   if(params.use_trajectory_smoothing) {
-      ParameterSmoothing(params, &data);
-      StabilizeLsf(&(data.lsf_vocal_tract));
-      StabilizeLsf(&(data.lsf_glot));
-   }
 
    CreateExcitation(params, data, &(data.excitation_signal));
+
+   if(params.noise_gain_voiced > 0.0)
+      HarmonicModification(params, data, &(data.excitation_signal));
+
 
    if(params.use_spectral_matching)
       SpectralMatchExcitation(params, data, &(data.excitation_signal));
 
-   if(params.noise_gain_voiced > 0.0)
-      HarmonicModification(params, data, &(data.excitation_signal));
+
+
 
    FilterExcitation(params, data, &(data.signal));
 

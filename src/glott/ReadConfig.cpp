@@ -243,14 +243,17 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
 	if (ConfigLookupString("DNN_WEIGHT_PATH", cfg, default_config, params->dnn_path_basename) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 
-   double update_interval_ms;
+   double update_interval_ms=0;
 	if (ConfigLookupDouble("FILTER_UPDATE_INTERVAL_VT", cfg, default_config, &(update_interval_ms)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
-	params->filter_update_interval_vt = (int)round(update_interval_ms/1000.0*(double)params->fs);
+	if( default_config || update_interval_ms > 0)
+	   params->filter_update_interval_vt = (int)round(update_interval_ms/1000.0*(double)params->fs);
 
+	update_interval_ms=0;
 	if (ConfigLookupDouble("FILTER_UPDATE_INTERVAL_SPECMATCH", cfg, default_config, &(update_interval_ms)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
-	params->filter_update_interval_specmatch = (int)round(update_interval_ms/1000.0*(double)params->fs);
+	if( default_config || update_interval_ms > 0)
+	    params->filter_update_interval_specmatch = (int)round(update_interval_ms/1000.0*(double)params->fs);
 
    if (ConfigLookupString("DATA_DIRECTORY", cfg, default_config, params->data_directory) == EXIT_FAILURE)
       return EXIT_FAILURE;

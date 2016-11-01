@@ -55,7 +55,7 @@ def make_directories():
     mkdir_p(conf.datadir + '/wav')
     mkdir_p(conf.datadir + '/raw')
     mkdir_p(conf.datadir + '/f0')
-    mkdir_p(conf.datadir + '/f0')
+    mkdir_p(conf.datadir + '/gci')
     mkdir_p(conf.datadir + '/gain')
     mkdir_p(conf.datadir + '/lsf')
     mkdir_p(conf.datadir + '/lsfg')
@@ -104,11 +104,16 @@ def reaper_pitch_analysis():
                 f0tmp1 = conf.datadir + '/f0/' + bname + '.F0tmp1'
                 f0tmp2 = conf.datadir + '/f0/' + bname + '.F0tmp2'                
                 f0file = conf.datadir + '/f0/' + bname + '.F0'
+            
+                gcitmp = conf.datadir + '/gci/' + bname + '.GCItmp'                
+                gcifile = conf.datadir + '/gci/' + bname + '.GCI'
                 
                 # analysis commands
-                cmd =  conf.reaper + ' -a -i ' + wavfile + ' -f ' + f0tmp1
+                cmd =  conf.reaper + ' -a -i ' + wavfile + ' -f ' + f0tmp1 + ' -p ' + gcitmp
                 os.system(cmd)
                 cmd = 'tail +8 ' + f0tmp1 + '| awk \'{print $3}\' | x2x +af | sopr -magic -1.0 -MAGIC 0.0  > ' + f0tmp2
+                os.system(cmd)
+                cmd = 'tail +8 ' + gcitmp + '| awk \'{print $1}\' | x2x +ad > ' + gcifile
                 os.system(cmd)
             
                 # read the file
@@ -131,6 +136,7 @@ def reaper_pitch_analysis():
                 # remove tmp
                 os.remove(f0tmp1)
                 os.remove(f0tmp2)
+                os.remove(gcitmp)
 
 def glott_vocoder_analysis():
     wavscp = conf.datadir + '/scp/wav.scp'
@@ -140,6 +146,7 @@ def glott_vocoder_analysis():
             if os.path.isfile(wavfile):
                 bname = os.path.splitext(os.path.basename(wavfile))[0]
                 f0file = conf.datadir + '/f0/' + bname + '.F0'
+                gcifile = conf.datadir + '/gci/' + bname + '.GCI'
                 config_user = 'config_user.cfg'
                 conf_file = open(config_user,'w');
                 if conf.do_sptk_pitch_analysis or do_reaper_pitch_analysis:
@@ -147,12 +154,33 @@ def glott_vocoder_analysis():
                     conf_file.write('EXTERNAL_F0_FILENAME = \"' + f0file + '\";\n' )
                 else:
                     conf_file.write('USE_EXTERNAL_F0 = false;\n')
+                if conf.use_external_gci:
+                    conf_file.write('USE_EXTERNAL_GCI = true;\n')
+                    conf_file.write('EXTERNAL_GCI_FILENAME = \"' + gcifile + '\";\n' )
                 conf_file.write('SAMPLING_FREQUENCY = ' + str(conf.sampling_frequency) +';\n')
                 conf_file.write('WARPING_LAMBDA_VT = '+ str(conf.warping_lambda) +';\n')
                 conf_file.write('DATA_DIRECTORY = \"' + conf.datadir + '\";\n')
                 conf_file.close()
                 cmd = conf.Analysis + ' ' + wavfile + ' ' + conf.config_default + ' ' + config_user
                 os.system(cmd)
+
+def glott_vocoder_synthesis():
+    wavscp = conf.datadir + '/scp/wav.scp'
+    with open(wavscp,'r') as wavfiles:
+        for file in wavfiles:
+            wavfile = file.rstrip()
+            if os.path.isfile(wavfile):
+                bname = os.path.splitext(os.path.basename(wavfile))[0]
+                f0file = conf.datadir + '/f0/' + bname + '.F0'
+                config_user = 'config_user.cfg'
+                conf_file = open(config_user,'w');
+                conf_file.write('SAMPLING_FREQUENCY = ' + str(conf.sampling_frequency) +';\n')
+                conf_file.write('WARPING_LAMBDA_VT = '+ str(conf.warping_lambda) +';\n')
+                conf_file.write('DATA_DIRECTORY = \"' + conf.datadir + '\";\n')
+                conf_file.close()
+                cmd = conf.Synthesis + ' ' + wavfile + ' ' + conf.config_default + ' ' + config_user
+                os.system(cmd)
+
 
 def package_data():
     # read and shuffle wav filelist
@@ -185,7 +213,10 @@ def package_data():
                     # set to input data matrix
                     input_data[:,feat_start:feat_start+dim ] = feat
                     feat_start += dim
-            # update global min and max
+            # remove unvoiced frames if requested
+            if conf.remove_unvoiced_frames:
+                input_data = input_data[input_data[:,0] > 0,:]
+            # update global min and max    
             in_min = np.minimum(np.amin(input_data, axis=0), in_min)
             in_max = np.maximum(np.amax(input_data, axis=0), in_max)
 
@@ -221,10 +252,6 @@ def package_data():
                     input_data[:,feat_start:feat_start+dim ] = feat
                     feat_start += dim
 
-            # normalize and write input data
-            input_data = (input_data - in_min) / (in_max - in_min) * (new_max - new_min) + new_min
-            input_data.astype(np.float32).tofile(in_fid, sep='',format="%f")
-           
             # read output data
             feat_start = 0
             for (ftype, ext, dim) in zip( conf.outputs, conf.output_exts, conf.output_dims): 
@@ -234,7 +261,17 @@ def package_data():
                     feat = np.reshape(feat, (-1,dim))
                     output_data[:,feat_start:feat_start+dim ] = feat
                     feat_start += dim
-
+            
+            
+            # remove unvoiced frames if requested
+            if conf.remove_unvoiced_frames:
+                output_data = output_data[input_data[:,0] > 0,:]
+                input_data = input_data[input_data[:,0] > 0,:]
+            
+            # normalize and write input data
+            input_data = (input_data - in_min) / (in_max - in_min) * (new_max - new_min) + new_min
+            input_data.astype(np.float32).tofile(in_fid, sep='',format="%f")
+            
             # write output data
             output_data.astype(np.float32).tofile(out_fid, sep='',format="%f")
 
@@ -286,5 +323,9 @@ def main(argv):
         TrainDnn.evaluate_dnn(n_in=dim_in, n_out=dim_out, n_hidden=conf.n_hidden, batch_size=conf.batch_size, 
                  learning_rate=conf.learning_rate, n_epochs = conf.max_epochs)
 
+    # Copy synthesis
+    if conf.do_glott_vocoder_synthesis:
+        glott_vocoder_synthesis()
+    
 if __name__ == "__main__":
     main(sys.argv[1:])
