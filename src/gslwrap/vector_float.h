@@ -59,11 +59,13 @@ public:
 	~vector_float(){free();}
 	vector_float(const size_t& n,bool clear=true)
 	{
+	   this->gsldata = NULL;
 		if(clear){this->calloc(n);}
 		else     {this->alloc(n);}
 	}
 	vector_float(const int& n,bool clear=true)
 	{
+	   this->gsldata = NULL;
 		if(clear){this->calloc(n);}
 		else     {this->alloc(n);}
 	}

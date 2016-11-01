@@ -143,6 +143,9 @@ gsl::vector GetDnnPulse(const size_t &pulse_len, const double &energy, const siz
    excDnn.setInput(data, frame_index);
    const gsl::vector &dnn_pulse = excDnn.getOutput();
 
+   if(frame_index == 5)
+      VPrint1(dnn_pulse);
+
    // Copy pulse starting from middle of external pulse
    int mid = round(dnn_pulse.size()/2.0);
    int ind;
@@ -246,7 +249,7 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
          size_t i;
          for(i=0;i<noise.size();i++) {
             noise(i) = gauss_gen.get();
-         }
+         };
          energy = LogEnergy2FrameEnergy(data.frame_energy(frame_index),noise.size());
 
          switch (params.excitation_method) {
@@ -260,11 +263,16 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
             break;
          case DNN_GENERATED_EXCITATION:
             //pulse = GetDnnPulse();
-            pulse = GetDnnPulse(noise.size(), energy, frame_index, data, excDnn);
+            //pulse = GetDnnPulse(noise.size(), energy, frame_index, data, excDnn);
+            pulse = noise;
+            pulse *= params.noise_gain_unvoiced*energy/getEnergy(noise);
+            pulse /= 0.5*(double)noise.size()/(double)params.frame_shift; // Compensate OLA gain
+            //pulse = GetExternalPulse(noise.size(), energy, frame_index, data.excitation_pulses);
             ApplyWindowingFunction(params.psola_windowing_function, &pulse);
             break;
          case PULSES_AS_FEATURES_EXCITATION:
             pulse = GetExternalPulse(noise.size(), params.use_pulse_interpolation, energy, frame_index, data.excitation_pulses);
+           // pulse = GetExternalPulse(noise.size(), energy, frame_index, data.excitation_pulses);
             ApplyWindowingFunction(params.psola_windowing_function, &pulse);
             break;
          }
@@ -328,6 +336,7 @@ void HarmonicModification(const Param &params, const SynthesisData &data, gsl::v
             val = 20*log10(fft_mag(i));
             fft_mag(i) = GSL_MAX(val,MIN_LOG_POWER); // Min log-power = -60dB
          }
+
          harmonic_index = FindHarmonicPeaks(fft_mag, data.fundf(frame_index), params.fs);
          lower_env_values = gsl::vector(harmonic_index.size());
          upper_env_values = gsl::vector(harmonic_index.size());
@@ -435,6 +444,7 @@ void SpectralMatchExcitation(const Param &params,const SynthesisData &data, gsl:
    if(params.use_trajectory_smoothing)
       MovingAverageFilter(params.lsf_glot_smooth_len, &(lsf_glot_syn));
 
+   StabilizeLsf(&(lsf_glot_syn));
 
 
    /* Spectral match excitation */
@@ -457,8 +467,12 @@ void SpectralMatchExcitation(const Param &params,const SynthesisData &data, gsl:
          //TODO: Add interpolation to frame_energy.
          gain_target_db = InterpolateLinear(data.frame_energy(floor(frame_index_double)),
                                           data.frame_energy(ceil(frame_index_double)),frame_index_double);
+
+
          gain = GetFilteringGain(a_gen, a_tar, excitation_orig, gain_target_db,
                                     sample_index, params.frame_length, 0.0); // Should this be from ecitation_signal or excitation_orig?
+         if(data.fundf(rint(frame_index_double)) == 0.0)
+            gain *= params.noise_gain_unvoiced;
          a_tar(0) = 0.0;
       }
       sum = 0.0;
@@ -502,6 +516,8 @@ void FilterExcitation(const Param &params, const SynthesisData &data, gsl::vecto
 
          gain = GetFilteringGain(B, a_interp, data.excitation_signal, gain_target_db,
                                  sample_index, params.frame_length, params.warping_lambda_vt);
+         if(data.fundf(rint(frame_index_double)) == 0.0)
+            gain *= params.noise_gain_unvoiced;
       }
       /** Normal filtering **/
       if(params.warping_lambda_vt == 0.0) {

@@ -89,6 +89,7 @@ int main(int argc, char *argv[]) {
    /* Read sound file and allocate data */
    AnalysisData data;
 
+
    if(ReadWavFile(wav_filename, &(data.signal), &params) == EXIT_FAILURE)
       return EXIT_FAILURE;
 

@@ -342,55 +342,54 @@ void ApplyPsolaWindow(const WindowingFunctionType &window_function, const double
    int start;
    double n_temp;
    size_t i;
-   std::cout << "prev t0: " << (int)t0_previous << "cur t0: " << (int)t0 << "nx t0: " << (int)t0_next << std::endl;
+  // std::cout << "prev t0: " << (int)t0_previous << "cur t0: " << (int)t0 << "nx t0: " << (int)t0_next << std::endl;
 	switch(window_function) {
 	case HANN :
+
       /* Left-hand side */
-      if (t0 <= t0_previous) { /* Use normal windowing */
-         for(i=0;i<t0;i++)
-            (*frame)(i) *= 0.5*(1.0-cos(2.0*M_PI*((double)i)/((n_dbl)-1.0)));
-      } else { /*  */
-         //n_temp = GSL_MAX(2*t0_previous,2*MINIMUM_W_LENGTH);
-         n_temp = 2*t0_previous;
-         start = t0-(n_temp/2);
-         for(i=0;i<start;i++)
-            (*frame)(i) = 0.0;
-         for(i=start;i<t0;i++)
-            (*frame)(i) *= 0.5*(1.0-cos(2.0*M_PI*((double)(i-start))/((n_temp)-1.0)));
-      }
+	   if (t0 <= t0_previous) { /* Use normal windowing */
+	      for(i=0;i<t0;i++)
+	         (*frame)(i) *= 0.5*(1.0-cos(2.0*M_PI*((double)i)/((n_dbl)-1.0)));
+	   } else { /*  */
+	      //n_temp = GSL_MAX(2*t0_previous,2*MINIMUM_W_LENGTH);
+	      n_temp = 2*t0_previous;
+	      start = t0-(n_temp/2);
+	      for(i=0;i<start;i++)
+	         (*frame)(i) = 0.0;
+	      for(i=start;i<t0;i++)
+	         (*frame)(i) *= 0.5*(1.0-cos(2.0*M_PI*((double)(i-start))/((n_temp)-1.0)));
+	   }
 
-		/* Right-hand side */
-      if(t0 <= t0_next) {
-         for(i=t0;i<frame->size();i++)
-            (*frame)(i) *= 0.5*(1.0-cos(2.0*M_PI*((double)i)/((n_dbl)-1.0)));
-      } else { //TODO: FIX PROBLEM
-         //n_temp = GSL_MAX(2*t0_next,2*MINIMUM_W_LENGTH);
-         n_temp = 2*t0_next;
-         start = frame->size() - t0_next ;
-         double val;
-         for(i=start;i<frame->size();i++) {
-            val = 0.5*(1.0-cos(2.0*M_PI*((double)(i-start+t0_next))/((n_temp)-1.0)));
-            (*frame)(i) *= val;
-         }
-      }
+	   /* Right-hand side */
+	   if(t0 <= t0_next) {
+	      for(i=t0;i<frame->size();i++)
+	         (*frame)(i) *= 0.5*(1.0-cos(2.0*M_PI*((double)i)/((n_dbl)-1.0)));
+	   } else { //TODO: FIX PROBLEM
+	      //n_temp = GSL_MAX(2*t0_next,2*MINIMUM_W_LENGTH);
+	      n_temp = 2*t0_next;
+	      start = frame->size() - t0_next ;
+	      double val;
+	      for(i=start;i<frame->size();i++) {
+	         val = 0.5*(1.0-cos(2.0*M_PI*((double)(i-start+t0_next))/((n_temp)-1.0)));
+	         (*frame)(i) *= val;
+	      }
+	   }
 
-      //for(i=0;i<frame->size();i++)
-		//	(*frame)(i) *= 0.5*(1.0-cos(2.0*M_PI*((double)i)/((n)-1.0)));
-		break;
-
-
-	/*case HAMMING :
+//      for(i=0;i<frame->size();i++)
+//         (*frame)(i) *= 0.5*(1.0-cos(2.0*M_PI*((double)i)/((n_dbl)-1.0)));
+//      break;
+	case HAMMING :
 		for(i=0;i<frame->size();i++)
-			(*frame)(i) *= 0.53836 - 0.46164*(cos(2.0*M_PI*((double)i)/((n)-1.0)));
+			(*frame)(i) *= 0.53836 - 0.46164*(cos(2.0*M_PI*((double)i)/((n_dbl)-1.0)));
 		break;
 	case BLACKMAN :
 		for(i=0;i<frame->size();i++)
-			(*frame)(i) *= 0.42-0.5*cos(2.0*M_PI*((double)i)/((n)-1))+0.08*cos(4.0*M_PI*((double)i)/((n)-1.0));
+			(*frame)(i) *= 0.42-0.5*cos(2.0*M_PI*((double)i)/((n_dbl)-1))+0.08*cos(4.0*M_PI*((double)i)/((n_dbl)-1.0));
 		break;
 	case COSINE :
 		for(i=0;i<frame->size();i++)
-			(*frame)(i) *= sqrt(0.5*(1.0-cos(2.0*M_PI*((double)i)/((n)-1.0))));
-		break;*/
+			(*frame)(i) *= sqrt(0.5*(1.0-cos(2.0*M_PI*((double)i)/((n_dbl)-1.0))));
+		break;
 	}
 }
 
@@ -1529,7 +1528,8 @@ void SharpenPowerSpectrumPeaks(const gsl::vector_int &peak_indices, const double
 int StabilizeLsf(gsl::vector *lsf) {
 
    /* Minimum LSF separation */
-   double LSF_EPSILON = 0.005;
+   //double LSF_EPSILON = 0.005;
+   double LSF_EPSILON = 0.01;
    bool ok = false;
    size_t nof_fixes = 0;
    //std::cout << *lsf << std::endl;

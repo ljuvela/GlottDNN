@@ -8,9 +8,18 @@ import numpy as np
 import random
 import wave
 import math
+import imp # for importing argv[1]
+
 
 # Config file 
-import config as conf
+#import config as conf
+if len(sys.argv) < 2:
+    sys.exit("Usage: python GlottDnnScript.py config.py")
+if os.path.isfile(sys.argv[1]):
+   # conf = __import__(sys.argv[1])
+    conf = imp.load_source('', sys.argv[1])
+else:
+    sys.exit("Config file " + sys.argv[1] + " does not exist")
 
 # Import Theano-based DNN training if used 
 if conf.do_dnn_training:
@@ -149,8 +158,11 @@ def glott_vocoder_analysis():
                 gcifile = conf.datadir + '/gci/' + bname + '.GCI'
                 config_user = 'config_user.cfg'
                 conf_file = open(config_user,'w');
-                conf_file.write('USE_EXTERNAL_F0 = true;\n')
-                conf_file.write('EXTERNAL_F0_FILENAME = \"' + f0file + '\";\n' )
+                if conf.do_sptk_pitch_analysis or do_reaper_pitch_analysis:
+                    conf_file.write('USE_EXTERNAL_F0 = true;\n')
+                    conf_file.write('EXTERNAL_F0_FILENAME = \"' + f0file + '\";\n' )
+                else:
+                    conf_file.write('USE_EXTERNAL_F0 = false;\n')
                 if conf.use_external_gci:
                     conf_file.write('USE_EXTERNAL_GCI = true;\n')
                     conf_file.write('EXTERNAL_GCI_FILENAME = \"' + gcifile + '\";\n' )
@@ -210,7 +222,10 @@ def package_data():
                     # set to input data matrix
                     input_data[:,feat_start:feat_start+dim ] = feat
                     feat_start += dim
-            # update global min and max
+            # remove unvoiced frames if requested
+            if conf.remove_unvoiced_frames:
+                input_data = input_data[input_data[:,0] > 0,:]
+            # update global min and max    
             in_min = np.minimum(np.amin(input_data, axis=0), in_min)
             in_max = np.maximum(np.amax(input_data, axis=0), in_max)
 
@@ -246,10 +261,6 @@ def package_data():
                     input_data[:,feat_start:feat_start+dim ] = feat
                     feat_start += dim
 
-            # normalize and write input data
-            input_data = (input_data - in_min) / (in_max - in_min) * (new_max - new_min) + new_min
-            input_data.astype(np.float32).tofile(in_fid, sep='',format="%f")
-           
             # read output data
             feat_start = 0
             for (ftype, ext, dim) in zip( conf.outputs, conf.output_exts, conf.output_dims): 
@@ -259,7 +270,17 @@ def package_data():
                     feat = np.reshape(feat, (-1,dim))
                     output_data[:,feat_start:feat_start+dim ] = feat
                     feat_start += dim
-
+            
+            
+            # remove unvoiced frames if requested
+            if conf.remove_unvoiced_frames:
+                output_data = output_data[input_data[:,0] > 0,:]
+                input_data = input_data[input_data[:,0] > 0,:]
+            
+            # normalize and write input data
+            input_data = (input_data - in_min) / (in_max - in_min) * (new_max - new_min) + new_min
+            input_data.astype(np.float32).tofile(in_fid, sep='',format="%f")
+            
             # write output data
             output_data.astype(np.float32).tofile(out_fid, sep='',format="%f")
 
