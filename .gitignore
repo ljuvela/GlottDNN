@@ -26,3 +26,9 @@ wav/*.PLS
 data/*
 src/Analysis
 src/Synthesis
+src/Analysis.dSYM/
+src/glott/.deps/
+src/gslwrap/.deps/
+aclocal.m4
+config.log
+xsconfig.status
