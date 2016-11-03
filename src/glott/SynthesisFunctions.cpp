@@ -130,9 +130,8 @@ gsl::vector GetDnnPulse(const size_t &pulse_len, const double &energy, const siz
    gsl::vector pulse(pulse_len);
    excDnn.setInput(data, frame_index);
    const gsl::vector &dnn_pulse = excDnn.getOutput();
-
-   if(frame_index == 5)
-      VPrint1(dnn_pulse);
+   //if(frame_index == 5)
+    //  VPrint1(dnn_pulse);
 
    // Copy pulse starting from middle of external pulse
    int mid = round(dnn_pulse.size()/2.0);
@@ -185,15 +184,19 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
    gsl::vector pulse;
    gsl::vector p2;
    gsl::vector noise(params.frame_shift*2);
+   //gsl::vector noise(params.frame_shift);
    double T0, energy;
 
    size_t pulse_len;
    while (sample_index < (size_t)params.signal_length) {
       frame_index = rint(params.speed_scale * sample_index / (params.signal_length-1) * (params.number_of_frames-1));
+
       /** Voiced excitation **/
       if(data.fundf(frame_index) > 0) {
-
          T0 = params.fs/data.fundf(frame_index);
+
+         if(params.excitation_method == DNN_GENERATED_EXCITATION && T0 > params.paf_pulse_length)
+            T0 = params.paf_pulse_length;
 
          /*  Experimental for accurate PSOLA */
          //frame_index_nx = rint(params.speed_scale * (sample_index+T0) / (params.signal_length-1) * (params.number_of_frames-1));;
@@ -256,7 +259,7 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
             pulse *= params.noise_gain_unvoiced*energy/getEnergy(noise);
             pulse /= 0.5*(double)noise.size()/(double)params.frame_shift; // Compensate OLA gain
             //pulse = GetExternalPulse(noise.size(), energy, frame_index, data.excitation_pulses);
-            ApplyWindowingFunction(params.psola_windowing_function, &pulse);
+            ApplyWindowingFunction(HANN, &pulse);
             break;
          case PULSES_AS_FEATURES_EXCITATION:
             pulse = GetExternalPulse(noise.size(), energy, frame_index, data.excitation_pulses);

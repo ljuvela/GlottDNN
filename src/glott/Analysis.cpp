@@ -113,7 +113,7 @@ int main(int argc, char *argv[]) {
       return EXIT_FAILURE;
 
    /* Estimate frame log-energy (Gain) */
-   GetGain(params, data.signal, &(data.frame_energy));
+   GetGain(params, data.fundf, data.signal, &(data.frame_energy));
 
    /* Spectral analysis for vocal tract transfer function*/
    if(params.qmf_subband_analysis)
