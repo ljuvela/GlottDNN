@@ -22,7 +22,7 @@
 
 
 /**
- * Function Parabolic_interpolation
+ * Function ParabolicInterpolation
  *
  * Fit quadratic function to the peak of autocorrelation function (ACF) to cancel the effect of the sampling period
  * (i.e. parabolic interpolation)
@@ -32,7 +32,7 @@
  * @param params
  * @return T0 value
  */
-double Parabolic_interpolation(const gsl::vector &r, const int maxind) {
+double ParabolicInterpolation(const gsl::vector &r, const int maxind) {
 
    /* Allocate variables */
    int i;
@@ -51,7 +51,7 @@ double Parabolic_interpolation(const gsl::vector &r, const int maxind) {
       X(i,0) = 1.0;
       X(i,1) = xi;
       X(i,2) = xi*xi;
-      y(i) = r(GSL_MIN(GSL_MAX(maxind-(F0_INTERP_SAMPLES-1)/2 + i,0),r.size()-1));
+      y(i) = r(GSL_MIN(GSL_MAX(maxind-(F0_INTERP_SAMPLES-1)/2 + i,0), (int)r.size()-1));
       w(i) = 1.0;
    }
 
@@ -66,6 +66,276 @@ double Parabolic_interpolation(const gsl::vector &r, const int maxind) {
 
    return T0;
 }
+
+
+/**
+ * Fill_f0_gaps
+ *
+ * Fill small gaps in F0
+ *
+ * @param fundf F0
+ */
+void FillF0Gaps(gsl::vector *fundf_ptr) {
+
+   gsl::vector & fundf = *fundf_ptr;
+
+   // constant hat trick values
+   const int F0_FILL_RANGE = 6;
+   const double RELATIVE_F0_THRESHOLD = 0.005;
+
+   int i,j,voiced;
+   double fundf_est,mu,std,sum,n,lim,ave;
+   double f0jump01,f0jump45,f0jump02,f0jump03,f0jump12,f0jump13,f0jump42,f0jump43,f0jump52,f0jump53,f0jump05,f0jump14;
+   gsl::vector fundf_fill(F0_FILL_RANGE);
+
+   /* Estimate mean (mu) and standard deviation (std) of voiced parts */
+   sum = 0;
+   n = 0;
+   for(i=0;i<(int)fundf.size();i++) {
+      if(fundf(i) > 0) {
+         sum += fundf(i);
+         n++;
+      }
+   }
+   mu = sum/n;
+   sum = 0;
+   n = 0;
+   for(i=0;i<(int)fundf.size();i++) {
+      if(fundf(i) > 0) {
+         sum += pow(mu-fundf(i),2);
+         n++;
+      }
+   }
+   std = sqrt(sum/(n-1));
+
+   /* Go through all F0 values and fill small gaps (even if voiced) */
+   for(i=0;i<(int)fundf.size()-F0_FILL_RANGE;i++) {
+      fundf_est = 0;
+      voiced = 0;
+      for(j=0;j<F0_FILL_RANGE;j++) {
+         fundf_fill(j) = fundf(i+j);
+         if(fundf_fill(j) > 0) {
+            voiced++;
+            fundf_est += fundf_fill(j);
+         }
+      }
+      if(fundf_fill(0) > 0 && fundf_fill(1) > 0 && fundf_fill(5) > 0 && fundf_fill(4) > 0) {
+         if(fundf_fill(2) == 0 && fundf_fill(3) == 0) {
+            fundf(i+2) = fundf_est/4.0;
+            fundf(i+3) = fundf_est/4.0;
+         } else if (fundf_fill(2) == 0) {
+            fundf(i+2) = fundf_est/5.0;
+         } else if (fundf_fill(3) == 0) {
+            fundf(i+3) = fundf_est/5.0;
+         }
+      }
+
+      /* If all values are voiced, replace gaps of size two of which values differ significantly from average value */
+      if(voiced == F0_FILL_RANGE) {
+         f0jump01 = fabs(fundf_fill(0)-fundf_fill(1));
+         f0jump45 = fabs(fundf_fill(4)-fundf_fill(5));
+         f0jump02 = fabs(fundf_fill(0)-fundf_fill(2));
+         f0jump03 = fabs(fundf_fill(0)-fundf_fill(3));
+         f0jump12 = fabs(fundf_fill(1)-fundf_fill(2));
+         f0jump13 = fabs(fundf_fill(1)-fundf_fill(3));
+         f0jump42 = fabs(fundf_fill(4)-fundf_fill(2));
+         f0jump43 = fabs(fundf_fill(4)-fundf_fill(3));
+         f0jump52 = fabs(fundf_fill(5)-fundf_fill(2));
+         f0jump53 = fabs(fundf_fill(5)-fundf_fill(3));
+         f0jump05 = fabs(fundf_fill(0)-fundf_fill(5));
+         f0jump14 = fabs(fundf_fill(1)-fundf_fill(4));
+         lim = RELATIVE_F0_THRESHOLD*std;
+         ave = (fundf_fill(0) + fundf_fill(1) + fundf_fill(4) + fundf_fill(5))/4.0;
+         if(f0jump01 < lim && f0jump45 < lim &&
+               f0jump02 > lim && f0jump03 > lim &&
+               f0jump12 > lim && f0jump13 > lim &&
+               f0jump42 > lim && f0jump43 > lim &&
+               f0jump52 > lim && f0jump53 > lim &&
+               f0jump05 < lim && f0jump14 < lim) {
+            fundf(i+2) = ave;
+            fundf(i+3) = ave;
+         }
+      }
+   }
+
+   /* Go through all F0 values and eliminate small voiced regions */
+   for(i=0;i<(int)fundf.size()-F0_FILL_RANGE;i++) {
+      for(j=0;j<F0_FILL_RANGE;j++) {
+         fundf_fill(j) = fundf(i+j);
+      }
+      if(fundf_fill(0) == 0 && fundf_fill(1) == 0 && fundf_fill(5) == 0 && fundf_fill(4) == 0) {
+         if(fundf_fill(2) > 0 || fundf_fill(3) > 0) {
+            fundf(i+2) = 0;
+            fundf(i+3) = 0;
+         }
+      }
+   }
+}
+
+
+/**
+ * Fundf_postprocessing
+ *
+ * Refine f0-trajectory
+ *
+ * @param fundf fundamental frequency values
+ * @param fundf_orig original fundamental frequency values
+ * @param fundf_candidates candidates for F0
+ * @param params parameter structure
+ */
+void FundfPostProcessing(const Param &params, const gsl::vector &fundf_orig, const gsl::matrix &fundf_candidates, gsl::vector *fundf_ptr) {
+
+   gsl::vector & fundf = *fundf_ptr;
+
+   const double RELATIVE_F0_THRESHOLD = 0.005;
+   const int F0_CHECK_RANGE = 10;
+
+   bool f0_postprocessing = true;
+
+   int i,j,ind,voiced_ind_b,voiced_ind_f,unvoiced_ind,n;
+   double f0_forward,f0_backward,x[F0_CHECK_RANGE],y[F0_CHECK_RANGE],w[F0_CHECK_RANGE],f0jump_b,f0jump_f;
+   double c0,c1,cov00,cov01,cov11,chisq_f,chisq_b,mu,std,sum;
+
+   /* Estimate mean (mu) and standard deviation (std) of voiced parts */
+   sum = 0;
+   n = 0;
+   for(i=0;i<(int)fundf.size();i++) {
+      if(fundf(i) > 0) {
+         sum += fundf(i);
+         n++;
+      }
+   }
+   mu = sum/n;
+   sum = 0;
+   n = 0;
+   for(i=0;i<(int)fundf.size();i++) {
+      if(fundf(i) > 0) {
+         sum += pow(mu-fundf(i),2);
+         n++;
+      }
+   }
+   std = sqrt(sum/(n-1));
+
+   /* Go through all F0 values and create weighted linear estimates for all F0 samples both from backward and forward */
+   // TODO: Nonlinear fitting! (replace linear fit with spline interpolation?)
+   if(f0_postprocessing) {
+
+      /* Start looping F0 */
+      for(i=F0_CHECK_RANGE;i<(int)fundf.size()-F0_CHECK_RANGE;i++) {
+
+         /* Check values backward (left to right) */
+         ind = 0;
+         voiced_ind_b = 0;
+         unvoiced_ind = 0;
+         for(j=F0_CHECK_RANGE;j>0;j--) {
+            if(fundf(i-j) == 0) {
+               w[ind] = 0; // zero weight for unvoiced
+               unvoiced_ind++;
+            } else {
+               w[ind] = 1; // unit weight for voiced
+               voiced_ind_b++;
+            }
+            x[ind] = ind;
+            y[ind] = fundf(i-j);
+            ind++;
+         }
+         if(unvoiced_ind == F0_CHECK_RANGE || voiced_ind_b < 3) {
+            f0_backward = 0;
+         } else {
+
+            /* Weighted linear fitting, estimate new value */
+            gsl_fit_wlinear(x,1,w,1,y,1,(double)F0_CHECK_RANGE,&c0,&c1,&cov00,&cov01,&cov11,&chisq_b);
+            f0_backward = c0 + c1*(double)F0_CHECK_RANGE;
+         }
+
+         /* Check values forward (right to left) */
+         ind = 0;
+         voiced_ind_f = 0;
+         unvoiced_ind = 0;
+         for(j=1;j<F0_CHECK_RANGE+1;j++) {
+            if(fundf(i+j) == 0) {
+               w[ind] = 0;
+               unvoiced_ind++;
+            } else {
+               w[ind] = 1;
+               voiced_ind_f++;
+            }
+            x[ind] = ind;
+            y[ind] = fundf(i+j);
+            ind++;
+         }
+         if(unvoiced_ind == F0_CHECK_RANGE || voiced_ind_f < 3) {
+            f0_forward = 0;
+         } else {
+
+            /* Weighted linear fitting, estimate new value */
+            gsl_fit_wlinear(x,1,w,1,y,1,(double)F0_CHECK_RANGE,&c0,&c1,&cov00,&cov01,&cov11,&chisq_f);
+            f0_forward = c0 - c1;
+         }
+
+         /* Evaluate relative jump in F0 from both directions */
+         if(fundf(i) != 0) {
+            f0jump_b = fabs(fundf(i)-fundf(i-1))/fundf(i);
+            f0jump_f = fabs(fundf(i)-fundf(i+1))/fundf(i);
+         } else {
+            f0jump_b = 0;
+            f0jump_f = 0;
+         }
+
+         /* Set estimate if the relative jump is high enough,
+          * take into account the number of used voiced values
+          * in the fitting (voiced_ind) and the magnitude of the fit residual (chisq) */
+         if(fundf(i) != 0) {
+            double new_f0 = fundf(i);
+            double f0jump = 0;
+            if(voiced_ind_b > voiced_ind_f) { // Compare number of voiced frames
+               if(f0_backward > params.f0_min && f0_backward < params.f0_max && f0jump_b >= RELATIVE_F0_THRESHOLD) {
+                  new_f0 = f0_backward;
+                  f0jump = f0jump_b;
+               }
+            } else if(voiced_ind_b < voiced_ind_f) {
+               if(f0_forward > params.f0_min && f0_forward < params.f0_max && f0jump_f >= RELATIVE_F0_THRESHOLD) {
+                  new_f0 = f0_forward;
+                  f0jump = f0jump_f;
+               }
+            } else {
+               if(chisq_b < chisq_f) { // Compare goodness of fit
+                  if(f0_backward > params.f0_min && f0_backward < params.f0_max && f0jump_b >= RELATIVE_F0_THRESHOLD) {
+                     new_f0 = f0_backward;
+                     f0jump = f0jump_b;
+                  }
+               } else {
+                  if(f0_forward > params.f0_min && f0_forward < params.f0_max && f0jump_f >= RELATIVE_F0_THRESHOLD) {
+                     new_f0 = f0_forward;
+                     f0jump = f0jump_f;
+                  }
+               }
+            }
+
+            /* Check if second F0 candidate is close. If so, set that value instead if estimated value */
+            if(f0jump > RELATIVE_F0_THRESHOLD*std) {
+               if(fabs(fundf_candidates(i,1) - new_f0) < f0jump)
+                  fundf(i) = fundf_candidates(i,1);
+               else
+                  fundf(i) = new_f0;
+            }
+         }
+
+         /* Make sure the correction does not lead the F0 trajectory to a wrong track by estimating
+          * the cumulative difference between the original and new F0 curves.
+          * This is just a precaution, leading to a wrong F0 track should not normally happen */
+         double F0_CUM_ERROR_LIM = 7.0;
+         int F0_CUM_ERROR_RANGE = 30;
+         double cum_error = 0;
+         for(j=GSL_MAX(i-F0_CUM_ERROR_RANGE,0);j<i;j++)
+            cum_error += fabs(fundf_orig(j)-fundf(j))/mu;
+         if(cum_error > F0_CUM_ERROR_LIM)
+            fundf(i) = fundf_orig(i);
+      }
+   }
+}
+
+
 
 void BandPassGain(const gsl::vector &frame, const int &fs, gsl::vector *bp_gain ) {
 
@@ -160,7 +430,7 @@ void FundamentalFrequency(const Param &params, const gsl::vector &glottal_frame,
 
       /* Fit quadratic function to the peak of ACF to cancel the effect of the sampling period
        * (i.e. parabolic interpolation) */
-      double T0 = Parabolic_interpolation(r,max_inds(i));
+      double T0 = ParabolicInterpolation(r,max_inds(i));
       if(!isnan(T0) && params.fs/T0 < params.f0_max && params.fs/T0 > params.f0_min)
          max_inds_interp(i) = T0;
       else
@@ -204,8 +474,6 @@ void FundamentalFrequency(const Param &params, const gsl::vector &glottal_frame,
       *fundf =  0.0;
    else
       *fundf = params.fs/(double)max_inds_interp(0);
-
-
 
 }
 

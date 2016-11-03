@@ -128,8 +128,9 @@ vector::norm2() const
 }
 
 double vector::mean() const {
-   return this->sum()/this->size();
+   return (double)this->sum()/(double)this->size();
 }
+
 
 double vector::median() const {
    gsl::vector t_cpy(*this);

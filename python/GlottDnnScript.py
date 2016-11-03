@@ -8,9 +8,18 @@ import numpy as np
 import random
 import wave
 import math
+import imp # for importing argv[1]
+
 
 # Config file 
-import config as conf
+#import config as conf
+if len(sys.argv) < 2:
+    sys.exit("Usage: python GlottDnnScript.py config.py")
+if os.path.isfile(sys.argv[1]):
+   # conf = __import__(sys.argv[1])
+    conf = imp.load_source('', sys.argv[1])
+else:
+    sys.exit("Config file " + sys.argv[1] + " does not exist")
 
 # Import Theano-based DNN training if used 
 if conf.do_dnn_training:

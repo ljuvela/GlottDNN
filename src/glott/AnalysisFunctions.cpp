@@ -52,6 +52,7 @@ int PolarityDetection(const Param &params, gsl::vector *signal, gsl::vector *sou
 int GetF0(const Param &params, const gsl::vector &signal, const gsl::vector &source_signal_iaif, gsl::vector *fundf) {
 
 	std::cout << "F0 analysis ";
+
 	if(params.use_external_f0) {
 		std::cout << "using external F0 file: " << params.external_f0_filename << " ...";
 		gsl::vector fundf_ext;
@@ -72,33 +73,36 @@ int GetF0(const Param &params, const gsl::vector &signal, const gsl::vector &sou
       gsl::vector glottal_frame = gsl::vector(2*params.frame_length); // Longer frame
       int frame_index;
       double ff;
-      gsl::vector candidates(3);
+      gsl::matrix fundf_candidates(params.number_of_frames, NUMBER_OF_F0_CANDIDATES);
+      gsl::vector candidates_vec(NUMBER_OF_F0_CANDIDATES);
       for(frame_index=0;frame_index<params.number_of_frames;frame_index++) {
 
          GetFrame(signal, frame_index,params.frame_shift, &signal_frame, NULL);
          GetFrame(source_signal_iaif, frame_index, params.frame_shift, &glottal_frame, NULL);
-         gsl::vector candidates(3);
 
-         FundamentalFrequency(params, glottal_frame, signal_frame, &ff, &candidates);
+         FundamentalFrequency(params, glottal_frame, signal_frame, &ff, &candidates_vec);
          (*fundf)(frame_index) = ff;
+
+         fundf_candidates.set_row_vec(frame_index, candidates_vec);
       }
 
-//
-//      /* Copy original F0 */
-//      gsl_vector *fundf_orig = gsl_vector_alloc(fundf->size);
-//      gsl_vector_memcpy(fundf_orig,fundf);
-//
-//      /* Process */
-//      MedFilt3(fundf);
-//      Fill_f0_gaps(fundf, params);
-//      Fundf_postprocessing(fundf, fundf_orig, fundf_candidates, params);
-//      MedFilt3(fundf);
-//      Fill_f0_gaps(fundf, params);
-//      Fundf_postprocessing(fundf, fundf_orig, fundf_candidates, params);
-//      MedFilt3(fundf);
+      /* Copy original F0 */
+      gsl::vector fundf_orig(*fundf);
 
+      /* Process */
+      MedianFilter(3,fundf);
+      FillF0Gaps(fundf);
+      FundfPostProcessing(params, fundf_orig, fundf_candidates, fundf);
+      MedianFilter(3,fundf);
+      FillF0Gaps(fundf);
+      FundfPostProcessing(params, fundf_orig, fundf_candidates, fundf);
+      MedianFilter(3,fundf);
 
 	}
+
+
+
+
 	std::cout << " done." << std::endl;
 	return EXIT_SUCCESS;
 }
@@ -484,9 +488,13 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
 
 
       size_t pulselen;
-      pulselen = round(gci_inds(pulse_index+1)-gci_inds(pulse_index-1))+1;
-      size_t j;
+      if (fundf(frame_index) > 0.0)
+         pulselen = round(gci_inds(pulse_index+1)-gci_inds(pulse_index-1))+1;
+      else
+         pulselen = params.frame_length;
 
+
+      size_t j;
       gsl::vector paf_pulse(params.paf_pulse_length,true);
       gsl::vector pulse;
 
@@ -496,9 +504,12 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
             pulse_orig(j) = source_signal(gci_inds(pulse_index-1)+j);
          }
          /* Interpolation on windowed signal prevents Gibbs at edges */
-         ApplyWindowingFunction(COSINE, &paf_pulse);
-         InterpolateSpline(pulse_orig, pulselen, &paf_pulse);
+
+         ApplyWindowingFunction(COSINE, &pulse_orig);
+         InterpolateSpline(pulse_orig, params.paf_pulse_length, &paf_pulse);
+
       } else {
+
          /* No windowing, just center at mid gci */
          int i, minind;
          int center_index = gci_inds(pulse_index);
@@ -544,7 +555,6 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
                   //paf_pulse(j) = source_signal(i);
             }
          } else {
-
             for(j=0;j<paf_pulse.size();j++) {
                i = center_index - round(paf_pulse.size()/2) + j;
                if (i >= 0 && i < (int)source_signal.size())
@@ -552,7 +562,6 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
             }
          }
       }
-
 
       /* Normalize energy */
       paf_pulse /= getEnergy(paf_pulse);
