@@ -58,7 +58,7 @@
 #include <gslwrap/vector_double.h>
 
 #include "definitions.h"
-#include "Filters.h""
+#include "Filters.h"
 #include "FileIo.h"
 #include "ReadConfig.h"
 #include "SpFunctions.h"
@@ -88,6 +88,8 @@ int main(int argc, char *argv[]) {
 
    /* Read sound file and allocate data */
    AnalysisData data;
+
+
 
 
    if(ReadWavFile(wav_filename, &(data.signal), &params) == EXIT_FAILURE)
@@ -141,6 +143,10 @@ int main(int argc, char *argv[]) {
    /* Write analyzed features to files */
    data.SaveData(params);
 
+//   WriteGslVector("foo.f0",FLOAT,data.fundf);
+//   ReadGslVector("foo.f0", FLOAT, &(data.fundf));
+//   WriteGslVector("foo2.f0",ASCII,data.fundf);
+//   WriteGslMatrix("foomat.lsf", FLOAT, data.lsf_glot);
 
    /* Finish */
    std::cout << "Finished analysis." << std::endl << std::endl;

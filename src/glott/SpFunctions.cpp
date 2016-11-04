@@ -153,6 +153,12 @@ void InterpolateLinear(const gsl::vector &vector, const size_t interpolated_size
 
 void InterpolateSpline(const gsl::vector &vector, const size_t interpolated_size, gsl::vector *i_vector) {
 
+   if (vector.size() == interpolated_size) {
+      i_vector->copy(vector);
+      return;
+   }
+
+
    size_t len = vector.size();
    if (i_vector->is_set()) {
       i_vector->resize(interpolated_size);

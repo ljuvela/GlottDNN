@@ -243,6 +243,10 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
 	if (ConfigLookupString("DNN_WEIGHT_PATH", cfg, default_config, params->dnn_path_basename) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 
+   if (ConfigLookupBool("USE_PAF_ENERGY_NORM", cfg, default_config, &(params->use_paf_energy_normalization)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
+
    double update_interval_ms=0;
 	if (ConfigLookupDouble("FILTER_UPDATE_INTERVAL_VT", cfg, default_config, &(update_interval_ms)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
@@ -258,29 +262,39 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
    if (ConfigLookupString("DATA_DIRECTORY", cfg, default_config, params->data_directory) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
+   /* Lookup for parameter directory paths, always optional */
+   ConfigLookupString("DIR_GAIN", cfg, false, params->dir_gain);
+   ConfigLookupString("DIR_F0", cfg, false, params->dir_f0);
+   ConfigLookupString("DIR_LSF_VT", cfg, false, params->dir_lsf);
+   ConfigLookupString("DIR_LSF_GLOT", cfg, false, params->dir_lsfg);
+   ConfigLookupString("DIR_HNR", cfg, false, params->dir_hnr);
+   ConfigLookupString("DIR_PULSES_AS_FEATURES", cfg, false, params->dir_paf);
+   ConfigLookupString("DIR_EXCITATION", cfg, false, params->dir_exc);
 
 
-   //if (ConfigLookupDouble("F0_CHECK_RANGE", cfg, default_config, &(params->f0_check_range)) == EXIT_FAILURE)
-   //      return EXIT_FAILURE;
 
 	/* Read enum style configurations */
-	std::string str = "";
+	std::string str;
 
 	/* Data Format */
+	str.clear();
 	if (ConfigLookupString("DATA_TYPE", cfg, default_config, str) == EXIT_FAILURE)
 	   return EXIT_FAILURE;
 	if( default_config || str != "") {
 	   if (str == "ASCII")
 	      params->data_type = ASCII;
-	   else if (str == "BINARY")
-	      params->data_type = BINARY;
-	   else
+	   else if (str == "DOUBLE")
+	      params->data_type = DOUBLE;
+      else if (str == "FLOAT")
+         params->data_type = FLOAT;
+	   else {
+	      std::cerr << "Error: DATA_TYPE must be either ASCII, DOUBLE of FLOAT" << std::endl;
 	      return EXIT_FAILURE;
+	   }
 	}
 
-
 	/* Signal Polarity */
-	str = "";
+	str.clear();
 	if (ConfigLookupString("SIGNAL_POLARITY", cfg, default_config, str) == EXIT_FAILURE)
 	   return EXIT_FAILURE;
 	if( default_config || str != "") {
@@ -294,10 +308,8 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
 	      return EXIT_FAILURE;
 	}
 
-
-
 	/* LP weighting function */
-	str = "";
+	str.clear();
 	if (ConfigLookupString("LP_WEIGHTING_FUNCTION", cfg, default_config, str) == EXIT_FAILURE)
 	   return EXIT_FAILURE;
 	if( default_config || str != "") {
@@ -311,10 +323,8 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
 	      return EXIT_FAILURE;
 	}
 
-
-
 	/* Excitation method */
-	str = "";
+	str.clear();
 	if (ConfigLookupString("EXCITATION_METHOD", cfg, default_config, str) == EXIT_FAILURE)
 	   return EXIT_FAILURE;
 	if( default_config || str != "") {
@@ -328,9 +338,8 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
 	      return EXIT_FAILURE;
 	}
 
-
 	/* PSOLA window for synthesis */
-	str = "";
+	str.clear();
 	if (ConfigLookupString("PSOLA_WINDOW", cfg, default_config, str) == EXIT_FAILURE)
 	   return EXIT_FAILURE;
 	if( default_config || str != "") {
@@ -344,8 +353,20 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
 	      return EXIT_FAILURE;
 	}
 
-
-
+   /* Pulses-as-features analysis window */
+   str.clear();
+   if (ConfigLookupString("PAF_WINDOW", cfg, default_config, str) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+   if( default_config || str != "") {
+      if (str == "NONE")
+         params->paf_analysis_window = RECT;
+      else if (str == "COSINE")
+         params->paf_analysis_window = COSINE;
+      else if (str == "HANN")
+         params->paf_analysis_window = HANN;
+      else
+         return EXIT_FAILURE;
+   }
 
 
 	return EXIT_SUCCESS;

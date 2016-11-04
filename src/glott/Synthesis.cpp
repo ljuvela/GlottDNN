@@ -70,18 +70,13 @@ int main(int argc, char *argv[]) {
    StabilizeLsf(&(data.lsf_vocal_tract));
    StabilizeLsf(&(data.lsf_glot));
 
-
    CreateExcitation(params, data, &(data.excitation_signal));
 
    if(params.noise_gain_voiced > 0.0)
       HarmonicModification(params, data, &(data.excitation_signal));
 
-
    if(params.use_spectral_matching)
       SpectralMatchExcitation(params, data, &(data.excitation_signal));
-
-
-
 
    FilterExcitation(params, data, &(data.signal));
 
