@@ -136,17 +136,36 @@ int GetGci(const Param &params, const gsl::vector &signal, const gsl::vector &so
 	return EXIT_SUCCESS;
 }
 
-int GetGain(const Param &params, const gsl::vector &signal, gsl::vector *gain_ptr) {
+int GetGain(const Param &params, const gsl::vector &fundf, const gsl::vector &signal, gsl::vector *gain_ptr) {
 
 
    //double E_REF = 0.00001;
 	gsl::vector frame = gsl::vector(params.frame_length);
+	gsl::vector unvoiced_frame = gsl::vector(params.frame_length_unvoiced);
+
 	gsl::vector gain = gsl::vector(params.number_of_frames);
 	int frame_index;
 	double frame_energy;
 	for(frame_index=0;frame_index<params.number_of_frames;frame_index++) {
-		GetFrame(signal, frame_index, params.frame_shift, &frame, NULL);
+      if(fundf(frame_index) != 0.0) {
+         GetFrame(signal, frame_index, params.frame_shift, &frame, NULL);
+         ApplyWindowingFunction(HANN,&frame);
+         frame_energy = getEnergy(frame);
+         if(frame_energy == 0.0)
+            frame_energy =+ DBL_MIN;
 
+         frame_energy *= sqrt(8.0/3.0);// Compensate windowing gain loss
+         gain(frame_index) = FrameEnergy2LogEnergy(frame_energy,frame.size());
+      } else {
+         GetFrame(signal, frame_index, params.frame_shift, &unvoiced_frame, NULL);
+         ApplyWindowingFunction(HANN,&unvoiced_frame);
+         frame_energy = getEnergy(unvoiced_frame);
+         if(frame_energy == 0.0)
+            frame_energy =+ DBL_MIN;
+
+         frame_energy *= sqrt(8.0/3.0);// Compensate windowing gain loss
+         gain(frame_index) = FrameEnergy2LogEnergy(frame_energy,unvoiced_frame.size());
+      }
 		/* Evaluate gain of frame, normalize energy per sample basis */
 	/*	double sum = 0.0;
 		double mean = getMean(frame);
@@ -158,11 +177,7 @@ int GetGain(const Param &params, const gsl::vector &signal, gsl::vector *gain_pt
 			sum =+ DBL_MIN;
 
 		gain(frame_index) = 10.0*log10(sum/((double)(frame.size() * frame.size()))); // energy per sample (not power)*/
-		frame_energy = getEnergy(frame);
-		if(frame_energy == 0.0)
-			frame_energy =+ DBL_MIN;
 
-		gain(frame_index) = FrameEnergy2LogEnergy(frame_energy,frame.size());
 	}
 	*gain_ptr = gain;
 	return EXIT_SUCCESS;
@@ -176,8 +191,9 @@ int GetGain(const Param &params, const gsl::vector &signal, gsl::vector *gain_pt
 int SpectralAnalysis(const Param &params, const AnalysisData &data, gsl::matrix *poly_vocal_tract) {
 
 	gsl::vector frame(params.frame_length);
+	gsl::vector unvoiced_frame(params.frame_length_unvoiced,true);
 	gsl::vector pre_frame(params.lpc_order_vt*2,true);
-	gsl::vector lp_weight(params.frame_length + params.lpc_order_vt,true);
+	gsl::vector lp_weight(params.frame_length + params.lpc_order_vt*3,true);
 	gsl::vector A(params.lpc_order_vt+1,true);
 	gsl::vector G(params.lpc_order_glot_iaif,true);
 	gsl::vector B(1);B(0) = 1.0;
@@ -191,9 +207,16 @@ int SpectralAnalysis(const Param &params, const AnalysisData &data, gsl::matrix 
    size_t frame_index;
 	for(frame_index=0;frame_index<(size_t)params.number_of_frames;frame_index++) {
 
-      GetFrame(data.signal, frame_index, params.frame_shift, &frame, &pre_frame);
+
+      //GetPitchSynchFrame(data.signal, frame_index, params.frame_shift, &frame, &pre_frame);
 		/** Voiced analysis **/
 		if(data.fundf(frame_index) != 0) {
+	      if(params.use_pitch_synchronous_analysis)
+            GetPitchSynchFrame(params, data.signal, data.gci_inds, frame_index, params.frame_shift,
+                              data.fundf(frame_index),&frame, &pre_frame);
+         else
+            GetFrame(data.signal, frame_index, params.frame_shift, &frame, &pre_frame);
+
 		   /* Estimate Weighted Linear Prediction weight */
 			GetLpWeight(params,params.lp_weighting_function,data.gci_inds, frame, frame_index, &lp_weight);
 			/* Pre-emphasis and windowing */
@@ -228,9 +251,10 @@ int SpectralAnalysis(const Param &params, const AnalysisData &data, gsl::matrix 
 
          /** Unvoiced analysis **/
 		} else {
-			ApplyWindowingFunction(params.default_windowing_function,&frame);
+         GetFrame(data.signal, frame_index, params.frame_shift, &unvoiced_frame, &pre_frame);
+			ApplyWindowingFunction(params.default_windowing_function,&unvoiced_frame);
 			//LPC(frame, params.lpc_order_vt, &A);
-			ArAnalysis(params.lpc_order_vt,params.warping_lambda_vt, NONE, lp_weight, frame, &A);
+			ArAnalysis(params.lpc_order_vt,params.warping_lambda_vt, NONE, lp_weight, unvoiced_frame, &A);
 		}
 		poly_vocal_tract->set_col_vec(frame_index,A);
 	}
@@ -339,17 +363,23 @@ int SpectralAnalysisQmf(const Param &params, const AnalysisData &data, gsl::matr
 
 
 
-int InverseFilter(const Param &params, const AnalysisData &data, gsl::matrix *poly_glott, gsl::vector *source_signal) {
+int InverseFilter(const Param &params, const AnalysisData &data, gsl::matrix *poly_glot, gsl::vector *source_signal) {
    size_t frame_index;
 	gsl::vector frame(params.frame_length,true);
 	gsl::vector pre_frame(2*params.lpc_order_vt,true);
    gsl::vector frame_full(frame.size() + pre_frame.size()); // Pre-frame + frame
    gsl::vector frame_residual(params.frame_length);
-   gsl::vector a_glott(params.lpc_order_glot+1);
+   gsl::vector a_glot(params.lpc_order_glot+1);
    gsl::vector b(1);b(0) = 1.0;
 
 	for(frame_index=0;frame_index<(size_t)params.number_of_frames;frame_index++) {
-      GetFrame(data.signal, frame_index, params.frame_shift, &frame, &pre_frame);
+      if(params.use_pitch_synchronous_analysis) {
+         GetPitchSynchFrame(params, data.signal, data.gci_inds, frame_index, params.frame_shift,
+                            data.fundf(frame_index),&frame, &pre_frame);
+         frame_residual.resize(frame.size());
+      } else
+         GetFrame(data.signal, frame_index, params.frame_shift, &frame, &pre_frame);
+
       ConcatenateFrames(pre_frame, frame, &frame_full);
       if(params.warping_lambda_vt == 0.0) {
          Filter(data.poly_vocal_tract.get_col_vec(frame_index),b,frame_full,&frame_residual);
@@ -362,17 +392,15 @@ int InverseFilter(const Param &params, const AnalysisData &data, gsl::matrix *po
 
 
 
-
       double ola_gain = (double)params.frame_length/((double)params.frame_shift*2.0);
       frame_residual *= LogEnergy2FrameEnergy(data.frame_energy(frame_index),frame_residual.size())/getEnergy(frame_residual)/ola_gain;
-      ApplyWindowingFunction(HANN, &frame_residual);
+      ApplyWindowingFunction(params.default_windowing_function, &frame_residual);
 
-      LPC(frame_residual,params.lpc_order_glot,&a_glott);
+      LPC(frame_residual,params.lpc_order_glot,&a_glot);
 
-      poly_glott->set_col_vec(frame_index, a_glott);
+      poly_glot->set_col_vec(frame_index, a_glot);
 
       OverlapAdd(frame_residual, frame_index*params.frame_shift, source_signal); // center index = frame_index*params.frame_shift
-
    }
 
 
@@ -683,3 +711,49 @@ void HnrAnalysis(const Param &params, const gsl::vector &source_signal, const gs
 	}
 	std::cout << " done." << std::endl;
 }
+
+
+int GetPitchSynchFrame(const Param &params, const gsl::vector &signal, const gsl::vector_int &gci_inds,
+                        const int &frame_index, const int &frame_shift, const double &f0,
+                        gsl::vector *frame, gsl::vector *pre_frame) {
+
+	int i, ind;
+	size_t T0;
+	if (f0 == 0.0)
+        T0 = (size_t)frame_shift;
+        //T0 = (size_t)params.frame_length;
+	else
+        T0 = (size_t)rint(params.fs/f0);
+
+	(*frame) = gsl::vector(2*T0,true);
+	int center_index = (int)frame_index*frame_shift;
+	int pulse_index = (int)Find_nearest_pulse_index(center_index, gci_inds, params, f0);
+    if(abs(center_index-pulse_index) <= frame_shift)
+        center_index = pulse_index;
+
+	// Get samples to frame
+	if (frame != NULL) {
+		for(i=0; i<(int)frame->size(); i++) {
+			ind = center_index - ((int)frame->size())/2 + i; // SPTK compatible, ljuvela
+			if (ind >= 0 && ind < (int)signal.size()){
+				(*frame)(i) = signal(ind);
+			}
+		}
+	} else {
+		return EXIT_FAILURE;
+	}
+
+	// Get pre-frame samples for smooth filtering
+	if (pre_frame){
+		for(i=0; i<(int)pre_frame->size(); i++) {
+			ind = center_index - (int)frame->size()/2+ i - pre_frame->size(); // SPTK compatible, ljuvela
+			if(ind >= 0 && ind < (int)signal.size())
+				(*pre_frame)(i) = signal(ind);
+
+  		}
+	}
+
+	return EXIT_SUCCESS;
+
+}
+

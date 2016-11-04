@@ -96,6 +96,12 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
    if( default_config || frame_ms > 0)
       params->frame_length = (int)round(frame_ms/1000.0*(double)params->fs);
 
+   frame_ms = -1.0;
+   if (ConfigLookupDouble("UNVOICED_FRAME_LENGTH", cfg, default_config, &(frame_ms)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+   if( default_config || frame_ms > 0)
+      params->frame_length_unvoiced = (int)round(frame_ms/1000.0*(double)params->fs);
+
 	if (ConfigLookupBool("USE_EXTERNAL_F0", cfg, default_config, &(params->use_external_f0)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 
@@ -262,6 +268,9 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
    if (ConfigLookupString("DATA_DIRECTORY", cfg, default_config, params->data_directory) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
+   if (ConfigLookupBool("USE_PITCH_SYNCHRONOUS_ANALYSIS", cfg, default_config, &(params->use_pitch_synchronous_analysis)) == EXIT_FAILURE)
+     return EXIT_FAILURE;
+
    /* Lookup for parameter directory paths, always optional */
    ConfigLookupString("DIR_GAIN", cfg, false, params->dir_gain);
    ConfigLookupString("DIR_F0", cfg, false, params->dir_f0);
@@ -270,6 +279,8 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
    ConfigLookupString("DIR_HNR", cfg, false, params->dir_hnr);
    ConfigLookupString("DIR_PULSES_AS_FEATURES", cfg, false, params->dir_paf);
    ConfigLookupString("DIR_EXCITATION", cfg, false, params->dir_exc);
+
+
 
 
 

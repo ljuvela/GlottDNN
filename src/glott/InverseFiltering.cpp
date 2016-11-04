@@ -79,7 +79,7 @@ void LpWeightAme(const Param &params, const gsl::vector_int &gci_inds,
 	double pq = params.ame_position_quotient;
 	double dq = params.ame_duration_quotient;
 
-	double d = 0.000001;
+	double d = 0.1;
 	//int nramp = DEFAULT_NRAMP;
 	int nramp = 12 * (double)params.fs/(double)16000;
 
@@ -266,7 +266,13 @@ void ArAnalysis(const int &lp_order,const double &warping_lambda, const LpWeight
 
    if(weight_type == NONE && warping_lambda == 0.0) {
       LPC(frame, lp_order, A);
-   } else {
+   } /*else if(warping_lambda != 0.0 && weight_type != NONE) {
+      int n_tmp = 60;
+      gsl::vector A_tmp(n_tmp+1);
+      //WWLP(lp_weight, 0.0, weight_type,(A->size()-1)*2,frame, &A_tmp );
+      LPC(frame, n_tmp, &A_tmp);
+      Lp2Walp(A_tmp,warping_lambda,A);
+   }*/ else {
       WWLP(lp_weight, warping_lambda, weight_type, lp_order, frame, A);
    }
 

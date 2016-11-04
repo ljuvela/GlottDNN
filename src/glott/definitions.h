@@ -9,7 +9,7 @@
 enum DataType {ASCII, DOUBLE, FLOAT};
 enum SignalPolarity {POLARITY_DEFAULT, POLARITY_INVERT, POLARITY_DETECT};
 enum LpWeightingFunction {NONE, AME, STE};
-enum WindowingFunctionType {HANN, HAMMING, BLACKMAN, COSINE, HANNING, RECT};
+enum WindowingFunctionType {HANN, HAMMING, BLACKMAN, COSINE, HANNING, RECT, NUTTALL};
 enum ExcitationMethod {SINGLE_PULSE_EXCITATION, DNN_GENERATED_EXCITATION, PULSES_AS_FEATURES_EXCITATION};
 
 /* Structures */
@@ -20,6 +20,7 @@ public:
 	int fs;
 	int frame_length;
 	int frame_length_long;
+	int frame_length_unvoiced;
 	int frame_shift;
 	int number_of_frames;
 	int signal_length;
@@ -90,6 +91,7 @@ public:
    double noise_low_freq_limit_voiced;
    //double f0_check_range;
    ExcitationMethod excitation_method;
+   bool use_pitch_synchronous_analysis;
 
    /* directory paths for storing parameters */
    std::string dir_gain;
@@ -99,6 +101,9 @@ public:
    std::string dir_paf;
    std::string dir_f0;
    std::string dir_exc;
+
+
+
 };
 
 

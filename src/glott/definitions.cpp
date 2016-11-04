@@ -19,7 +19,7 @@ Param::Param() {
 	file_basename = "";
 	data_directory = "";
 	/* Enum parameters */
-	default_windowing_function = HANN;
+	default_windowing_function = NUTTALL;
 	signal_polarity = POLARITY_DEFAULT;
    lp_weighting_function = AME;
    excitation_method = SINGLE_PULSE_EXCITATION;
@@ -28,6 +28,7 @@ Param::Param() {
    /* Other parameters */
 	fs = 16000;
 	frame_length = 400;
+	frame_length_unvoiced = 160;
 	frame_length_long = 800;
 	frame_shift = 80;
 	number_of_frames = 0 ;
@@ -82,6 +83,7 @@ Param::Param() {
    noise_low_freq_limit_voiced = 2500.0;
    filter_update_interval_vt = 80;
    filter_update_interval_specmatch = 80;
+   use_pitch_synchronous_analysis = false;
 }
 
 Param::~Param() {

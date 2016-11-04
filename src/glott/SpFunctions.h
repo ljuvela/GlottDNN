@@ -70,5 +70,6 @@ void MovingAverageFilter(const gsl::vector &x, const size_t &filterlen, gsl::vec
 void MovingAverageFilter(const size_t &filterlen, gsl::vector *x);
 void MovingAverageFilter(const size_t &filterlen, gsl::matrix *mat);
 void Leja(gsl::vector *lsfvec);
+void Lp2Walp(const gsl::vector &a_orig,const double &alpha, gsl::vector *a_w);
 
 #endif /* SRC_GLOTT_SPFUNCTIONS_H_ */

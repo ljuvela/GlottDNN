@@ -97,7 +97,7 @@ const gsl::vector & Dnn::getOutput() {
 
    // input normalization
   // 0.1 + 0.8*(gsl_vector_get(inputdata,i+stack*NPAR) - min)/(max-min);
-   input_matrix = input_min_value + (input_max_value-input_min_value)*ElementDivision(input_matrix - input_data_min, input_data_max - input_data_min);
+   input_matrix = input_min_value + (-input_min_value)*ElementDivision(input_matrix - input_data_min, input_data_max - input_data_min);
 
    gsl::matrix &input_ref = input_matrix;
    for(DnnLayer layer : this->layer_list) {
@@ -238,9 +238,10 @@ int Dnn::ReadData(const char *basename) {
    fname_str += ".dnnData";
 
    std::ifstream file(fname_str, std::ios::in | std::ios::binary);
-   if (!file)
-      return EXIT_FAILURE;
-
+   if (!file) {
+      std::cout << "Error: Failed to read file: " << fname_str << std::endl;
+      assert(false);
+    }
    std::streampos file_size;
    size_t n_values;
 

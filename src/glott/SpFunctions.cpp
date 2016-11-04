@@ -329,11 +329,20 @@ void ApplyWindowingFunction(const WindowingFunctionType &window_function, gsl::v
 			(*frame)(i) *= sqrt(0.5*(1.0-cos(2.0*M_PI*((double)i)/((n)-1.0))));
 		break;
 	case HANNING : // Hann window with non-zero edges
-      for(i=0;i<frame->size();i++)
+        for(i=0;i<frame->size();i++)
 			(*frame)(i) *= 0.5*(1.0-cos(2.0*M_PI*((double)i+1.0)/((n+2.0)-1.0)));
 		break;
-   case RECT :
-      break;
+    case RECT :
+        break;
+    case NUTTALL :
+        double a0 = 0.3635819;
+        double a1 = 0.4891775;
+        double a2 = 0.1365995;
+        double a3 = 0.0106411;
+        for(i=0;i<frame->size();i++)
+            (*frame)(i) *= a0-a1*cos(2.0*M_PI*(i/((double)(n-1)))) + a2*cos(4.0*M_PI*(i/((double)(n-1)))) - a3*cos(6.0*M_PI*(i/((double)(n-1))));
+        break;
+
 	}
 }
 
@@ -1439,6 +1448,10 @@ int GetFrame(const gsl::vector &signal, const int &frame_index, const int &frame
 	return EXIT_SUCCESS;
 }
 
+
+
+
+
 double getSquareSum(const gsl::vector &vec) {
    double sum = 0.0;
    size_t i;
@@ -1741,4 +1754,29 @@ void Leja(gsl::vector *lsfvec) {
 }
 
 
+void Lp2Walp(const gsl::vector &a_orig,const double &alpha, gsl::vector *a_w) {
+	int i,j,m;
+	int N = a_w->size()-1;
+	int M = a_orig.size()-1;
+	gsl::vector a_prev(N+1,true);
+
+	for(i=M;i>=0;i--) {
+		// For m=0:
+		(*a_w)(0) = a_orig(i) + alpha*a_prev(0);
+
+		// For m=1:
+        (*a_w)(1) = (1.0-alpha*alpha)*a_prev(0) + alpha*a_prev(1);
+
+		// For m=2:N
+		for(m=2;m<N+1;m++) {
+			(*a_w)(m) = a_prev(m-1) + alpha*(a_prev(m) - (*a_w)(m-1));
+		}
+
+		for(j=0;j<N+1;j++) {
+			a_prev(j) = (*a_w)(j);
+		}
+	}
+	(*a_w) /= (*a_w)(0);
+	StabilizePoly(4096, a_w);
+}
 
