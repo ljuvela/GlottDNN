@@ -61,7 +61,7 @@ int GetF0(const Param &params, const gsl::vector &signal, const gsl::vector &sou
 
 		if(fundf_ext.size() != (size_t)params.number_of_frames) {
 			std::cout << "Warning: External F0 file length differs from number of frames. Interpolating external "
-						  "F0 length to match number of frames. F0 length: " \
+						  "F0 length to match number of frames.  External F0 length: " \
 					<< fundf_ext.size() << ", Number of frames: " << params.number_of_frames << std::endl;
 			InterpolateNearest(fundf_ext,params.number_of_frames,fundf);
 		} else {

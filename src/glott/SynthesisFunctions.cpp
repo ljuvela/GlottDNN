@@ -182,8 +182,7 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
       excDnn.ReadData(params.dnn_path_basename.c_str());
       break;
    case PULSES_AS_FEATURES_EXCITATION:
-      // Load pulses as features
-
+      // Use the original pulses as features (no-op here)
       break;
    }
    /*  Experimental for accurate PSOLA */

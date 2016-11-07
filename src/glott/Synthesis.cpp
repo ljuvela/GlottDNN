@@ -53,12 +53,9 @@ int main(int argc, char *argv[]) {
          return EXIT_FAILURE;
    }
 
-
-
    SynthesisData data;
    if(ReadSynthesisData(filename, &params, &data) == EXIT_FAILURE)
       return EXIT_FAILURE;
-
 
    if(params.use_postfiltering)
       PostFilter(params.postfilter_coefficient, params.fs, &(data.lsf_vocal_tract));

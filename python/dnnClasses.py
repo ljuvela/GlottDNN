@@ -10,7 +10,17 @@ import scipy.io as sio
 import theano
 import theano.tensor as T
 
-import config as conf
+# Config file 
+import imp # for importing argv[1]
+if len(sys.argv) < 2:
+    sys.exit("Usage: python GlottDnnScript.py config.py")
+if os.path.isfile(sys.argv[1]):
+   # conf = __import__(sys.argv[1])
+    conf = imp.load_source('', sys.argv[1])
+else:
+    sys.exit("Config file " + sys.argv[1] + " does not exist")
+
+
 
 def relu(x):
     return theano.tensor.switch(x<0, 0, x)
@@ -19,11 +29,11 @@ def relu(x):
 def save_network(layerList, layer_out):
     fid = open( conf.weights_data_dir + '/' + conf.dnn_name + '.dnnData','w')
     for layer in layerList:
-        layer.W.get_value().astype(numpy.float64).tofile(fid, sep='',format="%f")
-        layer.b.get_value().astype(numpy.float64).tofile(fid, sep='',format="%f")
+        layer.W.get_value().astype(numpy.float32).tofile(fid, sep='',format="%f")
+        layer.b.get_value().astype(numpy.float32).tofile(fid, sep='',format="%f")
 
-    layer_out.W.get_value().astype(numpy.float64).tofile(fid, sep='',format="%f")
-    layer_out.b.get_value().astype(numpy.float64).tofile(fid, sep='',format="%f")
+    layer_out.W.get_value().astype(numpy.float32).tofile(fid, sep='',format="%f")
+    layer_out.b.get_value().astype(numpy.float32).tofile(fid, sep='',format="%f")
 
 
         #dstruct['W'+str(num)] = layer.W.get_value()

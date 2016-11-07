@@ -176,6 +176,8 @@ int ReadGslVector(const std::string &filename, const DataType format, gsl::vecto
    if (size < 0)
       return EXIT_FAILURE;
 
+
+
    /* Allocate vector */
    if (vector_ptr == NULL)
       *(vector_ptr) = gsl::vector(size);

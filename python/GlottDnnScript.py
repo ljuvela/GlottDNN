@@ -10,7 +10,6 @@ import wave
 import math
 import imp # for importing argv[1]
 
-
 # Config file 
 #import config as conf
 if len(sys.argv) < 2:
@@ -98,7 +97,7 @@ def sptk_pitch_analysis():
                     os.system(cmd)
                     # sptk pitch estimation 
                     cmd = conf.x2x + ' +sf ' + rawfile + '|' \
-                        + conf.pitch + ' | ' + conf.x2x + ' +fd >' + f0file
+                        + conf.pitch + '>' + f0file
                     os.system(cmd)
                     
     
@@ -120,9 +119,10 @@ def reaper_pitch_analysis():
                 # analysis commands
                 cmd =  conf.reaper + ' -a -i ' + wavfile + ' -f ' + f0tmp1 + ' -p ' + gcitmp
                 os.system(cmd)
-                cmd = 'tail +8 ' + f0tmp1 + '| awk \'{print $3}\' | x2x +af | sopr -magic -1.0 -MAGIC 0.0  > ' + f0tmp2
+                cmd = 'tail +8 ' + f0tmp1 + '| awk \'{print $3}\' | x2x +af ' + \
+                    '| sopr -magic -1.0 -MAGIC 0.0  > ' + f0tmp2
                 os.system(cmd)
-                cmd = 'tail +8 ' + gcitmp + '| awk \'{print $1}\' | x2x +ad > ' + gcifile
+                cmd = 'tail +8 ' + gcitmp + '| awk \'{print $1}\' | x2x +af > ' + gcifile
                 os.system(cmd)
             
                 # read the file
@@ -140,7 +140,7 @@ def reaper_pitch_analysis():
                 f0_true = np.zeros(n_frames_target, dtype= np.float32)
                 npad_start = 2
                 f0_true[npad_start:npad_start+n_frames] = f0
-                f0_true.astype(np.float64).tofile(f0file, sep='',format="%f")
+                f0_true.astype(np.float32).tofile(f0file, sep='',format="%f")
 
                 # remove tmp
                 os.remove(f0tmp1)
@@ -153,12 +153,14 @@ def glott_vocoder_analysis():
         for file in wavfiles:
             wavfile = file.rstrip()
             if os.path.isfile(wavfile):
+                # define file paths
                 bname = os.path.splitext(os.path.basename(wavfile))[0]
                 f0file = conf.datadir + '/f0/' + bname + '.F0'
                 gcifile = conf.datadir + '/gci/' + bname + '.GCI'
+                # create temporary analysis config for file 
                 config_user = 'config_user.cfg'
                 conf_file = open(config_user,'w');
-                if conf.do_sptk_pitch_analysis or do_reaper_pitch_analysis:
+                if conf.do_sptk_pitch_analysis or conf.do_reaper_pitch_analysis:
                     conf_file.write('USE_EXTERNAL_F0 = true;\n')
                     conf_file.write('EXTERNAL_F0_FILENAME = \"' + f0file + '\";\n' )
                 else:
@@ -169,9 +171,14 @@ def glott_vocoder_analysis():
                 conf_file.write('SAMPLING_FREQUENCY = ' + str(conf.sampling_frequency) +';\n')
                 conf_file.write('WARPING_LAMBDA_VT = '+ str(conf.warping_lambda) +';\n')
                 conf_file.write('DATA_DIRECTORY = \"' + conf.datadir + '\";\n')
+                # force the use of float file format
+                conf_file.write('DATA_TYPE = \"FLOAT\";\n')
                 conf_file.close()
+                # run analysis program
                 cmd = conf.Analysis + ' ' + wavfile + ' ' + conf.config_default + ' ' + config_user
                 os.system(cmd)
+                # remove temporary config
+                os.remove(config_user)
 
 def glott_vocoder_synthesis():
     wavscp = conf.datadir + '/scp/wav.scp'
@@ -186,6 +193,7 @@ def glott_vocoder_synthesis():
                 conf_file.write('SAMPLING_FREQUENCY = ' + str(conf.sampling_frequency) +';\n')
                 conf_file.write('WARPING_LAMBDA_VT = '+ str(conf.warping_lambda) +';\n')
                 conf_file.write('DATA_DIRECTORY = \"' + conf.datadir + '\";\n')
+                conf_file.write('DATA_TYPE = \"FLOAT\";\n')                
                 conf_file.close()
                 cmd = conf.Synthesis + ' ' + wavfile + ' ' + conf.config_default + ' ' + config_user
                 os.system(cmd)
@@ -199,8 +207,8 @@ def package_data():
     random.shuffle(filelist)
     
     # initialize global min and max
-    in_min = 9999*np.ones([1,sum(conf.input_dims)],dtype=np.float64)
-    in_max = -9999*np.ones([1,sum(conf.input_dims)],dtype=np.float64)    
+    in_min = 9999*np.ones([1,sum(conf.input_dims)],dtype=np.float32)
+    in_max = -9999*np.ones([1,sum(conf.input_dims)],dtype=np.float32)    
     
     n_frames = np.zeros([len(filelist)], dtype='int')
     for file_idx, wavfile in enumerate(filelist):
@@ -208,15 +216,18 @@ def package_data():
             bname = os.path.splitext(os.path.basename(wavfile))[0]
                 # todo: save n_frames
             f0_file = conf.datadir + '/f0/' + bname + '.F0' 
-            n_frames[file_idx] = (np.fromfile(f0_file, dtype=np.float64, count=-1, sep='')).shape[0]
+            n_frames[file_idx] = (np.fromfile(f0_file, dtype=np.float32, count=-1, sep='')).shape[0]
             # allocate file data
-            input_data = np.empty([n_frames[file_idx], sum(conf.input_dims)], dtype=np.float64)
+            input_data = np.empty([n_frames[file_idx], sum(conf.input_dims)], dtype=np.float32)
             feat_start = 0
             for (ftype, ext, dim) in zip( conf.inputs, conf.input_exts, conf.input_dims):
                 if dim > 0:
                     # read feat  data
                     feat_file = conf.datadir + '/'+ ftype + '/' + bname + ext
-                    feat = np.fromfile(feat_file, dtype=np.float64, count=-1, sep='')
+                    feat = np.fromfile(feat_file, dtype=np.float32, count=-1, sep='')
+                    # check length is multiple of feature dimension
+                    assert len(feat) % dim == 0, \
+                        " Length mismatch for " + ftype
                     # reshape
                     feat = np.reshape(feat, (-1,dim))
                     # set to input data matrix
@@ -248,15 +259,15 @@ def package_data():
         if os.path.isfile(wavfile):
             bname = os.path.splitext(os.path.basename(wavfile))[0]                
             # allocate input and output data
-            input_data = np.empty([n_frames[file_idx], sum(conf.input_dims)], dtype=np.float64)
-            output_data = np.empty([n_frames[file_idx], sum(conf.output_dims)], dtype=np.float64)
+            input_data = np.empty([n_frames[file_idx], sum(conf.input_dims)], dtype=np.float32)
+            output_data = np.empty([n_frames[file_idx], sum(conf.output_dims)], dtype=np.float32)
    
             # read input data
             feat_start = 0
             for (ftype, ext, dim) in zip( conf.inputs, conf.input_exts, conf.input_dims):
                 if dim > 0:
                     feat_file = conf.datadir + '/'+ ftype + '/' + bname + ext
-                    feat = np.fromfile(feat_file, dtype=np.float64, count=-1, sep='')
+                    feat = np.fromfile(feat_file, dtype=np.float32, count=-1, sep='')
                     feat = np.reshape(feat, (-1,dim))
                     input_data[:,feat_start:feat_start+dim ] = feat
                     feat_start += dim
@@ -266,11 +277,10 @@ def package_data():
             for (ftype, ext, dim) in zip( conf.outputs, conf.output_exts, conf.output_dims): 
                 if dim > 0:
                     feat_file = conf.datadir + '/'+ ftype + '/' + bname + ext
-                    feat = np.fromfile(feat_file, dtype=np.float64, count=-1, sep='')
+                    feat = np.fromfile(feat_file, dtype=np.float32, count=-1, sep='')
                     feat = np.reshape(feat, (-1,dim))
                     output_data[:,feat_start:feat_start+dim ] = feat
                     feat_start += dim
-            
             
             # remove unvoiced frames if requested
             if conf.remove_unvoiced_frames:
@@ -290,8 +300,8 @@ def package_data():
 
     # write input min and max
     fid = open(conf.weights_data_dir + '/' + conf.dnn_name + '.dnnMinMax' ,'w')
-    in_min.astype(np.float64).tofile(fid, sep='', format="%f")
-    in_max.astype(np.float64).tofile(fid, sep='', format="%f")
+    in_min.astype(np.float32).tofile(fid, sep='', format="%f")
+    in_max.astype(np.float32).tofile(fid, sep='', format="%f")
     fid.close()
     
 
