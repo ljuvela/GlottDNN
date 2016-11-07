@@ -1,1 +1,29 @@
-Sample readme file for GlottDNN project.
+// Copyright notice here!
+// Date: Nov. 7th 2016
+
+This is a readme file for the GlottDNN package. The package contains two main parts:
+
+1) The glottal vocoder written in C++
+   - Dependencies: libsndfile, libgsl, libconfig
+
+2) Python scripts for vocoder analysis, synthesis and training a DNN excitation model:
+   - Dependencies: python, numpy, theano
+
+To compile the system, run the following commands:
+   ./configure
+   make
+
+Some typical use cases: 
+     Case 1: Train excitation model 16kHz sample rate
+     	  - modify config/config_default_16k.cfg
+	  - modify python/config_default_16k.py
+	  - run feature extraction and training script
+	    	 python python/GlottDnnScript.py python/config_default_16k.py
+
+
+
+Please contact the authors for any questions, or open an issue at github:
+Lauri Juvela: lauri.juvela@aalto.fi
+Manu Airaksinen: manu.airaksinen@aalto.fi
+
+
