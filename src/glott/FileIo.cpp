@@ -4,6 +4,8 @@
 #include <cstring>
 #include <string>
 #include <cstdio>
+#include <iostream>
+#include <fstream>
 #include <libgen.h>
 #include <gslwrap/vector_double.h>
 #include <gslwrap/matrix_double.h>
@@ -123,7 +125,7 @@ int ReadWavFile(const char *fname, gsl::vector *signal, Param *params) {
  * Function EvalFileLength
  *
  * If file is in ASCII mode, read file and count the number of lines.
- * If file is in BINARY mode, read file size.
+ * If file is in DOUBLE of FLOAT mode, read file size.
  *
  * @param name filename
  * @return number of parameters
@@ -142,13 +144,22 @@ int EvalFileLength(const char *filename, DataType data_format) {
 	}
 
 	/* Read lines until EOF */
-	if(data_format == ASCII) {
-		while(fscanf(file,"%s",s) != EOF)
-			fileSize++;
-	} else if(data_format == BINARY) {
-		fseek(file, 0, SEEK_END);
-		fileSize = ftell(file)/sizeof(double);
+	switch (data_format) {
+	   case ASCII:
+	      while(fscanf(file,"%s",s) != EOF)
+	         fileSize++;
+	      break;
+	   case DOUBLE:
+	      fseek(file, 0, SEEK_END);
+	      fileSize = ftell(file)/sizeof(double);
+	      break;
+	   case FLOAT:
+         fseek(file, 0, SEEK_END);
+         fileSize = ftell(file)/sizeof(float);
+         break;
 	}
+
+
 	fclose(file);
 	delete[] s;
 
@@ -156,29 +167,48 @@ int EvalFileLength(const char *filename, DataType data_format) {
 }
 
 int ReadGslVector(const std::string &filename, const DataType format, gsl::vector *vector_ptr){
-	/* Get file length */
-	int size;
-	size = EvalFileLength(filename.c_str(), format);
-	if (size < 0)
-		return EXIT_FAILURE;
 
-	/* Allocate vector */
-	if (vector_ptr == NULL)
-	   *(vector_ptr) = gsl::vector(size);
-	else
-	   vector_ptr->resize(size);
+   int size;
+   FILE *inputfile = NULL;
 
-	FILE *inputfile = NULL;
-	inputfile = fopen(filename.c_str(), "r");
-	if(inputfile==NULL){
-		std::cerr << "Error opening file " << filename << std::endl;
-		return EXIT_FAILURE;
+   /* Get file length */
+   size = EvalFileLength(filename.c_str(), format);
+   if (size < 0)
+      return EXIT_FAILURE;
+
+
+
+   /* Allocate vector */
+   if (vector_ptr == NULL)
+      *(vector_ptr) = gsl::vector(size);
+   else
+      vector_ptr->resize(size);
+
+
+   inputfile = fopen(filename.c_str(), "r");
+   if(inputfile==NULL){
+      std::cerr << "Error opening file " << filename << std::endl;
+      return EXIT_FAILURE;
+   }
+
+   /* Read data */
+   size_t i;
+	switch (format) {
+	case ASCII:
+	   vector_ptr->fscanf(inputfile);
+	   break;
+	case DOUBLE:
+	   vector_ptr->fread(inputfile);
+	   break;
+	case FLOAT:
+      float fbuffer[1];
+      for(i=0;i<(size_t)size;i++) {
+         fread(fbuffer, sizeof(float), 1 , inputfile);
+         (*vector_ptr)(i) = static_cast<double>(fbuffer[0]);
+      }
+      break;
 	}
-	if(format == ASCII) {
-		vector_ptr->fscanf(inputfile);
-	} else if(format == BINARY) {
-		vector_ptr->fread(inputfile);
-	}
+
 	fclose(inputfile);
 
 	return EXIT_SUCCESS;
@@ -198,34 +228,50 @@ int ReadGslMatrix(const std::string &filename, const DataType format, const size
 	}
 	size_t n_cols = size/n_rows;
 
-	/* Read in transposed matrix */
-	gsl::matrix matrix_temp(n_cols, n_rows);
-
 	FILE *inputfile = NULL;
 	inputfile = fopen(filename.c_str(), "r");
 	if(inputfile==NULL){
 		std::cerr << "Error opening file " << filename << std::endl;
 		return EXIT_FAILURE;
 	}
-	if(format == ASCII) {
-		matrix_temp.fscanf(inputfile);
-	} else if(format == BINARY) {
-		matrix_temp.fread(inputfile);
-	}
-	fclose(inputfile);
 
-	*matrix_ptr = matrix_temp.transpose();
+	*matrix_ptr = gsl::matrix(n_rows,n_cols);
+	size_t i,j;
+	switch (format) {
+	case ASCII:
+	   float val;
+      for(j=0;j<n_cols;j++)
+         for(i=0;i<n_rows;i++) {
+            fscanf(inputfile,"%f", &val);
+            (*matrix_ptr)(i,j) = static_cast<double>(val);
+         }
+	   break;
+	case DOUBLE:
+      float dbuffer[1];
+      for(j=0;j<n_cols;j++)
+         for(i=0;i<n_rows;i++) {
+            fread(dbuffer, sizeof(double), 1 , inputfile);
+            (*matrix_ptr)(i,j) = static_cast<double>(dbuffer[0]);
+         }
+	   break;
+	case FLOAT:
+	   float fbuffer[1];
+	   for(j=0;j<n_cols;j++)
+	      for(i=0;i<n_rows;i++) {
+	         fread(fbuffer, sizeof(float), 1 , inputfile);
+	         (*matrix_ptr)(i,j) = static_cast<double>(fbuffer[0]);
+	      }
+	   break;
+	}
+
+	fclose(inputfile);
 
 	return EXIT_SUCCESS;
 }
 
 int WriteGslVector(const std::string &filename, const DataType &format, const gsl::vector &vector) {
 
-//   filename += dir;
-//   if (filename.back() != '/')
-//      filename += '/';
-//   filename += basename;
-//   filename += extension;
+   size_t i;
 
    FILE *fid = NULL;
    fid = fopen(filename.c_str(), "w");
@@ -233,12 +279,20 @@ int WriteGslVector(const std::string &filename, const DataType &format, const gs
       std::cerr << "Error: could not create file " << filename << std::endl;
       return EXIT_FAILURE;
    }
+
    switch (format) {
    case ASCII:
       vector.fprintf(fid, "%.7f");
       break;
-   case BINARY:
+   case DOUBLE:
       vector.fwrite(fid);
+      break;
+   case FLOAT:
+      float fbuffer[1];
+      for(i=0;i<vector.size();i++) {
+         fbuffer[0] = static_cast<float>(vector(i));
+         fwrite(fbuffer, sizeof(float), 1 , fid);
+      }
       break;
    }
 
@@ -249,13 +303,6 @@ int WriteGslVector(const std::string &filename, const DataType &format, const gs
 
 int WriteGslMatrix(const std::string &filename, const DataType &format, const gsl::matrix &mat) {
 
-
-//   filename += dir;
-//   if (filename.back() != '/')
-//      filename += '/';
-//   filename += basename;
-//   filename += extension;
-
    FILE *fid = NULL;
    fid = fopen(filename.c_str(), "w");
    if(fid==NULL){
@@ -263,22 +310,28 @@ int WriteGslMatrix(const std::string &filename, const DataType &format, const gs
       return EXIT_FAILURE;
    }
 
-   // TODO: make custom write functions to avoid transpose (and related allocation)
-   gsl::matrix mat_trans = mat.transpose();
    size_t i,j;
    switch (format) {
    case ASCII:
-      //mat_trans.fprintf(fid, "%.7f");
       for(j=0;j<mat.size2();j++)
          for(i=0;i<mat.size1();i++)
             fprintf(fid,"%.7f\n", mat(i,j));
       break;
-   case BINARY:
-      mat_trans.fwrite(fid);
-      //for(i=0;i<mat.size1();i++)
-      //for(j=0;j<mat.size2();j++)
-      //fwrite( mat(i,j), sizeof(double), 1, fid);
+   case DOUBLE:
+      double dbuffer[1];
+      for(j=0;j<mat.size2();j++)
+         for(i=0;i<mat.size1();i++) {
+            dbuffer[0] = static_cast<double>(mat(i,j));
+            fwrite(dbuffer, sizeof(double), 1 , fid);
+         }
       break;
+   case FLOAT:
+      float fbuffer[1];
+      for(j=0;j<mat.size2();j++)
+         for(i=0;i<mat.size1();i++) {
+            fbuffer[0] = static_cast<float>(mat(i,j));
+            fwrite(fbuffer, sizeof(float), 1 , fid);
+         }
    }
 
    fclose(fid);
@@ -339,3 +392,74 @@ int ReadSynthesisData(const char *filename, Param *params, SynthesisData *data) 
    return EXIT_SUCCESS;
 
 }
+
+
+
+/**
+ * Read binary file in float format
+ * inputs: fname_str is the filename , file_data is a float pointer where the data is read to
+ *
+ * This function will allocate the pointer with new, ownership is transferred to the caller
+ * who must call delete[] for the pointer
+ *
+ * Number of values read is saved to the address pointed by n_read
+ *
+ * author: ljuvela
+ *
+ */
+int ReadFileFloat(const std::string &fname_str, float **file_data, size_t *n_read) {
+
+   std::ifstream file(fname_str, std::ios::in | std::ios::binary);
+   if (!file)
+      return EXIT_FAILURE;
+
+   std::streampos file_size;
+   size_t n_values;
+
+   // File size
+   file.seekg(0, std::ios::end);
+   file_size = file.tellg();
+   file.seekg(0, std::ios::beg);
+
+   // Read file
+   n_values = file_size / sizeof(float);
+   *file_data = new float[n_values];
+   file.read(reinterpret_cast<char*>(*file_data), file_size);
+
+   *n_read = n_values;
+
+   return EXIT_SUCCESS;
+
+}
+
+int WriteFileFloat(const std::string &fname_str, const float *data, const size_t &n_values) {
+
+   // check for null
+   if (data == NULL) {
+      std::cerr << "Error: attempted to write from NULL pointer" << std::endl;
+      return EXIT_FAILURE;
+   }
+
+   // open file
+   std::ofstream file(fname_str, std::ios::out | std::ios::binary);
+   if (!file) {
+      std::cerr << "Error: could not open file " << fname_str << std::endl;
+      return EXIT_FAILURE;
+   }
+
+   size_t bytes_written;
+   size_t bytes_float = sizeof(float);
+   float buffer[1];
+   for (size_t i=0;i<n_values;i++) {
+      buffer[0] = data[i];
+      file.write(reinterpret_cast<char*>(buffer), bytes_float);
+      //bytes_written = file.write(reinterpret_cast<char*>(buffer), bytes_float);
+      //if (bytes_written != bytes_float)
+      //    return EXIT_FAILURE;
+   }
+   file.close();
+
+   return EXIT_SUCCESS;
+
+}
+

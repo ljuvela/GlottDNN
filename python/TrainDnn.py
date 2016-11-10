@@ -10,7 +10,16 @@ import theano.tensor as T
 #from theano.tensor.signal import downsample
 #from theano.tensor.nnet import conv 
 
-import config as conf
+# Config file 
+import imp # for importing argv[1]
+if len(sys.argv) < 2:
+    sys.exit("Usage: python GlottDnnScript.py config.py")
+if os.path.isfile(sys.argv[1]):
+   # conf = __import__(sys.argv[1])
+    conf = imp.load_source('', sys.argv[1])
+else:
+    sys.exit("Config file " + sys.argv[1] + " does not exist")
+
 
 from dnnClasses import HiddenLayer, LogisticRegression, save_network
 

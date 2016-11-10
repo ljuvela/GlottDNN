@@ -11,4 +11,7 @@ int WriteGslVector(const std::string &filename, const DataType &format, const gs
 int WriteGslMatrix(const std::string &filename, const DataType &format, const gsl::matrix &mat);
 int ReadSynthesisData(const char *basename, Param *params, SynthesisData *data);
 
+int ReadFileFloat(const std::string &fname_str, float **file_data, size_t *n_read);
+int WriteFileFloat(const std::string &fname_str, const float *data, const size_t &n_values);
+
 #endif /* FILEIO_H_ */

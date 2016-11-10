@@ -258,11 +258,10 @@ int Dnn::ReadData(const char *basename) {
       out_size = this->layer_sizes[layer_index+1];
       expected_length += in_size*out_size + out_size;
    }
-   //expected_length += 2*(this->layer_sizes[0]);
 
-   n_values = file_size / sizeof(double);
+   n_values = file_size / sizeof(float);
    assert(n_values == expected_length);
-   double *file_data = new double[n_values];
+   float *file_data = new float[n_values];
    file.read(reinterpret_cast<char*>(file_data), file_size);
 
    gsl::matrix W;
@@ -312,9 +311,9 @@ int Dnn::ReadData(const char *basename) {
      expected_length = 2*(this->layer_sizes[0]);
 
      ind=0;
-     n_values = file_size / sizeof(double);
+     n_values = file_size / sizeof(float);
      assert(n_values == expected_length);
-     file_data = new double[n_values];
+     file_data = new float[n_values];
      file2.read(reinterpret_cast<char*>(file_data), file_size);
 
    // Read input data min values

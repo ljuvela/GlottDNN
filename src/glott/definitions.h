@@ -6,7 +6,7 @@
 #include <gslwrap/matrix_double.h>
 
 /* Enums */
-enum DataType {ASCII, BINARY};
+enum DataType {ASCII, DOUBLE, FLOAT};
 enum SignalPolarity {POLARITY_DEFAULT, POLARITY_INVERT, POLARITY_DETECT};
 enum LpWeightingFunction {NONE, AME, STE};
 enum WindowingFunctionType {HANN, HAMMING, BLACKMAN, COSINE, HANNING, RECT, NUTTALL};
@@ -50,6 +50,7 @@ public:
 	double ame_position_quotient;
 	WindowingFunctionType default_windowing_function;
 	WindowingFunctionType psola_windowing_function;
+	WindowingFunctionType paf_analysis_window;
 
 	double max_pulse_len_diff;
 	int paf_pulse_length;
@@ -65,6 +66,7 @@ public:
 	bool extract_glottal_excitation;
 	bool extract_gci_signal;
 	bool extract_pulses_as_features;
+	bool use_paf_energy_normalization;
 	int lpc_order_vt_qmf1;
 	int lpc_order_vt_qmf2;
 	double f0_max;
@@ -90,6 +92,18 @@ public:
    //double f0_check_range;
    ExcitationMethod excitation_method;
    bool use_pitch_synchronous_analysis;
+
+   /* directory paths for storing parameters */
+   std::string dir_gain;
+   std::string dir_lsf;
+   std::string dir_lsfg;
+   std::string dir_hnr;
+   std::string dir_paf;
+   std::string dir_f0;
+   std::string dir_exc;
+
+
+
 };
 
 
