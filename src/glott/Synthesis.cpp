@@ -73,12 +73,15 @@ int main(int argc, char *argv[]) {
 
    CreateExcitation(params, data, &(data.excitation_signal));
 
+
+
    if(params.noise_gain_voiced > 0.0)
       HarmonicModification(params, data, &(data.excitation_signal));
 
 
    if(params.use_spectral_matching)
       SpectralMatchExcitation(params, data, &(data.excitation_signal));
+
 
 
 
