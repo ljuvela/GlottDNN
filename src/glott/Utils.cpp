@@ -1,6 +1,7 @@
 #include <gslwrap/vector_double.h>
 #include <vector>
 #include <cassert>
+#include <iostream>
 #include "definitions.h"
 #include "Utils.h"
 
@@ -36,6 +37,42 @@ gsl::matrix ElementDivision(const gsl::matrix &A, const gsl::matrix &B) {
          C(i,j) = A(i,j)/B(i,j);
 
    return C;
+}
+
+/**
+ * Function CheckCommandLineAnalysis
+ *
+ * Check command line format and print instructions
+ *
+ * @param argc number of input arguments
+ */
+int CheckCommandLineAnalysis(int argc) {
+
+   /* Check command line format */
+   if (argc < 3 || argc > 4) {
+
+      std::cout << "<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>"  << std::endl;
+      std::cout << "            GlottDNN - Speech Parameter Extractor "                << std::endl;
+      std::cout << "<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>"  << std::endl;
+      std::cout << "Description:\n"                                                    << std::endl;
+      std::cout << "    Extraction of speech signal into vocal tract filter and voice" << std::endl;
+      std::cout << "    source parameters using glottal inverse filtering.\n"          << std::endl;
+      std::cout << "Usage:\n"                                                          << std::endl;
+      std::cout << "    Analysis wav_file config_default config_user\n"                << std::endl;
+      std::cout << " wav_file.wav        - Name of the audio file to be analysed"      << std::endl;
+      std::cout << " config_default.cfg  - Name of the default config file"            << std::endl;
+      std::cout << " config_user.cfg     - Name of the user config file (OPTIONAL)"    << std::endl;
+      //std::cout << "Version:\n"  << std::endl;
+      //std::cout << "    %s (%s)\n\n",VERSION,DATE);
+      return EXIT_FAILURE;
+   } else {
+
+      /* Print program description */
+      std::cout << "<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>"  << std::endl;
+      std::cout << "            GlottDNN - Speech Parameter Extractor "                << std::endl;
+      std::cout << "<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>"  << std::endl;
+      return EXIT_SUCCESS;
+   }
 }
 
 

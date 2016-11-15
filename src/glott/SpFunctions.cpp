@@ -14,6 +14,7 @@
 #include <gsl/gsl_sort_vector.h> /* GSL, Sort vector */
 #include <gsl/gsl_complex.h>     /* GSL, Complex numbers */
 #include <gsl/gsl_complex_math.h>   /* GSL, Arithmetic operations for complex numbers */
+#include <gsl/gsl_sf_bessel.h> // Bessel functions for KBD window
 #include <gslwrap/vector_double.h>
 #include <vector>
 #include <queue>
@@ -344,6 +345,101 @@ void ApplyWindowingFunction(const WindowingFunctionType &window_function, gsl::v
         break;
 
 	}
+}
+
+
+/* Create Kaiser-Bessel derived window
+ *
+ * args: N is the window size, alpha is the shape parameter
+ * return: window in gsl::vector
+ *
+ * NOTE: Generating the KBD window is computationally expensive and should not be done often
+ *       For PSOLA, interpolation of a prototype KBD window is recommended
+ *
+ * */
+gsl::vector getKaiserBesselDerivedWindow(const size_t &N, const double &alpha) {
+
+   gsl::vector win(N,true);
+   double sum;
+   size_t k;
+   /*
+   for (k=0; k<N/2+1; k++) { // +1 for odd N
+      sum = 0.0;
+      size_t h;
+      for(h=0;h<k;h++)
+         sum += gsl_sf_bessel_I0(M_PI*alpha*sqrt(1.0-pow(2.0*(double)h/(double)(N-1)-1.0,2.0)));
+      win(k) = sqrt(sum);
+      win(N-k-1) = sqrt(sum);
+   }
+*/
+
+   size_t M = N/2;
+
+   for (k=0; k<M; k++) {
+      sum = 0.0;
+      size_t h;
+      for(h=0;h<k;h++)
+         sum += gsl_sf_bessel_I0(M_PI*alpha*sqrt(1.0-pow(2.0*(double)h/(double)(M-1)-1.0,2.0)));
+      win(k) = sqrt(sum);
+      win(N-k-1) = sqrt(sum);
+   }
+
+   win /= win.max();
+   return win;
+}
+
+void UpperLowerEnvelope(const gsl::vector &fft_mag, const double &f0, const int &fs, gsl::vector *fft_upper_env, gsl::vector *fft_lower_env) {
+
+   gsl::vector harmonic_index;
+   size_t NFFT = 2*(fft_mag.size()-1);
+
+   harmonic_index = FindHarmonicPeaks(fft_mag, f0, fs);
+
+   gsl::vector upper_env_values = gsl::vector(harmonic_index.size());
+   gsl::vector lower_env_values = gsl::vector(harmonic_index.size());
+
+   /* Linearly spaced frequency axis */
+   gsl::vector_int f_axis = LinspaceInt(0, 1, fft_mag.size()-1);
+
+   int i;
+   int ind1,ind2;
+   for(i=0;i<(int)harmonic_index.size();i++) {
+      /* Spectral valleys at midpoints between peaks */
+      if(i>0)
+         ind1 = (harmonic_index(i)+harmonic_index(i-1))/2;
+       else
+         ind1 = harmonic_index(i)/2;
+      if(i==(int)harmonic_index.size()-1)
+         ind2 = (harmonic_index(i)+fft_mag.size()-1)/2;
+       else
+         ind2 = (harmonic_index(i)+harmonic_index(i+1))/2;
+
+      upper_env_values(i) = fft_mag(harmonic_index(i));
+      lower_env_values(i) = (fft_mag(ind1) + fft_mag(ind2))/2.0;
+   }
+
+   /* Noise floor (lower envelope) estimate as band minima */
+   double step = NFFT * 100.0 / fs; // 100Hz step
+   size_t search_range = rint(2 * step);
+   size_t center_index = step;
+   while (center_index < fft_mag.size()) {
+      /* Find minimum at search range */
+      double minvalue = DBL_MAX;
+      for(i=GSL_MAX(center_index-search_range, 0); i<GSL_MIN(center_index+search_range, fft_mag.size()); i++) {
+         if (fft_mag(i) < minvalue)
+            minvalue = fft_mag(i);
+      }
+      /* Set band minimum value */
+      for(i=GSL_MAX(center_index-search_range, 0); i<GSL_MIN(center_index+search_range, fft_mag.size()); i++)
+         (*fft_lower_env)(i) = minvalue;
+
+      center_index += rint(step);
+   }
+
+   /* HNR as upper-lower envelope difference */
+   InterpolateLinear(harmonic_index, upper_env_values, f_axis, fft_upper_env);
+   InterpolateLinear(harmonic_index, lower_env_values, f_axis, fft_lower_env); // overrides minimum based noise floor
+
 }
 
 ///FIXME: Does not work as intended yet (@mairaksi)

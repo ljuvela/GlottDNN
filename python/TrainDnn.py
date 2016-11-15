@@ -15,30 +15,30 @@ import imp # for importing argv[1]
 if len(sys.argv) < 2:
     sys.exit("Usage: python GlottDnnScript.py config.py")
 if os.path.isfile(sys.argv[1]):
-   # conf = __import__(sys.argv[1])
     conf = imp.load_source('', sys.argv[1])
 else:
     sys.exit("Config file " + sys.argv[1] + " does not exist")
 
 
-from dnnClasses import HiddenLayer, LogisticRegression, save_network
+from dnnClasses import HiddenLayer, LogisticRegression
 
 def load_data(filename, size2):
-    
-    #############
-    # LOAD DATA #
-    #############
-
-    #print('... loading data: ' + filename)
-    
     var = numpy.fromfile(filename, dtype=numpy.float32, count=-1, sep='')
     var = numpy.reshape(var,(-1,size2))
 
     shared_var = theano.shared(numpy.asarray(var, dtype=theano.config.floatX), borrow=True)
-      
-    #print('... done.')
     return shared_var
 # EOF load_data_mat()
+
+def save_network(layerList, layer_out):
+    fid = open( conf.weights_data_dir + '/' + conf.dnn_name + '.dnnData','w')
+    for layer in layerList:
+        layer.W.get_value().astype(numpy.float32).tofile(fid, sep='',format="%f")
+        layer.b.get_value().astype(numpy.float32).tofile(fid, sep='',format="%f")
+
+    layer_out.W.get_value().astype(numpy.float32).tofile(fid, sep='',format="%f")
+    layer_out.b.get_value().astype(numpy.float32).tofile(fid, sep='',format="%f")
+# EOF : save_network
 
 
 def list_dir_fullpath(dirname,start,extension):

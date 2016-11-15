@@ -114,6 +114,20 @@ void ComplexVector::resize(size_t val) {
    setAllImag(0.0);
 }
 
+void ComplexVector::operator*=(double x) {
+   for (size_t i=0; i< this->fft_freq_bins; i++) {
+      this->imag_data[i] *= x;
+      this->real_data[i] *= x;
+   }
+}
+
+void ComplexVector::operator/=(double x) {
+   for (size_t i=0; i< this->fft_freq_bins; i++) {
+      this->imag_data[i] /= x;
+      this->real_data[i] /= x;
+   }
+}
+
 void ComplexVector::freeData() {
    if (real_data)
       delete[] real_data;

@@ -1,6 +1,6 @@
 //   MIT License
 //
-//   Copyright (c) 2016 ljuvela
+//   Copyright (c) 2016 Lauri Juvela, Manu Airaksinen
 //
 //   Permission is hereby granted, free of charge, to any person obtaining a copy
 //   of this software and associated documentation files (the "Software"), to deal
@@ -73,9 +73,18 @@
 
 int main(int argc, char *argv[]) {
 
+   if (CheckCommandLineAnalysis(argc) == EXIT_FAILURE) {
+      return EXIT_FAILURE;
+   }
+
    const char *wav_filename = argv[1];
    const char *default_config_filename = argv[2];
    const char *user_config_filename = argv[3];
+
+   if (argc < 3) {
+      std::cout << "Usage: Analysis <wavfile.wav> <config_default.cfg> (<config_usr.cfg>)" << std::endl;
+   }
+
 
    /* Read configuration file */
    Param params;
@@ -88,9 +97,6 @@ int main(int argc, char *argv[]) {
 
    /* Read sound file and allocate data */
    AnalysisData data;
-
-
-
 
    if(ReadWavFile(wav_filename, &(data.signal), &params) == EXIT_FAILURE)
       return EXIT_FAILURE;

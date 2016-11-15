@@ -668,6 +668,16 @@ void HnrAnalysis(const Param &params, const gsl::vector &source_signal, const gs
 	gsl::vector_int harmonic_index;
 	gsl::vector hnr_values;
 
+	gsl::vector harmonic_values; // experimental, ljuvela
+   gsl::vector upper_env_values;
+   gsl::vector lower_env_values;
+   gsl::vector fft_lower_env(NFFT/2+1,true);
+   gsl::vector fft_upper_env(NFFT/2+1);
+
+   double kbd_alpha = 2.3;
+   gsl::vector kbd_window = getKaiserBesselDerivedWindow(frame.size(), kbd_alpha);
+
+	/* Linearly spaced frequency axis */
 	gsl::vector_int x_interp = LinspaceInt(0, 1,fft_mag.size()-1);
 
 	gsl::vector hnr_interp(fft_mag.size());
@@ -676,38 +686,31 @@ void HnrAnalysis(const Param &params, const gsl::vector &source_signal, const gs
 	int frame_index,i, ind1, ind2;
 	double val;
 	for(frame_index=0;frame_index<params.number_of_frames;frame_index++) {
-      /** HNR Analysis only for voiced frames (zero for unvoiced frames) **/
-      if(fundf(frame_index) > 0) {
-         GetFrame(source_signal, frame_index, params.frame_shift, &frame, NULL);
-         ApplyWindowingFunction(params.default_windowing_function, &frame);
-         FFTRadix2(frame, NFFT, &frame_fft);
-         fft_mag = frame_fft.getAbs();
-         for(i=0;i<(int)fft_mag.size();i++) {
-            val = 20*log10(fft_mag(i));
-            fft_mag(i) = GSL_MAX(val,MIN_LOG_POWER); // Min log-power = -60dB
-         }
-         harmonic_index = FindHarmonicPeaks(fft_mag, fundf(frame_index), params.fs);
-         hnr_values = gsl::vector(harmonic_index.size());
-         for(i=0;i<(int)harmonic_index.size();i++) {
-            if(i>0) {
-               ind1 = (harmonic_index(i)+harmonic_index(i-1))/2;
-            } else {
-               ind1 = harmonic_index(i)/2;
-            }
 
-            if(i==(int)harmonic_index.size()-1) {
-               ind2 = (harmonic_index(i)+fft_mag.size()-1)/2;
-            } else {
-               ind2 = (harmonic_index(i)+harmonic_index(i+1))/2;
-            }
-            val = (fft_mag(ind1) + fft_mag(ind2))/2.0;
-            hnr_values(i) = val - fft_mag(harmonic_index(i)); // Actually Noise-to-Harmonic ratio
-         }
-
-         InterpolateLinear(harmonic_index, hnr_values, x_interp, &hnr_interp);
-         Linear2Erb(hnr_interp, params.fs, &hnr_erb);
-         hnr_glott->set_col_vec(frame_index,hnr_erb);
+      GetFrame(source_signal, frame_index, params.frame_shift, &frame, NULL);
+      //ApplyWindowingFunction(params.default_windowing_function, &frame);
+      frame *= kbd_window;
+      FFTRadix2(frame, NFFT, &frame_fft);
+      fft_mag = frame_fft.getAbs();
+      for(i=0;i<(int)fft_mag.size();i++) {
+         val = 20*log10(fft_mag(i)); // save to temp to prevent evaluation twice in max
+         fft_mag(i) = GSL_MAX(val,MIN_LOG_POWER); // Min log-power = -60dB
       }
+
+      if(fundf(frame_index) > 0) {
+         UpperLowerEnvelope(fft_mag, fundf(frame_index), params.fs, &fft_upper_env, &fft_lower_env);
+      } else {
+         /* Define the upper envelope as the maxima around pseudo-period of 100Hz */
+         UpperLowerEnvelope(fft_mag, 100.0, params.fs, &fft_upper_env, &fft_lower_env);
+      }
+
+      /* HNR as upper-lower envelope difference */
+      for(i=0;i<hnr_interp.size();i++)
+         hnr_interp(i) = fft_lower_env(i) - fft_upper_env(i);
+
+      /* Convert to erb-bands */
+      Linear2Erb(hnr_interp, params.fs, &hnr_erb);
+      hnr_glott->set_col_vec(frame_index,hnr_erb);
 	}
 	std::cout << " done." << std::endl;
 }

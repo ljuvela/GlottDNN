@@ -306,117 +306,112 @@ void HarmonicModification(const Param &params, const SynthesisData &data, gsl::v
    gsl::vector fft_upper_env(NFFT/2+1);
    gsl::vector fft_lower_env_target(NFFT/2+1);
    gsl::vector fft_noise(NFFT/2+1);
-
-   gsl::vector_int harmonic_index;
-   gsl::vector lower_env_values;
-   gsl::vector upper_env_values;
-
-
-
-   gsl::vector_int x_interp = LinspaceInt(0, 1,fft_mag.size()-1);
-
    gsl::vector hnr_interp(fft_mag.size());
 
+   /* Noise generation */
    gsl::random_generator rand_gen;
    gsl::gaussian_random random_gauss_gen(rand_gen);
    ComplexVector noise_vec_fft;
    gsl::vector noise_vec(frame.size());
+
+   /* Generate random Gaussian noise*/
+   gsl::vector noise_long(excitation_signal->size());
+   for(size_t j=0;j<noise_long.size();j++)
+      noise_long(j) = random_gauss_gen.get();
+
+
+   /* Copy excitation signal and re-initialize for overlap-add*/
    gsl::vector excitation_orig(*excitation_signal);
    excitation_signal->set_all(0.0);
 
-   int frame_index,i, ind1, ind2;
+   /* Define analysis and synthesis window */
+   double kbd_alpha = 2.3;
+   gsl::vector kbd_window = getKaiserBesselDerivedWindow(frame.size(), kbd_alpha);
+
+   int frame_index,i;
    double val;
    for(frame_index=0;frame_index<params.number_of_frames;frame_index++) {
-      /** HNR modification only in voiced frames **/
+
+      GetFrame(excitation_orig, frame_index, rint(params.frame_shift/params.speed_scale), &frame, NULL);
+
+      /* FFT with analysis window function */
+      frame *= kbd_window;
+      FFTRadix2(frame, NFFT, &frame_fft);
+      fft_mag = frame_fft.getAbs();
+
+      /* Get log power spectrum */
+      for(i=0;i<(int)fft_mag.size();i++) {
+         val = 20*log10(fft_mag(i));
+         fft_mag(i) = GSL_MAX(val,MIN_LOG_POWER); // Min log-power = -60dB
+      }
+
+      /* Upper and lower envelope estimates for synthetic signal */
       if(data.fundf(frame_index) > 0) {
-         GetFrame(excitation_orig, frame_index, rint(params.frame_shift/params.speed_scale), &frame, NULL);
-         ApplyWindowingFunction(HANN, &frame);
-         FFTRadix2(frame, NFFT, &frame_fft);
-         fft_mag = frame_fft.getAbs();
+         UpperLowerEnvelope(fft_mag, data.fundf(frame_index), params.fs, &fft_upper_env, &fft_lower_env);
+      } else {
+         UpperLowerEnvelope(fft_mag, 100.0, params.fs, &fft_upper_env, &fft_lower_env);
+      }
 
-         for(i=0;i<(int)fft_mag.size();i++) {
-            val = 20*log10(fft_mag(i));
-            fft_mag(i) = GSL_MAX(val,MIN_LOG_POWER); // Min log-power = -60dB
-         }
+      /* Convert HNR from ERB to linear frequency scale */
+      Erb2Linear(data.hnr_glot.get_col_vec(frame_index), params.fs, &hnr_interp);
 
-         harmonic_index = FindHarmonicPeaks(fft_mag, data.fundf(frame_index), params.fs);
-         lower_env_values = gsl::vector(harmonic_index.size());
-         upper_env_values = gsl::vector(harmonic_index.size());
+      /* Calculate target noise floor level based on upper envelope and HNR */
+      for(i=0;i<(int)fft_lower_env_target.size();i++)
+         fft_lower_env_target(i) = fft_upper_env(i) + hnr_interp(i); // Ptar
+
+      /* Calculate additive noise gain for each frequency bin */
+      for(i=0;i<(int)fft_lower_env_target.size();i++) {
+         fft_noise(i) = pow(10,fft_lower_env_target(i)/20.0) - pow(10,fft_lower_env(i)/20.0);
+        // fft_noise(i) = pow(10,fft_lower_env_target(i)/10.0) - pow(10,fft_lower_env(i)/10.0); // power difference
+      }
 
 
-         for(i=0;i<(int)harmonic_index.size();i++) {
+      /* Generate random Gaussian noise*/
+      for(i=0;i<(int)noise_vec.size();i++)
+         noise_vec(i) = random_gauss_gen.get();
 
-            /* Lower spectral valley */
-            if(i>0) {
-               ind1 = (harmonic_index(i)+harmonic_index(i-1))/2;
+      /* Noise FFT with analysis window */
+      noise_vec *= kbd_window;
+      FFTRadix2(noise_vec, NFFT, &noise_vec_fft);
+
+      /* Normalize noise s.t. mean(abs(noise_fft)) == 1 */
+      noise_vec_fft /= sqrt(noise_vec.size());
+
+      /* Modify noise amplitude at each frequency bin */
+      int noise_low_freq_limit_ind = rint(NFFT*params.noise_low_freq_limit_voiced/params.fs);
+      for(i=0;i<(int)fft_mag.size();i++) {
+         if(i < noise_low_freq_limit_ind) {
+            /* Do not add noise below specified frequency */
+            noise_vec_fft.setReal(i,0.0);
+            noise_vec_fft.setImag(i,0.0);
+         } else {
+            if(fft_noise(i) > 0) {
+               /* Add noise if noise floor is below that indicated by the HNR */
+               //noise_vec_fft.setReal(i,noise_vec_fft.getReal(i)/noise_vec_fft.getAbs(i)*sqrt(fft_noise(i))*params.noise_gain_voiced);
+               //noise_vec_fft.setImag(i,noise_vec_fft.getImag(i)/noise_vec_fft.getAbs(i)*sqrt(fft_noise(i))*params.noise_gain_voiced);
+
+               /* Don't normalize the noise realization, Gaussian normal distributed noise has unit power at all frequencies (ljuvela) */
+               noise_vec_fft.setReal(i,noise_vec_fft.getReal(i)*sqrt(fft_noise(i))*params.noise_gain_voiced);
+               noise_vec_fft.setImag(i,noise_vec_fft.getImag(i)*sqrt(fft_noise(i))*params.noise_gain_voiced);
             } else {
-               ind1 = harmonic_index(i)/2;
-            }
-            /* Upper spectral valley */
-            if(i==(int)harmonic_index.size()-1) {
-               ind2 = (harmonic_index(i)+fft_mag.size()-1)/2;
-            } else {
-               ind2 = (harmonic_index(i)+harmonic_index(i+1))/2;
-            }
-            lower_env_values(i) = (fft_mag(ind1) + fft_mag(ind2))/2.0;
-            upper_env_values(i) = fft_mag(harmonic_index(i));
-         }
-
-         /* Get FFT length HNR estimates */
-         InterpolateLinear(harmonic_index, lower_env_values, x_interp, &fft_lower_env); // P0
-         InterpolateLinear(harmonic_index, upper_env_values, x_interp, &fft_upper_env);
-         Erb2Linear(data.hnr_glot.get_col_vec(frame_index), params.fs, &hnr_interp);
-         for(i=0;i<(int)fft_lower_env_target.size();i++)
-            fft_lower_env_target(i) = fft_upper_env(i) + hnr_interp(i); // Ptar
-
-         /* Convert to linear scale */
-         for(i=0;i<(int)fft_lower_env_target.size();i++) {
-            fft_noise(i) = pow(10,fft_lower_env_target(i)/20.0) - pow(10,fft_lower_env(i)/20.0);
-         }
-
-         for(i=0;i<(int)noise_vec.size();i++)
-            noise_vec(i) = random_gauss_gen.get();
-
-
-         //ApplyWindowingFunction(COSINE,&noise_vec);
-
-         FFTRadix2(noise_vec, NFFT, &noise_vec_fft);
-
-         size_t noise_low_freq_limit_ind = rint(NFFT*params.noise_low_freq_limit_voiced/params.fs);
-
-
-         for(i=0;i<(int)fft_mag.size();i++) {
-            if(i < (int)noise_low_freq_limit_ind) {
+               /* Do not add noise if noise floor is above that indicated by the HNR */
                noise_vec_fft.setReal(i,0.0);
                noise_vec_fft.setImag(i,0.0);
-            } else {
-               if(fft_noise(i) > 0) {
-                  noise_vec_fft.setReal(i,noise_vec_fft.getReal(i)/noise_vec_fft.getAbs(i)*sqrt(fft_noise(i))*params.noise_gain_voiced);
-                  noise_vec_fft.setImag(i,noise_vec_fft.getImag(i)/noise_vec_fft.getAbs(i)*sqrt(fft_noise(i))*params.noise_gain_voiced);
-               } else {
-                  noise_vec_fft.setReal(i,0.0);
-                  noise_vec_fft.setImag(i,0.0);
-               }
             }
          }
-
-         IFFTRadix2(noise_vec_fft,&noise_vec);
-
-
-         ApplyWindowingFunction(HANN,&noise_vec);
-
-         for(i=0;i<(int)frame.size();i++)
-            frame(i) += noise_vec(i);
-
-
-        // ApplyWindowingFunction(COSINE, &frame);
-      } else {
-         GetFrame(excitation_orig, frame_index, rint(params.frame_shift/params.speed_scale), &frame, NULL);
-         ApplyWindowingFunction(HANN, &frame);
       }
+
+      IFFTRadix2(noise_vec_fft,&noise_vec);
+
+      /* Add noise and apply synthesis window */
+      frame += noise_vec;
+      frame *= kbd_window;
+      /* Normalize overlap-add window */
       frame /= 0.5*(double)frame.size()/(double)params.frame_shift;
       OverlapAdd(frame,frame_index*rint(params.frame_shift/params.speed_scale),excitation_signal);
+
    }
+
    std::cout << " done." << std::endl;
 }
 

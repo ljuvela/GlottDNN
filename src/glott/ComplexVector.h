@@ -32,6 +32,8 @@ public:
    void setAllImag(double val);
    size_t getSize() const {return fft_freq_bins;};
    void resize(size_t val);
+   void operator*=(double x);
+   void operator/=(double x);
 private:
    size_t fft_freq_bins;
    double *real_data;
