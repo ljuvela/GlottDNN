@@ -268,6 +268,10 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
    if (ConfigLookupString("DATA_DIRECTORY", cfg, default_config, params->data_directory) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
+   if (ConfigLookupBool("SAVE_TO_DATADIR_ROOT", cfg, default_config, &(params->save_to_datadir_root)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
+
    if (ConfigLookupBool("USE_PITCH_SYNCHRONOUS_ANALYSIS", cfg, default_config, &(params->use_pitch_synchronous_analysis)) == EXIT_FAILURE)
      return EXIT_FAILURE;
 

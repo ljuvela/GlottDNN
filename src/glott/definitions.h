@@ -38,6 +38,7 @@ public:
 	std::string dnn_path_basename;
 	std::string data_directory;
 	std::string file_basename;
+	bool save_to_datadir_root;
 	DataType data_type;
 	bool qmf_subband_analysis;
 	SignalPolarity signal_polarity;
@@ -92,6 +93,7 @@ public:
    //double f0_check_range;
    ExcitationMethod excitation_method;
    bool use_pitch_synchronous_analysis;
+
 
    /* directory paths for storing parameters */
    std::string dir_gain;
