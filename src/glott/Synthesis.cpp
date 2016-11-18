@@ -67,9 +67,8 @@ int main(int argc, char *argv[]) {
    StabilizeLsf(&(data.lsf_vocal_tract));
    StabilizeLsf(&(data.lsf_glot));
 
+   /* Create excitation with overlap-add */
    CreateExcitation(params, data, &(data.excitation_signal));
-
-
 
    if(params.noise_gain_voiced > 0.0)
       HarmonicModification(params, data, &(data.excitation_signal));
@@ -77,13 +76,16 @@ int main(int argc, char *argv[]) {
    if(params.use_spectral_matching)
       SpectralMatchExcitation(params, data, &(data.excitation_signal));
 
-
    FilterExcitation(params, data, &(data.signal));
 
-   if(WriteWavFile(params.data_directory + "/exc/" + params.file_basename + ".exc.wav", data.excitation_signal, params.fs) == EXIT_FAILURE)
+   std::string out_fname;
+   out_fname = GetParamPath("exc", ".exc.wav", params.dir_exc, params);
+   if(WriteWavFile(out_fname, data.excitation_signal, params.fs) == EXIT_FAILURE)
        return EXIT_FAILURE;
 
-   if(WriteWavFile(params.data_directory + "/syn/" + params.file_basename + ".syn.wav", data.signal, params.fs) == EXIT_FAILURE)
+   out_fname = GetParamPath("syn", ".syn.wav", params.dir_syn, params);
+   std::cout << out_fname << std::endl;
+   if(WriteWavFile(out_fname, data.signal, params.fs) == EXIT_FAILURE)
        return EXIT_FAILURE;
 
    std::cout << "Finished synthesis" << std::endl;

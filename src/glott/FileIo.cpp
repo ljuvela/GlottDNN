@@ -353,25 +353,34 @@ int ReadSynthesisData(const char *filename, Param *params, SynthesisData *data) 
 
    params->file_basename = str.substr(firstindex+1,lastindex-firstindex-1);
 
-   if (ReadGslVector(params->data_directory + "/f0/" + params->file_basename + ".F0", params->data_type, &(data->fundf)) == EXIT_FAILURE)
+
+   std::string param_fname;
+
+   param_fname = GetParamPath("f0", ".F0", params->dir_f0, *params);
+   if (ReadGslVector(param_fname, params->data_type, &(data->fundf)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-   if (ReadGslVector(params->data_directory + "/gain/" + params->file_basename + ".Gain", params->data_type, &(data->frame_energy)) == EXIT_FAILURE)
+   param_fname = GetParamPath("gain", ".Gain", params->dir_gain, *params);
+   if (ReadGslVector(param_fname, params->data_type, &(data->frame_energy)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-   if (ReadGslMatrix(params->data_directory + "/lsf/" + params->file_basename + ".LSF", params->data_type, params->lpc_order_vt, &(data->lsf_vocal_tract)) == EXIT_FAILURE)
+   param_fname = GetParamPath("lsf", ".LSF", params->dir_lsf, *params);
+   if (ReadGslMatrix(param_fname, params->data_type, params->lpc_order_vt, &(data->lsf_vocal_tract)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
+   param_fname = GetParamPath("lsfg", ".LSFglot", params->dir_lsfg, *params);
    if (1) // TODO: add conditional
-      if (ReadGslMatrix(params->data_directory + "/lsfg/" + params->file_basename + ".LSFglot", params->data_type, params->lpc_order_glot, &(data->lsf_glot)) == EXIT_FAILURE)
+      if (ReadGslMatrix(param_fname, params->data_type, params->lpc_order_glot, &(data->lsf_glot)) == EXIT_FAILURE)
          return EXIT_FAILURE;
 
+   param_fname = GetParamPath("hnr", ".HNR", params->dir_hnr, *params);
    if (1) // TODO: add conditional
-      if (ReadGslMatrix(params->data_directory + "/hnr/" + params->file_basename + ".HNR", params->data_type, params->hnr_order, &(data->hnr_glot)) == EXIT_FAILURE)
+      if (ReadGslMatrix(param_fname, params->data_type, params->hnr_order, &(data->hnr_glot)) == EXIT_FAILURE)
          return EXIT_FAILURE;
 
+   param_fname = GetParamPath("paf", ".PAF", params->dir_paf, *params);
    if (1) // TODO: add conditional
-      if (ReadGslMatrix(params->data_directory + "/paf/" + params->file_basename + ".PAF", params->data_type, params->paf_pulse_length, &(data->excitation_pulses)) == EXIT_FAILURE)
+      if (ReadGslMatrix(param_fname, params->data_type, params->paf_pulse_length, &(data->excitation_pulses)) == EXIT_FAILURE)
          return EXIT_FAILURE;
 
    /* Read number of frames & compute signal length */
@@ -461,5 +470,27 @@ int WriteFileFloat(const std::string &fname_str, const float *data, const size_t
 
    return EXIT_SUCCESS;
 
+}
+
+/**
+ * Get write/read path for a parameter as specified in configuration file
+ */
+std::string GetParamPath(const std::string &default_dir, const std::string &extension, const std::string &custom_dir, const Param &params)  {
+   std::string param_path;
+
+   std::string basedir(params.data_directory) ;
+   if (basedir.back() != '/')
+      basedir += "/";
+
+   if (custom_dir.empty()) {
+          if (params.save_to_datadir_root)
+             param_path = basedir + params.file_basename + extension;
+          else
+             param_path = basedir + default_dir + "/" + params.file_basename + extension;
+       } else {
+          param_path = custom_dir + "/" + params.file_basename + extension;
+       }
+
+   return param_path;
 }
 

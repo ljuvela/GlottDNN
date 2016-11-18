@@ -103,6 +103,7 @@ public:
    std::string dir_paf;
    std::string dir_f0;
    std::string dir_exc;
+   std::string dir_syn;
 
 
 
