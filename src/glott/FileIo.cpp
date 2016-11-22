@@ -369,12 +369,12 @@ int ReadSynthesisData(const char *filename, Param *params, SynthesisData *data) 
       return EXIT_FAILURE;
 
    param_fname = GetParamPath("lsfg", ".LSFglot", params->dir_lsfg, *params);
-   if (params->use_spectral_matching) // TODO: may be needed for internal DNN excitation, make more elaborate check
+   //if (params->use_spectral_matching) // TODO: may be needed for internal DNN excitation, make more elaborate check
       if (ReadGslMatrix(param_fname, params->data_type, params->lpc_order_glot, &(data->lsf_glot)) == EXIT_FAILURE)
          return EXIT_FAILURE;
 
    param_fname = GetParamPath("hnr", ".HNR", params->dir_hnr, *params);
-   if (params->noise_gain_voiced > 0.0) // TODO: may be needed for internal DNN excitation, make more elaborate check
+   //if (params->noise_gain_voiced > 0.0) // TODO: may be needed for internal DNN excitation, make more elaborate check
       if (ReadGslMatrix(param_fname, params->data_type, params->hnr_order, &(data->hnr_glot)) == EXIT_FAILURE)
          return EXIT_FAILURE;
 
