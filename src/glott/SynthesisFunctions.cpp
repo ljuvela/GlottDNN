@@ -124,9 +124,8 @@ gsl::vector GetExternalPulse(const size_t &pulse_len, const bool &use_interpolat
       }
    }
 
-
-   // Window pulse
-   pulse *= energy/getEnergy(pulse);
+   // Scale with correct energy
+    pulse *= energy/getEnergy(pulse);
 
    /* Window length normalization */
 //   gsl::vector ones(pulse_len);
@@ -273,7 +272,8 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
             ApplyWindowingFunction(HANN, &pulse);
             break;
          case PULSES_AS_FEATURES_EXCITATION:
-            pulse = GetExternalPulse(noise.size(), params.use_pulse_interpolation, energy, frame_index, data.excitation_pulses);
+            //pulse = GetExternalPulse(noise.size(), params.use_pulse_interpolation, energy, frame_index, data.excitation_pulses);
+            pulse = GetExternalPulse(noise.size(), false, energy, frame_index, data.excitation_pulses); // never interpolate noise
            // pulse = GetExternalPulse(noise.size(), energy, frame_index, data.excitation_pulses);
             ApplyWindowingFunction(params.psola_windowing_function, &pulse);
             break;

@@ -508,6 +508,21 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
          center_index = sample_index;
 
       int i;
+      /* Refine center index by finding the local minimum of HANN-windowed pulse */
+      int minind;
+      if(fundf(frame_index) != 0.0) {
+         pulse = gsl::vector((int)rint(2.0*(double)params.fs/fundf(frame_index)),true);
+         for(j=0;j<pulse.size();j++) {
+            i = center_index - round(pulse.size()/2) + j;
+            if (i >= 0 && i < (int)source_signal.size())
+               pulse(j) = source_signal(i);
+         }
+         ApplyWindowingFunction(HANNING, &pulse);
+         minind = pulse.min_index();
+         center_index += minind - pulse.size()/2;
+      }
+
+
       if (params.use_pulse_interpolation == true){
          /* Interpolate pitch-synchronous pulse segment */
          gsl::vector pulse_orig(pulselen);
@@ -517,26 +532,11 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
                pulse_orig(j) = source_signal(i);
          }
          /* Interpolation on windowed signal prevents Gibbs at edges */
-         ApplyWindowingFunction(COSINE, &pulse_orig);
-         InterpolateSpline(pulse_orig, params.paf_pulse_length, &paf_pulse);
+         ApplyWindowingFunction(params.paf_analysis_window, &pulse_orig);
+         InterpolateSpline(pulse_orig, params.paf_pulse_length, &paf_pulse); // NO-OP if lengths are the same
 
       } else {
          /* No interpolation, window with selected window */
-
-         /* Refine center index by finding the local minimum of HANN-windowed pulse */
-         int minind;
-         if(fundf(frame_index) != 0.0) {
-            pulse = gsl::vector((int)rint(2.0*(double)params.fs/fundf(frame_index)),true);
-            for(j=0;j<pulse.size();j++) {
-               i = center_index - round(pulse.size()/2) + j;
-               if (i >= 0 && i < (int)source_signal.size())
-                  pulse(j) = source_signal(i);
-            }
-            ApplyWindowingFunction(HANNING, &pulse);
-            minind = pulse.min_index();
-            center_index += minind - pulse.size()/2;
-         }
-
          if(params.paf_analysis_window != RECT) {
             /* Apply pitch-synchronous analysis window to pulse */
 
