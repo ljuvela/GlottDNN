@@ -206,62 +206,76 @@ int SpectralAnalysis(const Param &params, const AnalysisData &data, gsl::matrix 
    gsl::vector frame_full; // frame + preframe
    gsl::vector residual(params.frame_length);
 
+	if (params.use_external_lsf_vt == false) {
+
 	std::cout << "Spectral analysis ...";
+	/* Do analysis frame-wise */
+	   size_t frame_index;
+	   for(frame_index=0;frame_index<(size_t)params.number_of_frames;frame_index++) {
+	      //GetPitchSynchFrame(data.signal, frame_index, params.frame_shift, &frame, &pre_frame);
+	      /** Voiced analysis **/
+	      if(data.fundf(frame_index) != 0) {
+	         if(params.use_pitch_synchronous_analysis)
+	            GetPitchSynchFrame(params, data.signal, data.gci_inds, frame_index, params.frame_shift,
+	                              data.fundf(frame_index),&frame, &pre_frame);
+	         else
+	            GetFrame(data.signal, frame_index, params.frame_shift, &frame, &pre_frame);
 
-   size_t frame_index;
-	for(frame_index=0;frame_index<(size_t)params.number_of_frames;frame_index++) {
-
-
-      //GetPitchSynchFrame(data.signal, frame_index, params.frame_shift, &frame, &pre_frame);
-		/** Voiced analysis **/
-		if(data.fundf(frame_index) != 0) {
-	      if(params.use_pitch_synchronous_analysis)
-            GetPitchSynchFrame(params, data.signal, data.gci_inds, frame_index, params.frame_shift,
-                              data.fundf(frame_index),&frame, &pre_frame);
-         else
-            GetFrame(data.signal, frame_index, params.frame_shift, &frame, &pre_frame);
-
-		   /* Estimate Weighted Linear Prediction weight */
-			GetLpWeight(params,params.lp_weighting_function,data.gci_inds, frame, frame_index, &lp_weight);
-			/* Pre-emphasis and windowing */
-         Filter(std::vector<double>{1.0, -params.gif_pre_emphasis_coefficient},B, frame, &frame_pre_emph);
-         ApplyWindowingFunction(params.default_windowing_function, &frame_pre_emph);
-         /* First-loop envelope */
-			ArAnalysis(params.lpc_order_vt,params.warping_lambda_vt, params.lp_weighting_function, lp_weight, frame_pre_emph, &A);
-         //if(frame_index == 20) {
-         //   ConcatenateFrames(pre_frame, frame, &frame_full);
-         //   WFilter(A,B,frame_full,params.warping_lambda_vt,&residual);
-         //   VPrint1(frame);
-         //VPrint2(residual);
-         //   VPrint3(lp_weight);
-         //}
-
-			/* Second-loop envelope (if IAIF is used) */
-			if(params.use_iterative_gif) {
-            ConcatenateFrames(pre_frame, frame, &frame_full);
-            if(params.warping_lambda_vt != 0.0) {
-               Filter(A,B,frame_full,&residual);
-            } else {
-                WFilter(A,B,frame_full,params.warping_lambda_vt,&residual);
-            }
-
-            ApplyWindowingFunction(params.default_windowing_function, &residual);
-            ArAnalysis(params.lpc_order_glot_iaif,0.0, NONE, lp_weight, residual, &G);
-
-            Filter(G,B,frame,&frame_pre_emph); // Iterated pre-emphasis
-            ApplyWindowingFunction(params.default_windowing_function, &frame_pre_emph);
-            ArAnalysis(params.lpc_order_vt,params.warping_lambda_vt, params.lp_weighting_function, lp_weight, frame_pre_emph, &A);
-         }
-
-         /** Unvoiced analysis **/
-		} else {
-         GetFrame(data.signal, frame_index, params.frame_shift, &unvoiced_frame, &pre_frame);
-			ApplyWindowingFunction(params.default_windowing_function,&unvoiced_frame);
-			//LPC(frame, params.lpc_order_vt, &A);
-			ArAnalysis(params.lpc_order_vt,params.warping_lambda_vt, NONE, lp_weight, unvoiced_frame, &A);
-		}
-		poly_vocal_tract->set_col_vec(frame_index,A);
+	         /* Estimate Weighted Linear Prediction weight */
+	         GetLpWeight(params,params.lp_weighting_function,data.gci_inds, frame, frame_index, &lp_weight);
+	         /* Pre-emphasis and windowing */
+	         Filter(std::vector<double>{1.0, -params.gif_pre_emphasis_coefficient},B, frame, &frame_pre_emph);
+	         ApplyWindowingFunction(params.default_windowing_function, &frame_pre_emph);
+	         /* First-loop envelope */
+	         ArAnalysis(params.lpc_order_vt,params.warping_lambda_vt, params.lp_weighting_function, lp_weight, frame_pre_emph, &A);
+	         /* Second-loop envelope (if IAIF is used) */
+	         if(params.use_iterative_gif) {
+	            ConcatenateFrames(pre_frame, frame, &frame_full);
+	            if(params.warping_lambda_vt != 0.0) {
+	               Filter(A,B,frame_full, &residual);
+	            } else {
+	                WFilter(A,B,frame_full, params.warping_lambda_vt, &residual);
+	            }
+	            ApplyWindowingFunction(params.default_windowing_function, &residual);
+	            ArAnalysis(params.lpc_order_glot_iaif,0.0, NONE, lp_weight, residual, &G);
+	            Filter(G,B,frame,&frame_pre_emph); // Iterated pre-emphasis
+	            ApplyWindowingFunction(params.default_windowing_function, &frame_pre_emph);
+	            ArAnalysis(params.lpc_order_vt,params.warping_lambda_vt, params.lp_weighting_function, lp_weight, frame_pre_emph, &A);
+	         }
+	      /** Unvoiced analysis **/
+	      } else {
+	         GetFrame(data.signal, frame_index, params.frame_shift, &unvoiced_frame, &pre_frame);
+	         ApplyWindowingFunction(params.default_windowing_function, &unvoiced_frame);
+	         //LPC(frame, params.lpc_order_vt, &A);
+	         ArAnalysis(params.lpc_order_vt,params.warping_lambda_vt, NONE, lp_weight, unvoiced_frame, &A);
+	      }
+	      poly_vocal_tract->set_col_vec(frame_index, A);
+	   }
+	} else {
+	   std::cout << "Using external vocal tract LSFs ... " ;
+	   /* Read external vocal tract filter LSFs*/
+	   gsl::matrix external_lsf;
+	   ReadGslMatrix(params.external_lsf_vt_filename, params.data_type, params.lpc_order_vt,  &external_lsf);
+	   if (external_lsf.size2() < poly_vocal_tract->size2()) {
+	      std::cerr << "Warning: external LSF is missing "
+	            << poly_vocal_tract->size2()-external_lsf.size2()
+	            << " frames, zero-padding at the end" << std::endl;
+	   }
+	   gsl::vector a(params.lpc_order_vt+1);
+	   for (size_t i=0; i<poly_vocal_tract->size2(); i++) {
+	      if (i<external_lsf.size2())  {
+	         /* Convert external lsf to filter polynomial */
+	         Lsf2Poly(external_lsf.get_col_vec(i), &a);
+	      } else {
+	         /* Pad missing frames with a flat filter */
+	         a.set_all(0.0);
+	         a(0) = 1.0;
+	      }
+	      poly_vocal_tract->set_col_vec(i, a);
+	   }
 	}
+
+
 
 
 	std::cout << " done." << std::endl;
@@ -687,16 +701,16 @@ void HnrAnalysis(const Param &params, const gsl::vector &source_signal, const gs
 	gsl::vector hnr_interp(fft_mag.size());
 	gsl::vector hnr_erb(hnr_channels);
 
-	int frame_index,i, ind1, ind2;
+	size_t frame_index, i;
 	double val;
-	for(frame_index=0;frame_index<params.number_of_frames;frame_index++) {
+	for(frame_index=0;frame_index<(size_t)params.number_of_frames;frame_index++) {
 
       GetFrame(source_signal, frame_index, params.frame_shift, &frame, NULL);
       //ApplyWindowingFunction(params.default_windowing_function, &frame);
       frame *= kbd_window;
       FFTRadix2(frame, NFFT, &frame_fft);
       fft_mag = frame_fft.getAbs();
-      for(i=0;i<(int)fft_mag.size();i++) {
+      for(i=0;i<fft_mag.size();i++) {
          val = 20*log10(fft_mag(i)); // save to temp to prevent evaluation twice in max
          fft_mag(i) = GSL_MAX(val,MIN_LOG_POWER); // Min log-power = -60dB
       }

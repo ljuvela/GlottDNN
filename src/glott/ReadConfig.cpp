@@ -114,6 +114,12 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
 	if (ConfigLookupString("EXTERNAL_GCI_FILENAME", cfg, default_config, params->external_gci_filename) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 
+   if (ConfigLookupBool("USE_EXTERNAL_LSF_VT", cfg, default_config, &(params->use_external_lsf_vt)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
+   if (ConfigLookupString("EXTERNAL_LSF_VT_FILENAME", cfg, default_config, params->external_lsf_vt_filename) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
 	if (ConfigLookupDouble("GIF_PRE_EMPHASIS_COEFFICIENT", cfg, default_config, &(params->gif_pre_emphasis_coefficient)) == EXIT_FAILURE)
 			return EXIT_FAILURE;
 
@@ -270,7 +276,6 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
 
    if (ConfigLookupBool("SAVE_TO_DATADIR_ROOT", cfg, default_config, &(params->save_to_datadir_root)) == EXIT_FAILURE)
       return EXIT_FAILURE;
-
 
    if (ConfigLookupBool("USE_PITCH_SYNCHRONOUS_ANALYSIS", cfg, default_config, &(params->use_pitch_synchronous_analysis)) == EXIT_FAILURE)
      return EXIT_FAILURE;

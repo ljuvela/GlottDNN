@@ -15,6 +15,7 @@ Param::Param() {
    /* String parameters */
 	external_f0_filename = "";
 	external_gci_filename = "";
+	external_lsf_vt_filename = "";
 	dnn_path_basename = "";
 	file_basename = "";
 	data_directory = "";
@@ -38,6 +39,7 @@ Param::Param() {
 	hnr_order = 5;
 	use_external_f0 = false;
 	use_external_gci = false;
+	use_external_lsf_vt = false;
 	data_type = ASCII;
 	qmf_subband_analysis = false;
 	gif_pre_emphasis_coefficient = 0.97;

@@ -289,6 +289,7 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
       }
       //frame_index_pr = frame_index;
    }
+   CheckNanInf(*excitation_signal);
 }
 
 
@@ -498,7 +499,7 @@ void FilterExcitation(const Param &params, const SynthesisData &data, gsl::vecto
 
    int UPDATE_INTERVAL = params.filter_update_interval_vt;
    signal->copy(data.excitation_signal);
-
+  // std::cout << *signal << std::endl;
    for(sample_index=0;sample_index<(int)signal->size();sample_index++) {
 
       if(sample_index % UPDATE_INTERVAL == 0) {
@@ -515,6 +516,7 @@ void FilterExcitation(const Param &params, const SynthesisData &data, gsl::vecto
                                  sample_index, params.frame_length, params.warping_lambda_vt);
          if(data.fundf(rint(frame_index_double)) == 0.0)
             gain *= params.noise_gain_unvoiced;
+
       }
       /** Normal filtering **/
       if(params.warping_lambda_vt == 0.0) {
@@ -543,6 +545,8 @@ void FilterExcitation(const Param &params, const SynthesisData &data, gsl::vecto
 	    	}
       }
    }
+   /* Replace nan and inf values with zeros */
+   CheckNanInf(*signal);
 }
 
 

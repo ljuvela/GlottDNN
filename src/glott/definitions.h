@@ -28,13 +28,12 @@ public:
 	int lpc_order_glot;
 	int hnr_order;
 	bool use_external_f0;
-	bool use_external_gci;
-	//char *external_f0_filename;
-	//char *external_gci_filename;
-	//char *dnn_path_basename;
-	//char *data_directory;
 	std::string external_f0_filename;
+	bool use_external_gci;
 	std::string external_gci_filename;
+	bool use_external_lsf_vt; // inverse filtering with external vocal tract filter
+	std::string external_lsf_vt_filename;
+
 	std::string dnn_path_basename;
 	std::string data_directory;
 	std::string file_basename;

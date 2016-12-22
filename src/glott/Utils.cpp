@@ -40,6 +40,31 @@ gsl::matrix ElementDivision(const gsl::matrix &A, const gsl::matrix &B) {
 }
 
 /**
+ * Replace Nan and Inf values in vector
+ * Prints a warning message if invalid values are found
+ */
+void CheckNanInf(gsl::vector &vec) {
+   size_t nan_count = 0;
+   size_t inf_count = 0;
+
+   for (size_t i=0; i<vec.size(); i++) {
+      if (isinf(vec(i))) {
+         vec(i) = 0.0;
+         inf_count++;
+      }
+      if (isnan(vec(i))) {
+         vec(i) = 0.0;
+         nan_count++;
+      }
+   }
+
+   if (nan_count > 0 || inf_count > 0)
+      std::cerr << "Warning: NaN values (" << nan_count << ") " <<
+      "and Inf values (" << inf_count << ") found, replaced with zeros" << std::endl;
+
+}
+
+/**
  * Function CheckCommandLineAnalysis
  *
  * Check command line format and print instructions
@@ -110,4 +135,10 @@ void VPrint5(const gsl::vector &vector) {
 	FILE *fid = fopen("p5.dat", "w");
 	vector.fprintf(fid,"%.30f");
 	fclose(fid);
+}
+
+void MPrint1(const gsl::matrix &matrix) {
+   FILE *fid = fopen("m1.dat", "w");
+   matrix.fprintf(fid,"%.30f");
+   fclose(fid);
 }

@@ -76,7 +76,9 @@ int main(int argc, char *argv[]) {
    if(params.use_spectral_matching)
       SpectralMatchExcitation(params, data, &(data.excitation_signal));
 
+
    FilterExcitation(params, data, &(data.signal));
+
 
    std::string out_fname;
    out_fname = GetParamPath("exc", ".exc.wav", params.dir_exc, params);
