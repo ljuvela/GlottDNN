@@ -53,6 +53,7 @@ Param::Param() {
 	use_pulse_interpolation = true;
 	use_highpass_filtering = true;
 	use_waveforms_directly = false;
+	use_paf_unvoiced_synthesis = false;
 	extract_f0 = true;
 	extract_gain = true;
 	extract_lsf_vt = true;

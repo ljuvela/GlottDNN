@@ -34,13 +34,13 @@ void PostFilter(const double &postfilter_coefficient, const int &fs, gsl::matrix
    std::cout << "Using LPC postfiltering with a coefficient of " << postfilter_coefficient << std::endl;
 
 	/* Loop for every index of the LSF matrix */
-	for(frame_index=0;frame_index<lsf->get_cols();frame_index++) {
+	for(frame_index=0; frame_index<lsf->get_cols(); frame_index++) {
 
 		/* Convert LSF to LPC */
-		Lsf2Poly(lsf->get_col_vec(frame_index),&poly_vec);
+		Lsf2Poly(lsf->get_col_vec(frame_index), &poly_vec);
 
 		/* Compute power spectrum */
-		FFTRadix2(poly_vec,POWER_SPECTRUM_FRAME_LEN,&poly_fft);
+		FFTRadix2(poly_vec, POWER_SPECTRUM_FRAME_LEN, &poly_fft);
       fft_mag = poly_fft.getAbs();
       for(i=0;i<fft_mag.size();i++)
          fft_mag(i) = 1.0/pow(fft_mag(i),2);
@@ -240,9 +240,7 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
             ApplyWindowingFunction(params.psola_windowing_function, &pulse);
             break;
          }
-
          OverlapAdd(pulse,sample_index,excitation_signal);
-         //OverlapAdd(p2,sample_index,excitation_signal);
          sample_index += rint(T0);
 
       /** Unvoiced excitation **/
@@ -251,43 +249,37 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
          for(i=0;i<noise.size();i++) {
             noise(i) = gauss_gen.get();
          };
-         energy = LogEnergy2FrameEnergy(data.frame_energy(frame_index),noise.size());
+         energy = LogEnergy2FrameEnergy(data.frame_energy(frame_index), noise.size());
 
          switch (params.excitation_method) {
          case SINGLE_PULSE_EXCITATION:
-            //pulse = GetSinglePulse(noise.size(), energy, single_pulse_base);
             pulse = noise;
             pulse *= params.noise_gain_unvoiced*energy/getEnergy(noise);
             pulse /= 0.5*(double)noise.size()/(double)params.frame_shift; // Compensate OLA gain
             ApplyWindowingFunction(HANN, &pulse);
-
             break;
          case DNN_GENERATED_EXCITATION:
-            //pulse = GetDnnPulse();
-            //pulse = GetDnnPulse(noise.size(), energy, frame_index, data, excDnn);
             pulse = noise;
             pulse *= params.noise_gain_unvoiced*energy/getEnergy(noise);
             pulse /= 0.5*(double)noise.size()/(double)params.frame_shift; // Compensate OLA gain
-            //pulse = GetExternalPulse(noise.size(), energy, frame_index, data.excitation_pulses);
             ApplyWindowingFunction(HANN, &pulse);
             break;
          case PULSES_AS_FEATURES_EXCITATION:
-            //pulse = GetExternalPulse(noise.size(), params.use_pulse_interpolation, energy, frame_index, data.excitation_pulses);
-            pulse = GetExternalPulse(noise.size(), false, energy, frame_index, data.excitation_pulses); // never interpolate noise
-           // pulse = GetExternalPulse(noise.size(), energy, frame_index, data.excitation_pulses);
-            ApplyWindowingFunction(params.psola_windowing_function, &pulse);
+            if (params.use_paf_unvoiced_synthesis) {
+               pulse = GetExternalPulse(noise.size(), false, energy, frame_index, data.excitation_pulses);
+               // TODO: add psola compensation that takes different windows and their energies into account
+               ApplyWindowingFunction(params.psola_windowing_function, &pulse);
+            } else {
+               pulse = noise;
+               pulse *= params.noise_gain_unvoiced*energy/getEnergy(noise);
+               pulse /= 0.5*(double)noise.size()/(double)params.frame_shift; // Compensate OLA gain
+               ApplyWindowingFunction(HANN, &pulse);
+            }
             break;
          }
-
-//         noise *= params.noise_gain_unvoiced*energy/getEnergy(noise);
-//         noise /= 0.5*(double)noise.size()/(double)params.frame_shift; // Compensate OLA gain
-         //ApplyWindowingFunction(HANN,&noise);
-         //OverlapAdd(noise,sample_index,excitation_signal);
-         OverlapAdd(pulse,sample_index,excitation_signal);
-
+         OverlapAdd(pulse, sample_index, excitation_signal);
          sample_index += params.frame_shift;
       }
-      //frame_index_pr = frame_index;
    }
    CheckNanInf(*excitation_signal);
 }

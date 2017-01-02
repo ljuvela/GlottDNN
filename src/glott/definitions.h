@@ -57,6 +57,7 @@ public:
 	bool use_pulse_interpolation;
 	bool use_highpass_filtering;
 	bool use_waveforms_directly;
+	bool use_paf_unvoiced_synthesis;
 	bool extract_f0 ;
 	bool extract_gain ;
 	bool extract_lsf_vt;

@@ -131,6 +131,7 @@ int ReadWavFile(const char *fname, gsl::vector *signal, Param *params) {
  * @return number of parameters
  */
 int EvalFileLength(const char *filename, DataType data_format) {
+   // TODO: change filename to std::string
 
 	FILE *file;
 	char *s = new char[300];

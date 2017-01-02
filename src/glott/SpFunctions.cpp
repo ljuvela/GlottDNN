@@ -1345,8 +1345,8 @@ gsl::vector_int FindHarmonicPeaks(const gsl::vector &fft_mag, const double &f0, 
 }
 
 
-/** Stabilize a polynomial by computing the FFT autocorrelation of
- *  its' inverse power spectrum and perfoming Levinson
+/** Stabilize a filter polynomial by computing the FFT autocorrelation of
+ *  its inverse power spectrum and performing Levinson
  *  author: @mairaksi
  */
 void StabilizePoly(const int &fft_length, gsl::vector *A) {
@@ -1395,7 +1395,6 @@ void Linear2Erb(const gsl::vector &linvec, const int &fs, gsl::vector *erbvec) {
 	for(i=0;i<(int)linvec.size();i++)
 		erb(i) = log10(0.00437*((double)i/((double)linvec.size()-1.0)*((double)fs/2.0))+1.0) / log10(0.00437*((double)fs/2.0)+1.0) * ((double)hnr_channels-SMALL_VALUE);
                                                                                           // Subtract SMALL_VALUE to keep erb indeces within range of hnr_channels
-
 	/* Evaluate values according to ERB rate */
 	for(i=0;i<(int)linvec.size();i++) {
 		j = floor(erb(i));
@@ -1643,21 +1642,17 @@ void SharpenPowerSpectrumPeaks(const gsl::vector_int &peak_indices, const double
 int StabilizeLsf(gsl::vector *lsf) {
 
    /* Minimum LSF separation */
-   //double LSF_EPSILON = 0.005;
    double LSF_EPSILON = 0.01;
    bool ok = false;
    size_t nof_fixes = 0;
-   //std::cout << *lsf << std::endl;
 
    /* Sort guarantees interlacing property */
    lsf->sort();
 
    /* Repeat until LSF is fixed */
    while(ok == false) {
-
       /* Set ok */
       ok = true;
-
       size_t i;
       /* Check and correct values less than zero or greater than pi */
       for(i=0;i<lsf->size();i++) {
@@ -1673,7 +1668,6 @@ int StabilizeLsf(gsl::vector *lsf) {
          } else if((*lsf)(i) > M_PI-LSF_EPSILON) {
             (*lsf)(i) = M_PI-LSF_EPSILON;
             ok = false;
-
          }
          if(gsl_isnan((*lsf)(i))) {
             if(i == 0)
@@ -1683,10 +1677,8 @@ int StabilizeLsf(gsl::vector *lsf) {
             else
                (*lsf)(i) = (*lsf)(i-1)+(*lsf)(i+1)/2.0;
             ok = false;
-
          }
       }
-
       double mean;
       /* Check and correct non-increasing values or coefficients too close */
       for(i=0;i<lsf->size()-1;i++) {

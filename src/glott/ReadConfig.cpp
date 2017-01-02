@@ -11,10 +11,10 @@
 #include "definitions.h"
 #include "ReadConfig.h"
 
-int ConfigLookupInt(const char *config_string, const libconfig::Config &cfg, const bool default_config, int *val) {
+int ConfigLookupInt(const char *config_string, const libconfig::Config &cfg, const bool required, int *val) {
 	int ival;
 	if (cfg.lookupValue(config_string, ival) == false) {
-		if (default_config) {
+		if (required) {
 			std::cerr << "Could not find value: " << config_string << " in default config" << std::endl ;
 			return EXIT_FAILURE;
 		}
@@ -24,10 +24,10 @@ int ConfigLookupInt(const char *config_string, const libconfig::Config &cfg, con
 	return EXIT_SUCCESS;
 }
 
-int ConfigLookupDouble(const char *config_string, const libconfig::Config &cfg, const bool default_config, double *val) {
+int ConfigLookupDouble(const char *config_string, const libconfig::Config &cfg, const bool required, double *val) {
 	double dval;
 	if (cfg.lookupValue(config_string, dval) == false) {
-		if (default_config) {
+		if (required) {
 			std::cerr << "Could not find value: " << config_string << " in default config" << std::endl ;
 			return EXIT_FAILURE;
 		}
@@ -37,10 +37,10 @@ int ConfigLookupDouble(const char *config_string, const libconfig::Config &cfg, 
 	return EXIT_SUCCESS;
 }
 
-int ConfigLookupBool(const char *config_string, const libconfig::Config &cfg, const bool default_config, bool *val) {
+int ConfigLookupBool(const char *config_string, const libconfig::Config &cfg, const bool required, bool *val) {
 	bool bval;
 	if (cfg.lookupValue(config_string, bval) == false) {
-		if (default_config) {
+		if (required) {
 			std::cerr << "Could not find value: " << config_string << " in default config" << std::endl ;
 			return EXIT_FAILURE;
 		}
@@ -50,11 +50,11 @@ int ConfigLookupBool(const char *config_string, const libconfig::Config &cfg, co
 	return EXIT_SUCCESS;
 }
 
-int ConfigLookupCString(const char *config_string, const libconfig::Config &cfg, const bool default_config, char **val) {
+int ConfigLookupCString(const char *config_string, const libconfig::Config &cfg, const bool required, char **val) {
 	std::string sval;
 
 	if (cfg.lookupValue(config_string, sval) == false) {
-		if (default_config) {
+		if (required) {
 			std::cerr << "Could not find value: " << config_string << " in default config" << std::endl ;
 			return EXIT_FAILURE;
 		}
@@ -65,10 +65,10 @@ int ConfigLookupCString(const char *config_string, const libconfig::Config &cfg,
 	return EXIT_SUCCESS;
 }
 
-int ConfigLookupString(const char *config_string, const libconfig::Config &cfg, const bool default_config, std::string &sval) {
+int ConfigLookupString(const char *config_string, const libconfig::Config &cfg, const bool required, std::string &sval) {
 
    if (cfg.lookupValue(config_string, sval) == false) {
-      if (default_config) {
+      if (required) {
          std::cerr << "Could not find value: " << config_string << " in default config" << std::endl ;
          return EXIT_FAILURE;
       }
@@ -77,207 +77,210 @@ int ConfigLookupString(const char *config_string, const libconfig::Config &cfg, 
 }
 
 
-int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, Param *params) {
+int AssignConfigParams(const libconfig::Config &cfg, const bool required, Param *params) {
 
-	if (ConfigLookupInt("SAMPLING_FREQUENCY", cfg, default_config, &(params->fs)) == EXIT_FAILURE)
+	if (ConfigLookupInt("SAMPLING_FREQUENCY", cfg, required, &(params->fs)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 
    params->frame_length_long = (int)round(50/1000.0*(double)params->fs); // Hard coded value of 50ms.
 
    double shift_ms = -1.0;
-   if (ConfigLookupDouble("FRAME_SHIFT", cfg, default_config, &(shift_ms)) == EXIT_FAILURE)
+   if (ConfigLookupDouble("FRAME_SHIFT", cfg, required, &(shift_ms)) == EXIT_FAILURE)
       return EXIT_FAILURE;
-   if( default_config || shift_ms > 0)
+   if( required || shift_ms > 0)
       params->frame_shift = (int)round(shift_ms/1000.0*(double)params->fs);
 
    double frame_ms = -1.0;
-   if (ConfigLookupDouble("FRAME_LENGTH", cfg, default_config, &(frame_ms)) == EXIT_FAILURE)
+   if (ConfigLookupDouble("FRAME_LENGTH", cfg, required, &(frame_ms)) == EXIT_FAILURE)
       return EXIT_FAILURE;
-   if( default_config || frame_ms > 0)
+   if( required || frame_ms > 0)
       params->frame_length = (int)round(frame_ms/1000.0*(double)params->fs);
 
    frame_ms = -1.0;
-   if (ConfigLookupDouble("UNVOICED_FRAME_LENGTH", cfg, default_config, &(frame_ms)) == EXIT_FAILURE)
+   if (ConfigLookupDouble("UNVOICED_FRAME_LENGTH", cfg, required, &(frame_ms)) == EXIT_FAILURE)
       return EXIT_FAILURE;
-   if( default_config || frame_ms > 0)
+   if( required || frame_ms > 0)
       params->frame_length_unvoiced = (int)round(frame_ms/1000.0*(double)params->fs);
 
-	if (ConfigLookupBool("USE_EXTERNAL_F0", cfg, default_config, &(params->use_external_f0)) == EXIT_FAILURE)
+	if (ConfigLookupBool("USE_EXTERNAL_F0", cfg, required, &(params->use_external_f0)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 
-	if (ConfigLookupString("EXTERNAL_F0_FILENAME", cfg, default_config, params->external_f0_filename) == EXIT_FAILURE)
+	if (ConfigLookupString("EXTERNAL_F0_FILENAME", cfg, required, params->external_f0_filename) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 
-	if (ConfigLookupBool("USE_EXTERNAL_GCI", cfg, default_config, &(params->use_external_gci)) == EXIT_FAILURE)
+	if (ConfigLookupBool("USE_EXTERNAL_GCI", cfg, required, &(params->use_external_gci)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 
-	if (ConfigLookupString("EXTERNAL_GCI_FILENAME", cfg, default_config, params->external_gci_filename) == EXIT_FAILURE)
+	if (ConfigLookupString("EXTERNAL_GCI_FILENAME", cfg, required, params->external_gci_filename) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 
-   if (ConfigLookupBool("USE_EXTERNAL_LSF_VT", cfg, default_config, &(params->use_external_lsf_vt)) == EXIT_FAILURE)
+   if (ConfigLookupBool("USE_EXTERNAL_LSF_VT", cfg, required, &(params->use_external_lsf_vt)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-   if (ConfigLookupString("EXTERNAL_LSF_VT_FILENAME", cfg, default_config, params->external_lsf_vt_filename) == EXIT_FAILURE)
+   if (ConfigLookupString("EXTERNAL_LSF_VT_FILENAME", cfg, required, params->external_lsf_vt_filename) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-	if (ConfigLookupDouble("GIF_PRE_EMPHASIS_COEFFICIENT", cfg, default_config, &(params->gif_pre_emphasis_coefficient)) == EXIT_FAILURE)
+	if (ConfigLookupDouble("GIF_PRE_EMPHASIS_COEFFICIENT", cfg, required, &(params->gif_pre_emphasis_coefficient)) == EXIT_FAILURE)
 			return EXIT_FAILURE;
 
-	if (ConfigLookupBool("USE_ITERATIVE_GIF", cfg, default_config, &(params->use_iterative_gif)) == EXIT_FAILURE)
+	if (ConfigLookupBool("USE_ITERATIVE_GIF", cfg, required, &(params->use_iterative_gif)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 
-	if (ConfigLookupInt("LPC_ORDER_GLOT_IAIF", cfg, default_config, &(params->lpc_order_glot_iaif)) == EXIT_FAILURE)
+	if (ConfigLookupInt("LPC_ORDER_GLOT_IAIF", cfg, required, &(params->lpc_order_glot_iaif)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 
-	if (ConfigLookupInt("LPC_ORDER_VT", cfg, default_config, &(params->lpc_order_vt)) == EXIT_FAILURE)
+	if (ConfigLookupInt("LPC_ORDER_VT", cfg, required, &(params->lpc_order_vt)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 
-	if (ConfigLookupInt("LPC_ORDER_GLOT", cfg, default_config, &(params->lpc_order_glot)) == EXIT_FAILURE)
+	if (ConfigLookupInt("LPC_ORDER_GLOT", cfg, required, &(params->lpc_order_glot)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 
-	if (ConfigLookupDouble("WARPING_LAMBDA_VT", cfg, default_config, &(params->warping_lambda_vt)) == EXIT_FAILURE)
+	if (ConfigLookupDouble("WARPING_LAMBDA_VT", cfg, required, &(params->warping_lambda_vt)) == EXIT_FAILURE)
 			return EXIT_FAILURE;
 
-	if (ConfigLookupDouble("AME_DURATION_QUOTIENT", cfg, default_config, &(params->ame_duration_quotient)) == EXIT_FAILURE)
+	if (ConfigLookupDouble("AME_DURATION_QUOTIENT", cfg, required, &(params->ame_duration_quotient)) == EXIT_FAILURE)
 			return EXIT_FAILURE;
 
-	if (ConfigLookupDouble("AME_POSITION_QUOTIENT", cfg, default_config, &(params->ame_position_quotient)) == EXIT_FAILURE)
+	if (ConfigLookupDouble("AME_POSITION_QUOTIENT", cfg, required, &(params->ame_position_quotient)) == EXIT_FAILURE)
 			return EXIT_FAILURE;
 
-	if (ConfigLookupBool("QMF_SUBBAND_ANALYSIS", cfg, default_config, &(params->qmf_subband_analysis)) == EXIT_FAILURE)
+	if (ConfigLookupBool("QMF_SUBBAND_ANALYSIS", cfg, required, &(params->qmf_subband_analysis)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 
-   if (ConfigLookupDouble("MAX_PULSE_LEN_DIFF", cfg, default_config, &(params->max_pulse_len_diff)) == EXIT_FAILURE)
+   if (ConfigLookupDouble("MAX_PULSE_LEN_DIFF", cfg, required, &(params->max_pulse_len_diff)) == EXIT_FAILURE)
          return EXIT_FAILURE;
 
-   if (ConfigLookupInt("PAF_PULSE_LENGTH", cfg, default_config, &(params->paf_pulse_length)) == EXIT_FAILURE)
+   if (ConfigLookupInt("PAF_PULSE_LENGTH", cfg, required, &(params->paf_pulse_length)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-   if (ConfigLookupBool("USE_PULSE_INTERPOLATION", cfg, default_config, &(params->use_pulse_interpolation)) == EXIT_FAILURE)
+   if (ConfigLookupBool("USE_PULSE_INTERPOLATION", cfg, required, &(params->use_pulse_interpolation)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-   if (ConfigLookupBool("HP_FILTERING", cfg, default_config, &(params->use_highpass_filtering)) == EXIT_FAILURE)
+   if (ConfigLookupBool("USE_PAF_UNVOICED", cfg, false, &(params->use_paf_unvoiced_synthesis)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-   if (ConfigLookupBool("USE_WAVEFORMS_DIRECTLY", cfg, default_config, &(params->use_waveforms_directly)) == EXIT_FAILURE)
+   if (ConfigLookupBool("HP_FILTERING", cfg, required, &(params->use_highpass_filtering)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-   if (ConfigLookupBool("EXTRACT_F0", cfg, default_config, &(params->extract_f0)) == EXIT_FAILURE)
+   if (ConfigLookupBool("USE_WAVEFORMS_DIRECTLY", cfg, required, &(params->use_waveforms_directly)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-   if (ConfigLookupBool("EXTRACT_GAIN", cfg, default_config, &(params->extract_gain)) == EXIT_FAILURE)
+   if (ConfigLookupBool("EXTRACT_F0", cfg, required, &(params->extract_f0)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-   if (ConfigLookupBool("EXTRACT_LSF_VT", cfg, default_config, &(params->extract_lsf_vt)) == EXIT_FAILURE)
+   if (ConfigLookupBool("EXTRACT_GAIN", cfg, required, &(params->extract_gain)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-   if (ConfigLookupBool("EXTRACT_LSF_GLOT", cfg, default_config, &(params->extract_lsf_glot)) == EXIT_FAILURE)
+   if (ConfigLookupBool("EXTRACT_LSF_VT", cfg, required, &(params->extract_lsf_vt)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-   if (ConfigLookupBool("EXTRACT_HNR", cfg, default_config, &(params->extract_hnr)) == EXIT_FAILURE)
+   if (ConfigLookupBool("EXTRACT_LSF_GLOT", cfg, required, &(params->extract_lsf_glot)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-   if (ConfigLookupBool("EXTRACT_INFOFILE", cfg, default_config, &(params->extract_infofile)) == EXIT_FAILURE)
+   if (ConfigLookupBool("EXTRACT_HNR", cfg, required, &(params->extract_hnr)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-   if (ConfigLookupBool("EXTRACT_GLOTTAL_EXCITATION", cfg, default_config, &(params->extract_glottal_excitation)) == EXIT_FAILURE)
+   if (ConfigLookupBool("EXTRACT_INFOFILE", cfg, required, &(params->extract_infofile)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-   if (ConfigLookupBool("EXTRACT_GCI_SIGNAL", cfg, default_config, &(params->extract_gci_signal)) == EXIT_FAILURE)
+   if (ConfigLookupBool("EXTRACT_GLOTTAL_EXCITATION", cfg, required, &(params->extract_glottal_excitation)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-   if (ConfigLookupBool("EXTRACT_PULSES_AS_FEATURES", cfg, default_config, &(params->extract_pulses_as_features)) == EXIT_FAILURE)
+   if (ConfigLookupBool("EXTRACT_GCI_SIGNAL", cfg, required, &(params->extract_gci_signal)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-   if (ConfigLookupInt("LPC_ORDER_QMF1", cfg, default_config, &(params->lpc_order_vt_qmf1)) == EXIT_FAILURE)
+   if (ConfigLookupBool("EXTRACT_PULSES_AS_FEATURES", cfg, required, &(params->extract_pulses_as_features)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
+   if (ConfigLookupInt("LPC_ORDER_QMF1", cfg, required, &(params->lpc_order_vt_qmf1)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 
-   if (ConfigLookupInt("LPC_ORDER_QMF2", cfg, default_config, &(params->lpc_order_vt_qmf2)) == EXIT_FAILURE)
+   if (ConfigLookupInt("LPC_ORDER_QMF2", cfg, required, &(params->lpc_order_vt_qmf2)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 
-   if (ConfigLookupDouble("F0_MIN", cfg, default_config, &(params->f0_min)) == EXIT_FAILURE)
+   if (ConfigLookupDouble("F0_MIN", cfg, required, &(params->f0_min)) == EXIT_FAILURE)
          return EXIT_FAILURE;
 
-   if (ConfigLookupDouble("F0_MAX", cfg, default_config, &(params->f0_max)) == EXIT_FAILURE)
+   if (ConfigLookupDouble("F0_MAX", cfg, required, &(params->f0_max)) == EXIT_FAILURE)
          return EXIT_FAILURE;
 
-   if (ConfigLookupDouble("VOICING_THRESHOLD", cfg, default_config, &(params->voicing_threshold)) == EXIT_FAILURE)
+   if (ConfigLookupDouble("VOICING_THRESHOLD", cfg, required, &(params->voicing_threshold)) == EXIT_FAILURE)
          return EXIT_FAILURE;
 
-   if (ConfigLookupDouble("ZCR_THRESHOLD", cfg, default_config, &(params->zcr_threshold)) == EXIT_FAILURE)
+   if (ConfigLookupDouble("ZCR_THRESHOLD", cfg, required, &(params->zcr_threshold)) == EXIT_FAILURE)
          return EXIT_FAILURE;
 
-   if (ConfigLookupDouble("RELATIVE_F0_THRESHOLD", cfg, default_config, &(params->relative_f0_threshold)) == EXIT_FAILURE)
+   if (ConfigLookupDouble("RELATIVE_F0_THRESHOLD", cfg, required, &(params->relative_f0_threshold)) == EXIT_FAILURE)
          return EXIT_FAILURE;
 
-   if (ConfigLookupInt("HNR_ORDER", cfg, default_config, &(params->hnr_order)) == EXIT_FAILURE)
+   if (ConfigLookupInt("HNR_ORDER", cfg, required, &(params->hnr_order)) == EXIT_FAILURE)
          return EXIT_FAILURE;
 
-   if (ConfigLookupDouble("SPEED_SCALE", cfg, default_config, &(params->speed_scale)) == EXIT_FAILURE)
+   if (ConfigLookupDouble("SPEED_SCALE", cfg, required, &(params->speed_scale)) == EXIT_FAILURE)
          return EXIT_FAILURE;
 
-   if (ConfigLookupDouble("PITCH_SCALE", cfg, default_config, &(params->pitch_scale)) == EXIT_FAILURE)
+   if (ConfigLookupDouble("PITCH_SCALE", cfg, required, &(params->pitch_scale)) == EXIT_FAILURE)
          return EXIT_FAILURE;
 
-   if (ConfigLookupDouble("POSTFILTER_COEFFICIENT", cfg, default_config, &(params->postfilter_coefficient)) == EXIT_FAILURE)
+   if (ConfigLookupDouble("POSTFILTER_COEFFICIENT", cfg, required, &(params->postfilter_coefficient)) == EXIT_FAILURE)
          return EXIT_FAILURE;
 
-   if (ConfigLookupBool("USE_POSTFILTERING", cfg, default_config, &(params->use_postfiltering)) == EXIT_FAILURE)
+   if (ConfigLookupBool("USE_POSTFILTERING", cfg, required, &(params->use_postfiltering)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-   if (ConfigLookupBool("USE_TRAJECTORY_SMOOTHING", cfg, default_config, &(params->use_trajectory_smoothing)) == EXIT_FAILURE)
+   if (ConfigLookupBool("USE_TRAJECTORY_SMOOTHING", cfg, required, &(params->use_trajectory_smoothing)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-   if (ConfigLookupBool("USE_SPECTRAL_MATCHING", cfg, default_config, &(params->use_spectral_matching)) == EXIT_FAILURE)
+   if (ConfigLookupBool("USE_SPECTRAL_MATCHING", cfg, required, &(params->use_spectral_matching)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-	if (ConfigLookupInt("LSF_VT_SMOOTH_LEN", cfg, default_config, &(params->lsf_vt_smooth_len)) == EXIT_FAILURE)
+	if (ConfigLookupInt("LSF_VT_SMOOTH_LEN", cfg, required, &(params->lsf_vt_smooth_len)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 
-	if (ConfigLookupInt("LSF_GLOT_SMOOTH_LEN", cfg, default_config, &(params->lsf_glot_smooth_len)) == EXIT_FAILURE)
+	if (ConfigLookupInt("LSF_GLOT_SMOOTH_LEN", cfg, required, &(params->lsf_glot_smooth_len)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 
-	if (ConfigLookupInt("GAIN_SMOOTH_LEN", cfg, default_config, &(params->gain_smooth_len)) == EXIT_FAILURE)
+	if (ConfigLookupInt("GAIN_SMOOTH_LEN", cfg, required, &(params->gain_smooth_len)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 
-	if (ConfigLookupInt("HNR_SMOOTH_LEN", cfg, default_config, &(params->hnr_smooth_len)) == EXIT_FAILURE)
+	if (ConfigLookupInt("HNR_SMOOTH_LEN", cfg, required, &(params->hnr_smooth_len)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 
-   if (ConfigLookupDouble("NOISE_GAIN_VOICED", cfg, default_config, &(params->noise_gain_voiced)) == EXIT_FAILURE)
+   if (ConfigLookupDouble("NOISE_GAIN_VOICED", cfg, required, &(params->noise_gain_voiced)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-   if (ConfigLookupDouble("NOISE_LOW_FREQ_LIMIT_VOICED", cfg, default_config, &(params->noise_low_freq_limit_voiced)) == EXIT_FAILURE)
+   if (ConfigLookupDouble("NOISE_LOW_FREQ_LIMIT_VOICED", cfg, required, &(params->noise_low_freq_limit_voiced)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-   if (ConfigLookupDouble("NOISE_GAIN_UNVOICED", cfg, default_config, &(params->noise_gain_unvoiced)) == EXIT_FAILURE)
+   if (ConfigLookupDouble("NOISE_GAIN_UNVOICED", cfg, required, &(params->noise_gain_unvoiced)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-	if (ConfigLookupString("DNN_WEIGHT_PATH", cfg, default_config, params->dnn_path_basename) == EXIT_FAILURE)
+	if (ConfigLookupString("DNN_WEIGHT_PATH", cfg, required, params->dnn_path_basename) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 
-   if (ConfigLookupBool("USE_PAF_ENERGY_NORM", cfg, default_config, &(params->use_paf_energy_normalization)) == EXIT_FAILURE)
+   if (ConfigLookupBool("USE_PAF_ENERGY_NORM", cfg, required, &(params->use_paf_energy_normalization)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
 
    double update_interval_ms=0;
-	if (ConfigLookupDouble("FILTER_UPDATE_INTERVAL_VT", cfg, default_config, &(update_interval_ms)) == EXIT_FAILURE)
+	if (ConfigLookupDouble("FILTER_UPDATE_INTERVAL_VT", cfg, required, &(update_interval_ms)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
-	if( default_config || update_interval_ms > 0)
+	if( required || update_interval_ms > 0)
 	   params->filter_update_interval_vt = (int)round(update_interval_ms/1000.0*(double)params->fs);
 
 	update_interval_ms=0;
-	if (ConfigLookupDouble("FILTER_UPDATE_INTERVAL_SPECMATCH", cfg, default_config, &(update_interval_ms)) == EXIT_FAILURE)
+	if (ConfigLookupDouble("FILTER_UPDATE_INTERVAL_SPECMATCH", cfg, required, &(update_interval_ms)) == EXIT_FAILURE)
 		return EXIT_FAILURE;
-	if( default_config || update_interval_ms > 0)
+	if( required || update_interval_ms > 0)
 	    params->filter_update_interval_specmatch = (int)round(update_interval_ms/1000.0*(double)params->fs);
 
-   if (ConfigLookupString("DATA_DIRECTORY", cfg, default_config, params->data_directory) == EXIT_FAILURE)
+   if (ConfigLookupString("DATA_DIRECTORY", cfg, required, params->data_directory) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-   if (ConfigLookupBool("SAVE_TO_DATADIR_ROOT", cfg, default_config, &(params->save_to_datadir_root)) == EXIT_FAILURE)
+   if (ConfigLookupBool("SAVE_TO_DATADIR_ROOT", cfg, required, &(params->save_to_datadir_root)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-   if (ConfigLookupBool("USE_PITCH_SYNCHRONOUS_ANALYSIS", cfg, default_config, &(params->use_pitch_synchronous_analysis)) == EXIT_FAILURE)
+   if (ConfigLookupBool("USE_PITCH_SYNCHRONOUS_ANALYSIS", cfg, required, &(params->use_pitch_synchronous_analysis)) == EXIT_FAILURE)
      return EXIT_FAILURE;
 
    /* Lookup for parameter directory paths, always optional */
@@ -298,9 +301,9 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
 
 	/* Data Format */
 	str.clear();
-	if (ConfigLookupString("DATA_TYPE", cfg, default_config, str) == EXIT_FAILURE)
+	if (ConfigLookupString("DATA_TYPE", cfg, required, str) == EXIT_FAILURE)
 	   return EXIT_FAILURE;
-	if( default_config || str != "") {
+	if( required || str != "") {
 	   if (str == "ASCII")
 	      params->data_type = ASCII;
 	   else if (str == "DOUBLE")
@@ -315,9 +318,9 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
 
 	/* Signal Polarity */
 	str.clear();
-	if (ConfigLookupString("SIGNAL_POLARITY", cfg, default_config, str) == EXIT_FAILURE)
+	if (ConfigLookupString("SIGNAL_POLARITY", cfg, required, str) == EXIT_FAILURE)
 	   return EXIT_FAILURE;
-	if( default_config || str != "") {
+	if( required || str != "") {
 	   if (str == "DEFAULT")
 	      params->signal_polarity = POLARITY_DEFAULT;
 	   else if (str == "INVERT")
@@ -330,9 +333,9 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
 
 	/* LP weighting function */
 	str.clear();
-	if (ConfigLookupString("LP_WEIGHTING_FUNCTION", cfg, default_config, str) == EXIT_FAILURE)
+	if (ConfigLookupString("LP_WEIGHTING_FUNCTION", cfg, required, str) == EXIT_FAILURE)
 	   return EXIT_FAILURE;
-	if( default_config || str != "") {
+	if( required || str != "") {
 	   if (str == "NONE")
 	      params->lp_weighting_function= NONE;
 	   else if (str == "AME")
@@ -345,9 +348,9 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
 
 	/* Excitation method */
 	str.clear();
-	if (ConfigLookupString("EXCITATION_METHOD", cfg, default_config, str) == EXIT_FAILURE)
+	if (ConfigLookupString("EXCITATION_METHOD", cfg, required, str) == EXIT_FAILURE)
 	   return EXIT_FAILURE;
-	if( default_config || str != "") {
+	if( required || str != "") {
 	   if (str == "SINGLE_PULSE")
 	      params->excitation_method = SINGLE_PULSE_EXCITATION;
 	   else if (str == "DNN_GENERATED")
@@ -360,9 +363,9 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
 
 	/* PSOLA window for synthesis */
 	str.clear();
-	if (ConfigLookupString("PSOLA_WINDOW", cfg, default_config, str) == EXIT_FAILURE)
+	if (ConfigLookupString("PSOLA_WINDOW", cfg, required, str) == EXIT_FAILURE)
 	   return EXIT_FAILURE;
-	if( default_config || str != "") {
+	if( required || str != "") {
 	   if (str == "NONE")
 	      params->psola_windowing_function = RECT;
 	   else if (str == "COSINE")
@@ -375,9 +378,9 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
 
    /* Pulses-as-features analysis window */
    str.clear();
-   if (ConfigLookupString("PAF_WINDOW", cfg, default_config, str) == EXIT_FAILURE)
+   if (ConfigLookupString("PAF_WINDOW", cfg, required, str) == EXIT_FAILURE)
       return EXIT_FAILURE;
-   if( default_config || str != "") {
+   if( required || str != "") {
       if (str == "NONE")
          params->paf_analysis_window = RECT;
       else if (str == "COSINE")
@@ -393,7 +396,7 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool default_config, 
 }
 
 
-int ReadConfig(const char *filename, const bool default_config, Param *params) {
+int ReadConfig(const char *filename, const bool required, Param *params) {
 
    libconfig::Config cfg;
 	/* Read the file. If there is an error, report it and exit. */
@@ -413,7 +416,7 @@ int ReadConfig(const char *filename, const bool default_config, Param *params) {
 		return(EXIT_FAILURE);
 	}
 
-	AssignConfigParams(cfg, default_config, params);
+	AssignConfigParams(cfg, required, params);
 	return EXIT_SUCCESS;
 }
 
