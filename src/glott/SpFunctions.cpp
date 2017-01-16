@@ -22,6 +22,12 @@
 #include "definitions.h"
 #include "SpFunctions.h"
 
+/* Initialize global rng */
+#include <gslwrap/random_generator.h>
+#include <gslwrap/random_number_distribution.h>
+gsl::random_generator rand_gen; // TODO: take time as seed, default seed=0
+gsl::gaussian_random global_randn(rand_gen);
+
 void Filter(const gsl::vector &b, const gsl::vector &a, const gsl::vector &x, gsl::vector *y) {
 	int i,j;
 	double sum;
@@ -1868,3 +1874,46 @@ void Lp2Walp(const gsl::vector &a_orig,const double &alpha, gsl::vector *a_w) {
 	StabilizePoly(4096, a_w);
 }
 
+/**
+ * Function that randomizes phase of gsl::vector, while keeping the amplitude
+ *
+ **/
+void RandomizePhase(gsl::vector *frame) {
+
+   /* Noise generation */
+//   gsl::random_generator rand_gen;
+//   gsl::gaussian_random random_gauss_gen(rand_gen);
+
+   /* FFT of frame */
+   size_t NFFT = NextPow2(frame->size());
+   ComplexVector frame_fft;
+   FFTRadix2(*frame, NFFT, &frame_fft);
+   gsl::vector fft_mag = frame_fft.getAbs();
+   gsl::vector fft_phase = frame_fft.getAng();
+
+   //std::cout << "randomizing phase" << std::endl;
+
+
+   double phi;
+   size_t i;
+   /* Set phase to random */
+
+   for (i=0; i<frame_fft.getSize(); i++) {
+      phi = global_randn.get();
+      frame_fft.setReal(i, fft_mag(i)*cos(phi));
+      frame_fft.setImag(i, fft_mag(i)*sin(phi));
+   }
+
+   /* Random shift  */
+   /*
+   double x = global_randn.get();
+   for (i=0; i<frame_fft.getSize(); i++) {
+      phi = fft_phase(i) + M_PI*x;
+      frame_fft.setReal(i, fft_mag(i)*cos(phi));
+      frame_fft.setImag(i, fft_mag(i)*sin(phi));
+   }
+   */
+
+   IFFTRadix2(frame_fft,frame);
+
+}

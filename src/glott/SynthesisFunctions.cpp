@@ -267,6 +267,8 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
          case PULSES_AS_FEATURES_EXCITATION:
             if (params.use_paf_unvoiced_synthesis) {
                pulse = GetExternalPulse(noise.size(), false, energy, frame_index, data.excitation_pulses);
+               // TODO: phase scramble
+                RandomizePhase(&pulse);
                // TODO: add psola compensation that takes different windows and their energies into account
                ApplyWindowingFunction(params.psola_windowing_function, &pulse);
             } else {
