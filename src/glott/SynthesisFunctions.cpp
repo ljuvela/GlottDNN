@@ -268,7 +268,7 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
             if (params.use_paf_unvoiced_synthesis) {
                pulse = GetExternalPulse(noise.size(), false, energy, frame_index, data.excitation_pulses);
                // TODO: phase scramble
-                RandomizePhase(&pulse);
+               // RandomizePhase(&pulse);
                // TODO: add psola compensation that takes different windows and their energies into account
                ApplyWindowingFunction(params.psola_windowing_function, &pulse);
             } else {
@@ -309,11 +309,10 @@ void HarmonicModification(const Param &params, const SynthesisData &data, gsl::v
    ComplexVector noise_vec_fft;
    gsl::vector noise_vec(frame.size());
 
-   /* Generate random Gaussian noise*/
-   gsl::vector noise_long(excitation_signal->size());
-   for(size_t j=0;j<noise_long.size();j++)
-      noise_long(j) = random_gauss_gen.get();
-
+   /* Generate random Gaussian noise (whole signal length)*/
+   //gsl::vector noise_long(excitation_signal->size());
+   //for(size_t j=0;j<noise_long.size();j++)
+   //   noise_long(j) = random_gauss_gen.get();
 
    /* Copy excitation signal and re-initialize for overlap-add*/
    gsl::vector excitation_orig(*excitation_signal);
@@ -344,7 +343,8 @@ void HarmonicModification(const Param &params, const SynthesisData &data, gsl::v
       if(data.fundf(frame_index) > 0) {
          UpperLowerEnvelope(fft_mag, data.fundf(frame_index), params.fs, &fft_upper_env, &fft_lower_env);
       } else {
-         UpperLowerEnvelope(fft_mag, 100.0, params.fs, &fft_upper_env, &fft_lower_env);
+         // Unvoiced pseudo-pitch is the frame_shift
+         UpperLowerEnvelope(fft_mag, (double)params.fs/(double)params.frame_shift, params.fs, &fft_upper_env, &fft_lower_env);
       }
 
       /* Convert HNR from ERB to linear frequency scale */

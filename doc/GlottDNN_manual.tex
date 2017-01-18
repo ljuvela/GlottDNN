@@ -1,0 +1,219 @@
+\documentclass[a4paper, 11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[toc,page]{appendix}
+\usepackage{titlesec}
+
+\usepackage[margin=1in,footskip=0.25in]{geometry}
+\usepackage{color}
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  linktoc=all,
+  linkcolor=blue,
+}
+
+%\pagestyle{headings}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LE,RO]{\emph{\leftmark}}
+\fancyhead[RE,LO]{\textsc{GlottDNN user manual}}
+\fancyfoot[CE,CO]{\thepage}
+\fancyfoot[L,R]{}
+
+\titleformat{\section}
+  {\Large\scshape}{\thesection}{1em}{}
+
+  
+\titleformat{\subsection}
+  {\normalsize\bfseries}{\thesubsection}{2em}{}
+
+\titleformat{\subsubsection}
+  {\large\slshape}{\thesubsubsection}{2em}{}
+
+
+
+\onecolumn
+
+%\title{GlottDNN V.0.0.1 Manual}
+
+%\author{Manu Airaksinen \& Lauri Juvela}
+
+
+\begin{document}
+
+\begin{titlepage}
+\begin{center}
+~\\[3cm]
+\line(1,0){450} \\[1cm]
+\Huge{\textsf{\textsc{GlottDNN}}}\\[1cm]
+\huge{\textmd{A full-band glottal vocoder for\\
+	 statistical parametric speech synthesis}}\\[0.5cm]
+\line(1,0){450} \\[2cm] 
+\Huge{\textsc{user manual}}\\
+\huge{Version 0.1}\\[2cm] 
+
+\Large{\today \\
+      Manu Airaksinen \& Lauri Juvela\\}
+	
+\end{center}
+\end{titlepage}
+\stepcounter{page}
+
+\tableofcontents
+
+\newpage
+
+\section{Introduction}
+
+\subsection{Background}
+
+\subsection{Licence and distribution}
+
+
+\subsection{Authors \& contact}
+
+\subsection{Acknowledgements}
+
+\section{Quick-start guide}
+
+\subsection{Installation}
+
+The vocoder C++ code has the following library dependencies:
+
+\begin{itemize}
+	\item \texttt{GSL} (GNU scientific library), for basic linear algebra and FFT etc.
+	\item \texttt{libsndfile}, for reading and writing audio files
+	\item \texttt{libconfig}, for reading structured configuration files
+\end{itemize}
+%
+Usually the best way to install the dependencies is with the system package manager. 
+
+Alternatively, you may download the source code for the libraries and compile them yourself. For example in Ubuntu, install the packages 
+
+libgsl0-dev 
+libsndfile1-dev
+libconfig++-dev
+
+\begin{itemize}
+	\item[] \href{https://www.gnu.org/software/gsl/}{https://www.gnu.org/software/gsl/}
+	\item[] \href{http://www.mega-nerd.com/libsndfile/}{http://www.mega-nerd.com/libsndfile/}
+	\item[] \href{http://www.hyperrealm.com/libconfig/ }{http://www.hyperrealm.com/libconfig/}
+\end{itemize}
+
+
+Additionally, this package uses the C++ wrappers for GSL provided at 
+\href{http://gslwrap.sourceforge.net}{http://gslwrap.sourceforge.net}.
+
+libgsl0-dev 
+libsndfile1-dev
+libconfig++-dev
+
+We recommend to use the GitHub version to get the latest updates, and for the ease of other people contributing to the development 
+%
+\texttt{
+git clone https://github.com/ljuvela/GlottDNN.git 
+}
+
+
+
+\subsection{Configuration}
+
+\subsection{Running Analysis}
+
+\subsection{Running Synthesis}
+
+\section{GlottDNN Analysis}
+
+\subsection{Technical description}
+TODO: Rundown of block diagram etc.
+
+\subsection{Spectral (vocal tract) estimation}
+
+\subsubsection{Quasi-closed phase analysis (QCP)}
+
+\subsubsection{Iterative adaptive inverse filtering (IAIF)}
+
+\subsubsection{Frequency-warped time-weighted linear prediction (WWLP)}
+
+\subsubsection{Quadrature mirror filter (QMF) sub-band analysis}
+
+\subsection{Harmonic-to-noise ratio (HNR) estimation}
+
+\subsection{Analysis features}
+
+\section{GlottDNN Synthesis}
+
+\subsection{Technical description}
+TODO: Rundown of block diagram etc.
+
+\subsection{Glottal excitation generation}
+
+\subsubsection{DNN-based excitation generation}
+
+\subsubsection{Pulses-as-features excitation}
+
+\subsubsection{Library pulse excitation}
+
+\subsection{Training of excitation DNN}
+
+\section{Text-to-speech (TTS) pipeline integration}
+
+\section{Configuration file explained}
+
+\subsection{General shared parameters}
+
+\begin{enumerate}
+    \item[]  SAMPLING\_FREQUENCY : 
+    Sampling frequency should match that of the wav file
+    \item[]  FRAME\_LENGTH :
+    Analysis frame length (in ms)
+    \item[]   UNVOICED\_FRAME\_LENGTH :
+    Analysis frame length in unvoiced frames. Shorter frames can better capture plosives and other impulse-like unvoiced events.
+    \item[] F0\_FRAME\_LENGTH : Frame length used for fundamental frequency analysis. 
+    \item[] FRAME\_SHIFT :
+    Frame rate (in ms)
+    \item[] LPC\_ORDER\_VT : 
+    LPC order for the vocal tract filter
+    \item[] LPC\_ORDER\_GLOT :
+    LPC order for the glottal source
+    \item[] HNR\_ORDER :
+    Number of ERB bands for Harmonic-to-noise ratio
+    \item[] DATA\_TYPE : Data type for saving and reading parameters. Valid types are "ASCII" / "DOUBLE" / "FLOAT"    
+\end{enumerate}
+
+\subsection{Pulse extraction related parameters}
+
+\begin{enumerate}
+    \item[]                                        
+    MAX\_PULSE\_LEN\_DIFF :
+    Percentage of how much pulse length can differ from F0. Pulses are searched iteratively until the nearest pulse fulfilling the length condition is found.     
+    \item[]
+    PAF\_PULSE\_LENGTH :
+    Pulses-as-features length in samples. If interpolation is not used, this should be large enough to fit two pitch periods at the lowest F0.
+    \item[] 
+    USE\_PULSE\_INTERPOLATION :
+    If true, two pitch-period pulses are interpolated to fill the feature vector. If false, the pulse is only centered at GCI.
+    \item[] 
+    USE\_WAVEFORMS\_DIRECTLY :
+    If true, the speech waveform is used directly instead of the inverse filtered waveform.
+    \item[]
+    USE\_FOUR\_PERIOD\_PULSES :
+    If true, Four pitch-periods are used instead of two.
+    \item[] PAF\_WINDOW :
+    Select the windowing function applied to the pulse at analysis. Valid options are 
+    "NONE"/"HANN"/"COSINE"/"KBD"
+    \item[]
+    USE\_PAF\_ENERGY\_NORM :
+    Normalize the pulse to unit energy.
+\end{enumerate}
+
+
+\newpage
+
+\begin{appendices}
+\section{Configuration file description}
+\section{Excitation DNN file format}
+\end{appendices}
+
+\end{document}

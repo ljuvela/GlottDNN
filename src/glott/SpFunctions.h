@@ -55,6 +55,7 @@ double Skewness(const gsl::vector &data);
 int FindPeaks(const gsl::vector &vec, const double &threshold, gsl::vector_int *index, gsl::vector *value);
 gsl::vector_int FindHarmonicPeaks(const gsl::vector &fft_mag, const double &f0, const int &fs);
 void StabilizePoly(const int &fft_length, gsl::vector *A);
+void StabilizePoly(const int &fft_length, const gsl::vector &A_orig, gsl::vector *A_new);
 gsl::vector_int LinspaceInt(const int &start_val, const int &hop_val,const int &end_val);
 void Linear2Erb(const gsl::vector &linvec, const int &fs, gsl::vector *erbvec);
 void Erb2Linear(const gsl::vector &vector_erb, const int &fs,  gsl::vector *vector_lin);
@@ -74,5 +75,6 @@ void MovingAverageFilter(const size_t &filterlen, gsl::matrix *mat);
 void Leja(gsl::vector *lsfvec);
 void Lp2Walp(const gsl::vector &a_orig,const double &alpha, gsl::vector *a_w);
 void RandomizePhase(gsl::vector *frame);
+void WarpLP(const gsl::vector &a_orig, double alpha, gsl::vector *a_w);
 
 #endif /* SRC_GLOTT_SPFUNCTIONS_H_ */

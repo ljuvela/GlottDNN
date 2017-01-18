@@ -390,22 +390,49 @@ int InverseFilter(const Param &params, const AnalysisData &data, gsl::matrix *po
    gsl::vector a_glot(params.lpc_order_glot+1);
    gsl::vector b(1);b(0) = 1.0;
 
+   // for linear frequency scale inverse filtering
+   gsl::vector a_lin(params.lpc_order_vt+1);
+   gsl::vector a_lin_high_order(3*params.lpc_order_vt+1); // arbitrary high order
+   size_t NFFT = 4096;
+   gsl::vector impulse(NFFT);
+   gsl::vector imp_response(NFFT);
+   gsl::vector pre_frame_high_order(2*a_lin_high_order.size());
+   gsl::vector frame_full_high_order(frame.size() + pre_frame_high_order.size());
+
 	for(frame_index=0;frame_index<(size_t)params.number_of_frames;frame_index++) {
       if(params.use_pitch_synchronous_analysis) {
          GetPitchSynchFrame(params, data.signal, data.gci_inds, frame_index, params.frame_shift,
                             data.fundf(frame_index),&frame, &pre_frame);
          frame_residual.resize(frame.size());
-      } else
+      } else {
          GetFrame(data.signal, frame_index, params.frame_shift, &frame, &pre_frame);
+         GetFrame(data.signal, frame_index, params.frame_shift, &frame, &pre_frame_high_order);
+      }
 
       ConcatenateFrames(pre_frame, frame, &frame_full);
+      ConcatenateFrames(pre_frame_high_order, frame, &frame_full_high_order);
+
       if(params.warping_lambda_vt == 0.0) {
          Filter(data.poly_vocal_tract.get_col_vec(frame_index),b,frame_full,&frame_residual);
       } else {
-         WFilter(data.poly_vocal_tract.get_col_vec(frame_index),b,frame_full,params.warping_lambda_vt,&frame_residual);
-         if( (data.fundf(frame_index) != 0.0) && (frame_residual.max() > -1.0*frame_residual.min()) ) { // Warped residual seems to be switching the polarity on occasion
-            frame_residual *= -1.0;
-         }
+         // BOF inverse filter always with linear frequency axis high order fitted version
+        // WarpLP(data.poly_vocal_tract.get_col_vec(frame_index), -1.0*params.warping_lambda_vt, &a_lin);
+         gsl::vector a_warp(data.poly_vocal_tract.get_col_vec(frame_index));
+       //  WarpLP(a_lin, 1.0*params.warping_lambda_vt, &a_warp);
+
+//         StabilizePoly(NFFT, &a_lin); // TODO: fit to higher order!!
+//         StabilizePoly(1024, a_lin, &a_lin_high_order);
+//         Filter(a_lin, b, frame_full, &frame_residual);
+         // EOF
+
+         // get warped filter linear frequency response via impulse response
+         imp_response.set_zero();
+         impulse.set_zero();
+         impulse(a_lin_high_order.size()) = 1.0; // give pre-frame (only affects phase, not filter fit)
+//         WFilter(data.poly_vocal_tract.get_col_vec(frame_index), b,impulse, params.warping_lambda_vt, &imp_response); // get inverse filter impulse response
+         WFilter(a_warp, b,impulse, params.warping_lambda_vt, &imp_response); // get inverse filter impulse response
+         StabilizePoly(NFFT, imp_response, &a_lin_high_order); // Do high-order LP fit on the inverse filter (FIR polynomial)
+         Filter(a_lin_high_order, b, frame_full_high_order, &frame_residual); // Linear filtering
       }
 
 

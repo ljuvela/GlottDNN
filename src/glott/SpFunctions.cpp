@@ -769,7 +769,7 @@ void ConcatenateFrames(const gsl::vector &frame1, const gsl::vector &frame2, gsl
  * Warped FIR/IIR filter.
  *
  * This function is more or less adapted from WarpTB (MATLAB toolbox for frequency-warped signal processing)
- * authored by Aki H\E4rm\E4 and Matti Karjalainen.
+ * authored by Aki Harma and Matti Karjalainen.
  *
  * @param signal signal vector with preframe
  * @param A filter numerator
@@ -1350,33 +1350,55 @@ gsl::vector_int FindHarmonicPeaks(const gsl::vector &fft_mag, const double &f0, 
    return peak_inds;
 }
 
-
 /** Stabilize a filter polynomial by computing the FFT autocorrelation of
  *  its inverse power spectrum and performing Levinson
  *  author: @mairaksi
  */
 void StabilizePoly(const int &fft_length, gsl::vector *A) {
 
-	ComplexVector a_fft;
-	FFTRadix2(*A,(size_t)fft_length,&a_fft);
+   ComplexVector a_fft;
+   FFTRadix2(*A,(size_t)fft_length,&a_fft);
 
-	gsl::vector a_mag = a_fft.getAbs();
-	size_t i;
-	double thresh = 0.0001;
-	for(i=0;i<a_mag.size();i++) {
+   gsl::vector a_mag = a_fft.getAbs();
+   size_t i;
+   double thresh = 0.0001;
+   for(i=0;i<a_mag.size();i++) {
       a_mag(i) = 1.0/GSL_MAX(pow(a_mag(i),2),thresh);
-	}
+   }
 
-	a_fft.setAllImag(0.0);
-	a_fft.setReal(a_mag);
+   a_fft.setAllImag(0.0);
+   a_fft.setReal(a_mag);
 
-	gsl::vector ac(A->size());
-	IFFTRadix2(a_fft, &ac);
+   gsl::vector ac(A->size());
+   IFFTRadix2(a_fft, &ac);
 
-	Levinson(ac, A);
-
+   Levinson(ac, A);
 }
 
+/** Stabilize a filter polynomial by computing the FFT autocorrelation of
+ *  its inverse power spectrum and performing Levinson
+ *  This version enables the change or filter order in the process
+ */
+void StabilizePoly(const int &fft_length, const gsl::vector &A_orig, gsl::vector *A_new) {
+
+   ComplexVector a_fft;
+   FFTRadix2(A_orig,(size_t)fft_length,&a_fft);
+
+   gsl::vector a_mag = a_fft.getAbs();
+   size_t i;
+   double thresh = 0.0001;
+   for(i=0;i<a_mag.size();i++) {
+      a_mag(i) = 1.0/GSL_MAX(pow(a_mag(i),2),thresh);
+   }
+
+   a_fft.setAllImag(0.0);
+   a_fft.setReal(a_mag);
+
+   gsl::vector ac(A_new->size());
+   IFFTRadix2(a_fft, &ac);
+
+   Levinson(ac, A_new);
+}
 
 gsl::vector_int LinspaceInt(const int &start_val, const int &hop_val,const int &end_val) {
    int N = floor((end_val-start_val)/hop_val)+1;
@@ -1916,4 +1938,34 @@ void RandomizePhase(gsl::vector *frame) {
 
    IFFTRadix2(frame_fft,frame);
 
+}
+
+
+/**
+ * Function for warping linear predictor polynomials
+ *
+ * Use positive alpha for WLP -> LP and negative for LP -> WLP
+ *
+ */
+void WarpLP(const gsl::vector &a_orig, double alpha, gsl::vector *a_w) {
+
+   int i,j,m;
+   int N = a_w->size()-1;
+   int M = a_orig.size()-1;
+   gsl::vector a_prev(N+1,true);
+
+   for(i=M;i>=0;i--) {
+      // For m=0:
+      (*a_w)(0) = a_orig(i) + alpha*a_prev(0);
+      // For m=1:
+      (*a_w)(1) = (1-alpha*alpha)*a_prev(0) + alpha*a_prev(1);
+      // For m=2:N
+      for(m=2;m<N+1;m++) {
+         (*a_w)(m) = a_prev(m-1) + alpha*(a_prev(m)-(*a_w)(m-1));
+      }
+      for(j=0;j<N+1;j++) {
+         a_prev(j) = (*a_w)(j);
+      }
+   }
+   (*a_w) *= 1.0/(*a_w)(0);
 }
