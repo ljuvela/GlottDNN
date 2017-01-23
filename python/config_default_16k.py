@@ -1,6 +1,6 @@
 # run flags
-make_dirs = True
-make_scp = True
+make_dirs = False
+make_scp = False
 do_sptk_pitch_analysis = False
 do_reaper_pitch_analysis = False
 do_glott_vocoder_analysis = False
@@ -16,7 +16,7 @@ datadir = prjdir + '/data/slt16'
 # general parameters
 sampling_frequency = 16000
 warping_lambda = 0.00
-use_external_gci = True
+use_external_gci = False
 
 
 # programs
@@ -31,7 +31,7 @@ config_default = prjdir + '/config/config_default_16k.cfg'
 # nn input params
 inputs = ['f0', 'gain', 'hnr', 'lsfg', 'lsf']
 input_exts = ['.F0', '.Gain', '.HNR', '.LSFglot','.LSF']
-input_dims = [1, 1, 0, 10, 30] # set feature to zero if not used
+input_dims = [1, 1, 0, 10, 24] # set feature to zero if not used
 outputs = ['paf']
 output_exts = ['.PAF']
 output_dims = [400]
@@ -40,8 +40,12 @@ output_dims = [400]
 dnn_name = 'slt16'
 train_data_dir = prjdir + '/nndata/traindata/' + dnn_name 
 weights_data_dir = prjdir + '/nndata/weights/' + dnn_name
-data_buffer_size = 100
+#data_buffer_size = 100
 remove_unvoiced_frames = True
+validation_ratio = 0.2
+test_ratio = 0.1
+max_number_of_files = 30
+
 
 #train_set = [1, 2 , 3, 4, 5]
 #train_set = [3,4,5,6,7,8]

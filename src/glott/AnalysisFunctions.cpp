@@ -538,7 +538,6 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
       else
          pulselen = params.paf_pulse_length;
 
-
       size_t j;
       gsl::vector paf_pulse(params.paf_pulse_length,true);
       gsl::vector pulse;

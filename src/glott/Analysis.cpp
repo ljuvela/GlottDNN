@@ -85,7 +85,6 @@ int main(int argc, char *argv[]) {
       std::cout << "Usage: Analysis <wavfile.wav> <config_default.cfg> (<config_usr.cfg>)" << std::endl;
    }
 
-
    /* Read configuration file */
    Param params;
    if (ReadConfig(default_config_filename, true, &params) == EXIT_FAILURE)
@@ -148,11 +147,6 @@ int main(int argc, char *argv[]) {
 
    /* Write analyzed features to files */
    data.SaveData(params);
-
-//   WriteGslVector("foo.f0",FLOAT,data.fundf);
-//   ReadGslVector("foo.f0", FLOAT, &(data.fundf));
-//   WriteGslVector("foo2.f0",ASCII,data.fundf);
-//   WriteGslMatrix("foomat.lsf", FLOAT, data.lsf_glot);
 
    /* Finish */
    std::cout << "Finished analysis." << std::endl << std::endl;

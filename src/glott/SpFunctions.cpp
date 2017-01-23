@@ -21,6 +21,7 @@
 #include "ComplexVector.h"
 #include "definitions.h"
 #include "SpFunctions.h"
+#include "Utils.h"
 
 /* Initialize global rng */
 #include <gslwrap/random_generator.h>
@@ -1157,20 +1158,99 @@ void Poly2Lsf(const gsl::matrix &a_mat, gsl::matrix *lsf_mat) {
 void OverlapAdd(const gsl::vector &frame, const size_t center_index, gsl::vector *target) {
    //center index = frame_index*params.frame_shift , start_ind = frame_index*params.frame_shift - ((int)frame->size())/2 + i;
    // Frame must be HANN windowed beforehand!
-   int start_ind = (int)center_index - ((int)frame.size())/2;
-   int stop_ind = start_ind+frame.size()-1;
 
+   int start_ind;
+   int stop_ind;
+   int i;
+
+   start_ind = (int)center_index - round(frame.size()/2);
+   stop_ind = start_ind+frame.size()-1;
    if(start_ind < 0)
       start_ind = 0;
-
    if(stop_ind > (int)target->size())
       stop_ind = (int)target->size();
 
-   int i;
    for(i=start_ind;i<stop_ind;i++) {
       (*target)(i) += frame(i-start_ind);
    }
 }
+
+
+gsl::vector GetPulseWsola(const gsl::vector &frame, const gsl::vector &pulse_prev, const int &t0, const double &energy) {
+
+   int t0_prev = (int)pulse_prev.size()/2; // size should be multiple of 2
+   gsl::vector pulse(2*t0);
+
+   int ind,i;
+   int start_ind;
+   int stop_ind;
+
+   // BOF waveform similarity overlap add (WSOLA)
+   //int M = 0.5 * t0;
+   //int M = 0.375 * t0; // total range of 3/4 T0
+   int M = 0.6250 * t0; // total range of 1.25 T0
+   //int M = 0.75 * t0; // total range of 1.5 T0
+   int  mid = round(frame.size()/2.0); // PAF frame midpoint
+   gsl::vector corr(2*M+1,true); // correlations, init to zero
+   int m,c_ind;
+   // Find the maximum cross-correlation
+   for(m=-1*M, c_ind=0; m<M; m++, c_ind++) {
+
+      // Select pulse with lag
+      pulse.set_zero();
+      for (i=0; i<2*t0;i++) {
+         ind = mid-t0+i+m;
+         if (ind >= 0 && ind < (int)frame.size())
+            pulse(i) = frame(ind);
+      }
+      // Window pulse for xcorr calculation
+      ApplyWindowingFunction(HANN, &pulse);
+
+      // determine index range where signals overlap
+      start_ind = (int)pulse_prev.size() - round(pulse.size()/2);
+      stop_ind = start_ind+pulse.size()-1;
+      if(start_ind < 0)
+         start_ind = 0;
+      if(stop_ind > (int)pulse_prev.size())
+         stop_ind = (int)pulse_prev.size();
+
+      // cross-correlation
+      for(i=start_ind; i<stop_ind; i++) {
+         corr(c_ind) += pulse_prev(i) * pulse(i-start_ind);
+      }
+   }
+   int m_opt = (int)corr.max_index() - M;
+   //std::cout << "max xcorr at m = " << m_opt << std::endl;
+   // EOF WSOLA
+
+   /* Make non-windowed pulse at optimum lag */
+   pulse.set_zero();
+   for (i=0; i<2*t0;i++) {
+      ind = mid-t0+i+m_opt;
+      if (ind >= 0 && ind < (int)frame.size())
+         pulse(i) = frame(ind);
+   }
+
+   gsl::vector pulse_win(pulse);
+   ApplyWindowingFunction(HANN, &pulse_win);
+
+   // Scale with correct energy
+   pulse *= energy/getEnergy(pulse_win);
+
+   /* Window length normalization */
+   gsl::vector win(pulse.size());
+   win.set_all(1.0);
+   ApplyWindowingFunction(HANN, &win);
+   double sum = 0.0;
+   for (i=0;i<win.size();i++) {
+      sum += win(i)*win(i);
+   }
+
+   //pulse *= pulse.size() / sum;
+
+   return pulse;
+}
+
 
 /** Compute the mean value of a vector
  *  author: @mairaksi

@@ -122,6 +122,38 @@ int ReadWavFile(const char *fname, gsl::vector *signal, Param *params) {
 
 
 /**
+ * Function version that doesn't modify params
+ */
+int ReadWavFile(const char *fname, gsl::vector *signal) {
+
+   SndfileHandle file ;
+   file = SndfileHandle(fname) ;
+   if(file.error()) {
+      std::cerr << "Error: Failed to open file: " << fname << std::endl;
+      return EXIT_FAILURE;
+   }
+   printf ("Reading file '%s'\n", fname) ;
+   printf ("    Sample rate : %d\n", file.samplerate ()) ;
+   printf ("    Channels    : %d\n", file.channels ()) ;
+
+   /* define buffer for sndfile and read */
+   *(signal) = gsl::vector(static_cast <size_t> (file.frames()));
+   // double buffer[signal->size()];
+   double *buffer = (double*)malloc(signal->size() * sizeof(double));
+   file.read(buffer, signal->size()) ;
+
+   /* copy read buffer to signal */
+   size_t i;
+   for (i=0;i<signal->size();i++)
+      (*signal)(i) = buffer[i];
+
+   free(buffer);
+
+   return EXIT_SUCCESS;
+}
+
+
+/**
  * Function EvalFileLength
  *
  * If file is in ASCII mode, read file and count the number of lines.

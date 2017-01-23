@@ -79,6 +79,8 @@
 
 \subsection{Installation}
 
+This distribution intended for use in Unix-like systems that support the GNU autotools buildchain. Standard ./configure script and Makefile are provided for easy compilation.
+%
 The vocoder C++ code has the following library dependencies:
 
 \begin{itemize}
@@ -87,34 +89,42 @@ The vocoder C++ code has the following library dependencies:
 	\item \texttt{libconfig}, for reading structured configuration files
 \end{itemize}
 %
-Usually the best way to install the dependencies is with the system package manager. 
+Usually the best way to install the dependencies is with the system package manager. For example, in Ubuntu 14.04, install the packages \texttt{libgsl0-dev}, \texttt{libsndfile1-dev}, \texttt{libconfig++-dev}
 
-Alternatively, you may download the source code for the libraries and compile them yourself. For example in Ubuntu, install the packages 
 
-libgsl0-dev 
-libsndfile1-dev
-libconfig++-dev
-
+Alternatively, you may download the source code for the libraries and compile them yourself. Make sure to add the built libraries into the \texttt{LD\_LIBRARY\_PATH},
+ so that configure can find them. The libraries (and their documentation) are available at 
+%
 \begin{itemize}
 	\item[] \href{https://www.gnu.org/software/gsl/}{https://www.gnu.org/software/gsl/}
 	\item[] \href{http://www.mega-nerd.com/libsndfile/}{http://www.mega-nerd.com/libsndfile/}
 	\item[] \href{http://www.hyperrealm.com/libconfig/ }{http://www.hyperrealm.com/libconfig/}
 \end{itemize}
-
-
-Additionally, this package uses the C++ wrappers for GSL provided at 
-\href{http://gslwrap.sourceforge.net}{http://gslwrap.sourceforge.net}.
-
-libgsl0-dev 
-libsndfile1-dev
-libconfig++-dev
-
-We recommend to use the GitHub version to get the latest updates, and for the ease of other people contributing to the development 
 %
+Additionally, this package uses the C++ wrappers for GSL provided at 
+\href{http://gslwrap.sourceforge.net}{http://gslwrap.sourceforge.net}. The code is included in this distribution, but is set to build as a separate library.
+
+
+We recommend to use the GitHub distributed version to get the latest updates, and for the ease of other people contributing to the development. First, clone the code to a suitable location with
+
 \texttt{
 git clone https://github.com/ljuvela/GlottDNN.git 
 }
 
+Then, if everything goes well, you should be able to compile with the basic 
+\begin{itemize}
+	 \item[]\texttt{./configure}
+	 \item[]\texttt{make}
+\end{itemize}
+% 
+If something went wrong, it might help to use autotools to regenerate the configure and make files.
+\begin{itemize}
+	 \item[]\texttt{autoreconf}
+	 \item[]\texttt{automake --add-missing}
+\end{itemize}
+
+
+Python
 
 
 \subsection{Configuration}

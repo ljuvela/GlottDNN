@@ -71,8 +71,11 @@ void ParameterSmoothing(const Param &params, SynthesisData *data) {
    if(params.lsf_glot_smooth_len > 2)
       MovingAverageFilter(params.lsf_glot_smooth_len, &(data->lsf_glot));
 
-   if(params.gain_smooth_len > 2)
+   if(params.gain_smooth_len > 2) {
+      //MedianFilter(5, &(data->frame_energy));
       MovingAverageFilter(params.gain_smooth_len, &(data->frame_energy));
+   }
+
 
    if(params.hnr_smooth_len > 2)
       MovingAverageFilter(params.hnr_smooth_len, &(data->hnr_glot));
@@ -99,11 +102,14 @@ gsl::vector GetSinglePulse(const size_t &pulse_len, const double &energy, const 
    return pulse;
 }
 
-gsl::vector GetExternalPulse(const size_t &pulse_len, const bool &use_interpolation, const double &energy, const size_t &frame_index, const gsl::matrix &external_pulses) {
+gsl::vector GetExternalPulse(const size_t &pulse_len, const bool &use_interpolation,
+      const double &energy, const size_t &frame_index, const WindowingFunctionType &psola_window_function,
+      const gsl::matrix &external_pulses) {
 
    // Declare and initialize
    gsl::vector pulse(pulse_len,true);
 
+   size_t i;
    if (use_interpolation == true){
       // Interpolate pulse
       gsl::vector pulse_orig(external_pulses.size1());
@@ -112,26 +118,35 @@ gsl::vector GetExternalPulse(const size_t &pulse_len, const bool &use_interpolat
       }
       InterpolateSpline(pulse_orig, pulse_len, &pulse);
 
-   } else{
+   } else {
 
       // Copy pulse starting from middle of external pulse
       int mid = round(external_pulses.size1()/2.0);
       int ind;
-      for (size_t i=0; i<pulse_len;i++) {
+      for (i=0; i<pulse_len;i++) {
          ind = mid-round(pulse_len/2.0)+i;
          if (ind >= 0 && ind < (int)external_pulses.size1())
             pulse(i) = external_pulses(ind , frame_index);
       }
    }
 
+   gsl::vector pulse_win(pulse);
+   ApplyWindowingFunction(psola_window_function, &pulse_win);
+
    // Scale with correct energy
-    pulse *= energy/getEnergy(pulse);
+   pulse *= energy/getEnergy(pulse_win);
 
    /* Window length normalization */
-//   gsl::vector ones(pulse_len);
-//   ones.set_all(1.0);
-//   ApplyWindowingFunction(HANN, &ones);
-//   pulse *= pulse_len / pow(ones.norm2(),2);
+   gsl::vector win(pulse_len);
+   win.set_all(1.0);
+   ApplyWindowingFunction(HANN, &win);
+   double sum = 0.0;
+   for (i=0;i<win.size();i++) {
+       sum += win(i)*win(i); // probably wrong, this is for the case analysis and synthesis windows are the same, e.g. cosine
+      //sum += win(i);
+   }
+
+   pulse *= pulse_len/sum;
 
    return pulse;
 }
@@ -192,10 +207,21 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
 
    size_t frame_index, sample_index = 0;
    gsl::vector pulse;
+   gsl::vector pulse_prev(2,true); // previous pulse for WSOLA similarity estimation
+   gsl::vector pulse_orig(2,true);
    gsl::vector p2;
    gsl::vector noise(params.frame_shift*2);
    //gsl::vector noise(params.frame_shift);
    double T0, energy;
+   bool unvoiced_psola_flip = false; // alternatingly flip unvoiced frames in psola
+
+   /* Waveform similarity PSOLA is available only when PAF waveforms haven't been windowed */
+   bool use_wsola = false;
+   if (params.paf_analysis_window == RECT && params.use_pulse_interpolation == false) {
+      use_wsola = true;
+   } else {
+      std::cerr << "Warning: PAF window is not NONE, WS-PSOLA can't be used" << std::endl;
+   }
 
    size_t pulse_len;
    while (sample_index < (size_t)params.signal_length) {
@@ -231,17 +257,27 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
             //ApplyPsolaWindow(HANN, t0_pr, t0_nx, &p2);
             break;
          case DNN_GENERATED_EXCITATION:
-            //pulse = GetDnnPulse();
             pulse = GetDnnPulse(pulse_len, energy, frame_index, data, excDnn);
             ApplyWindowingFunction(params.psola_windowing_function, &pulse);
             break;
          case PULSES_AS_FEATURES_EXCITATION:
-            pulse = GetExternalPulse(pulse_len, params.use_pulse_interpolation, energy, frame_index, data.excitation_pulses);
+            /* Waveform similarity PSOLA is available only when PAF waveforms haven't been windowed */
+            if (use_wsola) {
+               pulse = GetPulseWsola(data.excitation_pulses.get_col_vec(frame_index), pulse_prev, T0, energy);
+            } else {
+               pulse = GetExternalPulse(pulse_len, params.use_pulse_interpolation, energy,
+                                 frame_index, params.psola_windowing_function, data.excitation_pulses);
+            }
+            pulse_orig = pulse;
             ApplyWindowingFunction(params.psola_windowing_function, &pulse);
             break;
          }
-         OverlapAdd(pulse,sample_index,excitation_signal);
+
+         OverlapAdd(pulse, sample_index, excitation_signal);
+
          sample_index += rint(T0);
+       //  pulse_prev = pulse_orig; // non-windowed
+         pulse_prev = pulse; // hann windowed pulse
 
       /** Unvoiced excitation **/
       } else {
@@ -266,7 +302,8 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
             break;
          case PULSES_AS_FEATURES_EXCITATION:
             if (params.use_paf_unvoiced_synthesis) {
-               pulse = GetExternalPulse(noise.size(), false, energy, frame_index, data.excitation_pulses);
+               pulse = GetExternalPulse(noise.size(), false, energy, frame_index,
+                     params.psola_windowing_function, data.excitation_pulses);
                // TODO: phase scramble
                // RandomizePhase(&pulse);
                // TODO: add psola compensation that takes different windows and their energies into account
@@ -275,11 +312,21 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
                pulse = noise;
                pulse *= params.noise_gain_unvoiced*energy/getEnergy(noise);
                pulse /= 0.5*(double)noise.size()/(double)params.frame_shift; // Compensate OLA gain
+               if (unvoiced_psola_flip) { // alternate between flipping or not
+                  for (size_t k=0; k< pulse.size(); k++)
+                     pulse.swap_elements(k, pulse.size()-1-k);
+                  unvoiced_psola_flip = false;
+               } else {
+                  unvoiced_psola_flip = true;
+               }
                ApplyWindowingFunction(HANN, &pulse);
             }
             break;
          }
          OverlapAdd(pulse, sample_index, excitation_signal);
+
+
+
          sample_index += params.frame_shift;
       }
    }

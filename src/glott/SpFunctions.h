@@ -45,6 +45,7 @@ void IFFTRadix2(const ComplexVector &X, gsl::vector *x);
 void WFilter(const gsl::vector &A, const gsl::vector &B,const gsl::vector &signal,const double &lambda, gsl::vector *result);
 void WarpingAlphas2Sigmas(const gsl::vector &alp, const double &lambda, gsl::vector *sigm);
 void OverlapAdd(const gsl::vector &frame, const size_t center_index, gsl::vector *target);
+gsl::vector GetPulseWsola(const gsl::vector &frame, const gsl::vector &pulse_prev, const int &t0, const double &energy);
 double getMean(const gsl::vector &vec);
 double getMeanF0(const gsl::vector &fundf);
 double getEnergy(const gsl::vector &vec);

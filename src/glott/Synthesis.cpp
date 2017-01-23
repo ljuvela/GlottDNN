@@ -58,6 +58,14 @@ int main(int argc, char *argv[]) {
    if(ReadSynthesisData(filename, &params, &data) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
+
+   //   read original excitation
+   if (false) {
+      std::string src_filename = GetParamPath("src", ".src.wav", params.dir_syn, params);
+      if(ReadWavFile(src_filename.c_str(), &(data.excitation_signal)) == EXIT_FAILURE)
+         return EXIT_FAILURE;
+   }
+
    if(params.use_postfiltering)
       PostFilter(params.postfilter_coefficient, params.fs, &(data.lsf_vocal_tract));
 
@@ -77,9 +85,7 @@ int main(int argc, char *argv[]) {
    if(params.use_spectral_matching)
       SpectralMatchExcitation(params, data, &(data.excitation_signal));
 
-
    FilterExcitation(params, data, &(data.signal));
-
 
    std::string out_fname;
    out_fname = GetParamPath("exc", ".exc.wav", params.dir_exc, params);

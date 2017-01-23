@@ -204,6 +204,9 @@ def package_data():
         filelist = wavfiles.read().splitlines()    
     random.shuffle(filelist)
     
+    if conf.max_number_of_files < len(filelist):
+        filelist = filelist[0:conf.max_number_of_files]
+
     # initialize global min and max
     in_min = 9999*np.ones([1,sum(conf.input_dims)],dtype=np.float32)
     in_max = -9999*np.ones([1,sum(conf.input_dims)],dtype=np.float32)    
@@ -241,17 +244,44 @@ def package_data():
     new_min = 0.1
     new_max = 0.9
     
-    batch_index = 1
-    in_fid = open(conf.train_data_dir + '/' + conf.dnn_name + '.' + str(batch_index) + '.idat' ,'w')
-    out_fid = open(conf.train_data_dir + '/' + conf.dnn_name + '.' + str(batch_index) + '.odat' ,'w')
-            
+    n_val = (conf.validation_ratio * len(filelist))
+    n_test = round(conf.test_ratio * len(filelist))
+    n_train = len(filelist) - n_val - n_test
+    if n_train < 0:
+        print "oops"
+    set_name = ['train', 'val', 'test']
+    set_sizes = [n_train , n_val, n_test]
+    print set_sizes
+
+#    batch_index = 1
+#    in_fid = open(conf.train_data_dir + '/' + conf.dnn_name + '.' + str(batch_index) + '.idat' ,'w')
+#    out_fid = open(conf.train_data_dir + '/' + conf.dnn_name + '.' + str(batch_index) + '.odat' ,'w')
+
+    set_file_counter = 1
+    set_index = 0
+    in_fid = open(conf.train_data_dir + '/' + conf.dnn_name + '.' + set_name[set_index] + '.idat' ,'w')
+    out_fid = open(conf.train_data_dir + '/' + conf.dnn_name + '.' + set_name[set_index] + '.odat' ,'w')
+                        
     for file_idx, wavfile in enumerate(filelist):
-        if file_idx > 0 and file_idx % conf.data_buffer_size == 0:
+
+        if set_file_counter > set_sizes[set_index]:
+            set_file_counter = 1
+            set_index += 1
             in_fid.close()
-            out_fid.close()
-            batch_index += 1
-            in_fid = open(conf.train_data_dir + '/' + conf.dnn_name + '.' + str(batch_index) + '.idat' ,'w')
-            out_fid = open(conf.train_data_dir + '/' + conf.dnn_name + '.' + str(batch_index) + '.odat' ,'w')
+            out_fid.close()            
+            if set_sizes[set_index] == 0:
+                set_index += 1
+            else:
+                in_fid = open(conf.train_data_dir + '/' + conf.dnn_name + '.' + set_name[set_index] + '.idat' ,'w')
+                out_fid = open(conf.train_data_dir + '/' + conf.dnn_name + '.' + set_name[set_index] + '.odat' ,'w')
+            
+
+        #if file_idx > 0 and file_idx % conf.data_buffer_size == 0:
+        #    in_fid.close()
+        #    out_fid.close()
+        #    batch_index += 1
+        #    in_fid = open(conf.train_data_dir + '/' + conf.dnn_name + '.' + str(batch_index) + '.idat' ,'w')
+        #    out_fid = open(conf.train_data_dir + '/' + conf.dnn_name + '.' + str(batch_index) + '.odat' ,'w')
             
    
         if os.path.isfile(wavfile):
@@ -292,6 +322,8 @@ def package_data():
             # write output data
             output_data.astype(np.float32).tofile(out_fid, sep='',format="%f")
 
+            set_file_counter += 1
+            
     # close files
     in_fid.close()
     out_fid.close()
