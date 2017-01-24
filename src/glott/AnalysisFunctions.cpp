@@ -396,7 +396,7 @@ int InverseFilter(const Param &params, const AnalysisData &data, gsl::matrix *po
    size_t NFFT = 4096;
    gsl::vector impulse(NFFT);
    gsl::vector imp_response(NFFT);
-   gsl::vector pre_frame_high_order(2*a_lin_high_order.size());
+   gsl::vector pre_frame_high_order(3*a_lin_high_order.size());
    gsl::vector frame_full_high_order(frame.size() + pre_frame_high_order.size());
 
 	for(frame_index=0;frame_index<(size_t)params.number_of_frames;frame_index++) {

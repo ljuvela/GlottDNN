@@ -156,8 +156,6 @@ gsl::vector GetDnnPulse(const size_t &pulse_len, const double &energy, const siz
    gsl::vector pulse(pulse_len);
    excDnn.setInput(data, frame_index);
    const gsl::vector &dnn_pulse = excDnn.getOutput();
-   //if(frame_index == 5)
-    //  VPrint1(dnn_pulse);
 
    // Copy pulse starting from middle of external pulse
    int mid = round(dnn_pulse.size()/2.0);
@@ -168,9 +166,8 @@ gsl::vector GetDnnPulse(const size_t &pulse_len, const double &energy, const siz
          pulse(i) = dnn_pulse(ind);
    }
 
-   // Window pulse
-   pulse *= energy/getEnergy(pulse);
-   // TODO: window type switch
+   // scale pulse
+   //pulse *= energy/getEnergy(pulse);
 
    return pulse;
 
@@ -207,8 +204,8 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
 
    size_t frame_index, sample_index = 0;
    gsl::vector pulse;
-   gsl::vector pulse_prev(2,true); // previous pulse for WSOLA similarity estimation
-   gsl::vector pulse_orig(2,true);
+   gsl::vector pulse_prev(1,true); // previous pulse for WSOLA similarity estimation
+   gsl::vector pulse_orig(1,true);
    gsl::vector p2;
    gsl::vector noise(params.frame_shift*2);
    //gsl::vector noise(params.frame_shift);
@@ -257,13 +254,28 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
             //ApplyPsolaWindow(HANN, t0_pr, t0_nx, &p2);
             break;
          case DNN_GENERATED_EXCITATION:
-            pulse = GetDnnPulse(pulse_len, energy, frame_index, data, excDnn);
+
+
+            /* Waveform similarity PSOLA is available only when PAF waveforms haven't been windowed */
+            if (use_wsola) {
+               // get unwindowed pulse from DNN
+               pulse = GetDnnPulse(params.paf_pulse_length, energy, frame_index, data, excDnn);
+              // pulse = GetPulseWsola(pulse, pulse_prev, T0, energy);
+               pulse =  GetPulseWsola2(pulse, T0, energy,
+                     sample_index,  (pulse_prev.size() > 1), excitation_signal) ;
+            } else {
+               pulse = GetDnnPulse(pulse_len, energy, frame_index, data, excDnn);
+            }
+            pulse_orig = pulse;
+
             ApplyWindowingFunction(params.psola_windowing_function, &pulse);
             break;
          case PULSES_AS_FEATURES_EXCITATION:
             /* Waveform similarity PSOLA is available only when PAF waveforms haven't been windowed */
             if (use_wsola) {
-               pulse = GetPulseWsola(data.excitation_pulses.get_col_vec(frame_index), pulse_prev, T0, energy);
+//               pulse = GetPulseWsola(data.excitation_pulses.get_col_vec(frame_index), pulse_prev, T0, energy);
+               pulse =  GetPulseWsola2(data.excitation_pulses.get_col_vec(frame_index), T0, energy,
+                     sample_index,  (pulse_prev.size() > 1), excitation_signal) ;
             } else {
                pulse = GetExternalPulse(pulse_len, params.use_pulse_interpolation, energy,
                                  frame_index, params.psola_windowing_function, data.excitation_pulses);
@@ -276,7 +288,7 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
          OverlapAdd(pulse, sample_index, excitation_signal);
 
          sample_index += rint(T0);
-       //  pulse_prev = pulse_orig; // non-windowed
+        //pulse_prev = pulse_orig; // non-windowed
          pulse_prev = pulse; // hann windowed pulse
 
       /** Unvoiced excitation **/
@@ -325,9 +337,8 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
          }
          OverlapAdd(pulse, sample_index, excitation_signal);
 
-
-
          sample_index += params.frame_shift;
+         pulse_prev = gsl::vector(1,true); // sets the previous pulse to undefined for WS-Psola
       }
    }
    CheckNanInf(*excitation_signal);

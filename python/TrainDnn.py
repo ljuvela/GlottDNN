@@ -73,15 +73,24 @@ def evaluate_dnn(learning_rate=0.1, n_epochs=150000,
     
     nndata_basename = conf.train_data_dir + '/' + conf.dnn_name 
 
-    valid_set_x = load_data(nndata_basename + '.' + str(conf.val_set[0]) + '.idat', n_in)
-    valid_set_y = load_data(nndata_basename + '.' + str(conf.val_set[0]) + '.odat', n_out)
+    #valid_set_x = load_data(nndata_basename + '.' + str(conf.val_set[0]) + '.idat', n_in)
+    #valid_set_y = load_data(nndata_basename + '.' + str(conf.val_set[0]) + '.odat', n_out)
     
-    test_set_x = load_data(nndata_basename + '.' + str(conf.test_set[0]) + '.idat', n_in)
-    test_set_y = load_data(nndata_basename + '.' + str(conf.test_set[0]) + '.odat', n_out)
+    #test_set_x = load_data(nndata_basename + '.' + str(conf.test_set[0]) + '.idat', n_in)
+    #test_set_y = load_data(nndata_basename + '.' + str(conf.test_set[0]) + '.odat', n_out)
     
-    train_set_x = load_data(nndata_basename + '.' + str(conf.train_set[0]) + '.idat', n_in)
-    train_set_y = load_data(nndata_basename + '.' + str(conf.train_set[0]) + '.odat', n_out)
+    #train_set_x = load_data(nndata_basename + '.' + str(conf.train_set[0]) + '.idat', n_in)
+    #train_set_y = load_data(nndata_basename + '.' + str(conf.train_set[0]) + '.odat', n_out)
     
+    valid_set_x = load_data(nndata_basename + '.val.idat', n_in)
+    valid_set_y = load_data(nndata_basename + '.val.odat', n_out)
+    
+    test_set_x = load_data(nndata_basename + '.test.idat', n_in)
+    test_set_y = load_data(nndata_basename + '.test.odat', n_out)
+    
+    train_set_x = load_data(nndata_basename + '.train.idat', n_in)
+    train_set_y = load_data(nndata_basename + '.train.odat', n_out)
+
     # compute number of minibatches for training, validation and testing
     n_train_batches = train_set_x.get_value(borrow=True).shape[0]
     n_valid_batches = valid_set_x.get_value(borrow=True).shape[0]
@@ -192,7 +201,8 @@ def evaluate_dnn(learning_rate=0.1, n_epochs=150000,
     ###############
     print '... training'
     # early-stopping parameters
-    patience = 10000  # look as this many examples regardless
+    #patience = 10000  # look as this many examples regardless
+    patience = conf.patience
     patience_increase = 2  # wait this much longer when a new best is
                            # found
     improvement_threshold = 0.995  # a relative improvement of this much is
@@ -213,73 +223,65 @@ def evaluate_dnn(learning_rate=0.1, n_epochs=150000,
     
     while (epoch < n_epochs) and (not done_looping):
         epoch = epoch + 1
-        for train_set_id in conf.train_set:
-            if len(conf.train_set) > 1:
-                train_set_x = load_data(nndata_basename + '.' + str(train_set_id) + '.idat', n_in)
-                train_set_y = load_data(nndata_basename + '.' + str(train_set_id) + '.odat', n_out)
-                n_train_batches = train_set_x.get_value(borrow=True).shape[0]
-                n_train_batches /= batch_size
-
-	    for minibatch_index in xrange(n_train_batches):
-
-		iter = (epoch - 1) * n_train_batches + minibatch_index
-
-		#if iter % 100 == 0:
-		  #  print 'training @ iter = ', iter
-		cost_ij = train_model(minibatch_index)
-
-		if (iter + 1) % validation_frequency == 0:
-
-		    # compute zero-one loss on validation set
-		    validation_losses = [validate_model(i) for i
-					in xrange(n_valid_batches)]
-		    this_validation_loss = numpy.mean(validation_losses)
+                    
+        # loop over minibatches
+        for minibatch_index in xrange(n_train_batches):
+            
+            iter = (epoch - 1) * n_train_batches + minibatch_index            		
+            cost_ij = train_model(minibatch_index)
+            
+            if (iter + 1) % validation_frequency == 0:
+                
+                # compute zero-one loss on validation set
+                validation_losses = [validate_model(i) for i
+                                     in xrange(n_valid_batches)]
+                this_validation_loss = numpy.mean(validation_losses)
 		
-		    training_losses = [train_model(i) for i
-					in xrange(n_train_batches)]
-		    this_training_loss = numpy.log(numpy.mean(training_losses))
+                training_losses = [train_model(i) for i
+                                   in xrange(n_train_batches)]
+                this_training_loss = numpy.log(numpy.mean(training_losses))
 		
-		    print('epoch %i, minibatch %i/%i, training error %f, validation error %f' %
-			  (epoch, minibatch_index + 1, n_train_batches,
-			  this_training_loss, this_validation_loss))
+                print('epoch %i, minibatch %i/%i, training error %f, validation error %f' %
+                      (epoch, minibatch_index + 1, n_train_batches,
+                       this_training_loss, this_validation_loss))
+                
+                # if we got the best validation score until now
+                if this_validation_loss < best_validation_loss:
+                    
+                    #improve patience if loss improvement is good enough
+                    if this_validation_loss < best_validation_loss *  \
+                            improvement_threshold:
+                        patience = max(patience, iter * patience_increase)
+                        
+                    # save best validation score and iteration number
+                    best_validation_loss = this_validation_loss
+                    best_iter = iter
+                        
+                    # test it on the test set
+                    test_losses = [
+                        test_model(i)
+                        for i in xrange(n_test_batches)
+                        ]
+                    test_score = numpy.mean(test_losses)
+                    print(('     epoch %i, minibatch %i/%i, test error of '
+                           'best model %f') %
+                          (epoch, minibatch_index + 1, n_train_batches,
+                           test_score))
+                    save_network(layerList, layer_out)
+                    #ENDIF (validation_loss is improved)
+                #ENDIF (validate at this iteration)
+            #ENDFOR (loop minibatches)
+            
+        if patience <= iter:
+            done_looping = True
+            break	
+        #END WHILE (training epochs)
 
-		    # if we got the best validation score until now
-		    if this_validation_loss < best_validation_loss:
-
-			#improve patience if loss improvement is good enough
-			if this_validation_loss < best_validation_loss *  \
-			  improvement_threshold:
-			    patience = max(patience, iter * patience_increase)
-
-			# save best validation score and iteration number
-			best_validation_loss = this_validation_loss
-			best_iter = iter
-
-			# test it on the test set
-			test_losses = [
-			    test_model(i)
-			    for i in xrange(n_test_batches)
-			]
-			test_score = numpy.mean(test_losses)
-			print(('     epoch %i, minibatch %i/%i, test error of '
-			      'best model %f') %
-			      (epoch, minibatch_index + 1, n_train_batches,
-			      test_score))
-			save_network(layerList, layer_out)
-			#ENDIF
-		    #ENDIF
-		#ENDIF
-	    #ENDFOR
-		if patience <= iter:
-		    done_looping = True
-		    break
-	#END WHILE
-    #END WHILE
     end_time = timeit.default_timer()
     print('Optimization complete.')
-    print('Best validation score of %f %% obtained at iteration %i, '
-          'with test performance %f %%' %
-          (best_validation_loss * 100., best_iter + 1, test_score * 100.))
+    #print('Best validation score of %f obtained at iteration %i, '
+    #      'with test performance %f' %
+    #      (best_validation_loss., best_iter + 1, test_score.))
     print >> sys.stderr, ('The code for file ' +
                           os.path.split(__file__)[1] +
                           ' ran for %.2fm' % ((end_time - start_time) / 60.))
