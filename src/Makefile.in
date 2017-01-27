@@ -87,7 +87,8 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
-bin_PROGRAMS = Analysis$(EXEEXT) Synthesis$(EXEEXT)
+bin_PROGRAMS = Analysis$(EXEEXT) Synthesis$(EXEEXT) \
+	LsfPostFilter$(EXEEXT)
 subdir = src
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -124,6 +125,14 @@ am_Analysis_OBJECTS = glott/Analysis.$(OBJEXT) \
 	glott/AnalysisFunctions.$(OBJEXT) glott/Utils.$(OBJEXT)
 Analysis_OBJECTS = $(am_Analysis_OBJECTS)
 Analysis_DEPENDENCIES = libgslwrap.a
+am_LsfPostFilter_OBJECTS = glott/LsfPostFilterMain.$(OBJEXT) \
+	glott/definitions.$(OBJEXT) glott/ReadConfig.$(OBJEXT) \
+	glott/FileIo.$(OBJEXT) glott/InverseFiltering.$(OBJEXT) \
+	glott/ComplexVector.$(OBJEXT) glott/SpFunctions.$(OBJEXT) \
+	glott/DnnClass.$(OBJEXT) glott/SynthesisFunctions.$(OBJEXT) \
+	glott/Utils.$(OBJEXT)
+LsfPostFilter_OBJECTS = $(am_LsfPostFilter_OBJECTS)
+LsfPostFilter_DEPENDENCIES = libgslwrap.a
 am_Synthesis_OBJECTS = glott/Synthesis.$(OBJEXT) \
 	glott/definitions.$(OBJEXT) glott/ReadConfig.$(OBJEXT) \
 	glott/FileIo.$(OBJEXT) glott/InverseFiltering.$(OBJEXT) \
@@ -174,9 +183,9 @@ am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
 SOURCES = $(libgslwrap_a_SOURCES) $(Analysis_SOURCES) \
-	$(Synthesis_SOURCES)
+	$(LsfPostFilter_SOURCES) $(Synthesis_SOURCES)
 DIST_SOURCES = $(libgslwrap_a_SOURCES) $(Analysis_SOURCES) \
-	$(Synthesis_SOURCES)
+	$(LsfPostFilter_SOURCES) $(Synthesis_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -335,6 +344,18 @@ Synthesis_SOURCES = glott/Synthesis.cpp Filters.h \
 					glott/Utils.h glott/Utils.cpp
 
 Synthesis_LDADD = libgslwrap.a
+LsfPostFilter_SOURCES = glott/LsfPostFilterMain.cpp Filters.h \
+					glott/definitions.h glott/definitions.cpp \
+					glott/ReadConfig.h glott/ReadConfig.cpp \
+					glott/FileIo.h glott/FileIo.cpp \
+					glott/InverseFiltering.h glott/InverseFiltering.cpp \
+					glott/ComplexVector.h glott/ComplexVector.cpp \
+					glott/SpFunctions.h glott/SpFunctions.cpp \
+					glott/DnnClass.h glott/DnnClass.cpp \
+					glott/SynthesisFunctions.h glott/SynthesisFunctions.cpp \
+					glott/Utils.h glott/Utils.cpp
+
+LsfPostFilter_LDADD = libgslwrap.a
 all: all-am
 
 .SUFFIXES:
@@ -470,11 +491,17 @@ glott/Utils.$(OBJEXT): glott/$(am__dirstamp) \
 Analysis$(EXEEXT): $(Analysis_OBJECTS) $(Analysis_DEPENDENCIES) $(EXTRA_Analysis_DEPENDENCIES) 
 	@rm -f Analysis$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(Analysis_OBJECTS) $(Analysis_LDADD) $(LIBS)
-glott/Synthesis.$(OBJEXT): glott/$(am__dirstamp) \
+glott/LsfPostFilterMain.$(OBJEXT): glott/$(am__dirstamp) \
 	glott/$(DEPDIR)/$(am__dirstamp)
 glott/DnnClass.$(OBJEXT): glott/$(am__dirstamp) \
 	glott/$(DEPDIR)/$(am__dirstamp)
 glott/SynthesisFunctions.$(OBJEXT): glott/$(am__dirstamp) \
+	glott/$(DEPDIR)/$(am__dirstamp)
+
+LsfPostFilter$(EXEEXT): $(LsfPostFilter_OBJECTS) $(LsfPostFilter_DEPENDENCIES) $(EXTRA_LsfPostFilter_DEPENDENCIES) 
+	@rm -f LsfPostFilter$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(LsfPostFilter_OBJECTS) $(LsfPostFilter_LDADD) $(LIBS)
+glott/Synthesis.$(OBJEXT): glott/$(am__dirstamp) \
 	glott/$(DEPDIR)/$(am__dirstamp)
 
 Synthesis$(EXEEXT): $(Synthesis_OBJECTS) $(Synthesis_DEPENDENCIES) $(EXTRA_Synthesis_DEPENDENCIES) 
@@ -495,6 +522,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@glott/$(DEPDIR)/DnnClass.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@glott/$(DEPDIR)/FileIo.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@glott/$(DEPDIR)/InverseFiltering.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@glott/$(DEPDIR)/LsfPostFilterMain.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@glott/$(DEPDIR)/PitchEstimation.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@glott/$(DEPDIR)/QmfFunctions.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@glott/$(DEPDIR)/ReadConfig.Po@am__quote@

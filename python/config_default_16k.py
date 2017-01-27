@@ -1,7 +1,7 @@
 # run flags
 make_dirs = True
 make_scp = True
-do_sptk_pitch_analysis = True
+do_sptk_pitch_analysis = False
 do_reaper_pitch_analysis = False
 do_glott_vocoder_analysis = True
 make_dnn_train_data = True
@@ -11,8 +11,7 @@ do_glott_vocoder_synthesis = True
 
 # directories
 prjdir = '/Users/ljuvela/CODE/GlottDNN' # add your own local install dir here
-#datadir = prjdir + '/data/slt16'
-datadir = prjdir + '/data/vowels'
+datadir = prjdir + '/data/slt16'
 
 # general parameters
 sampling_frequency = 16000
@@ -38,21 +37,13 @@ output_exts = ['.PAF']
 output_dims = [400]
 
 # dnn data conf
-dnn_name = 'vowels'
+dnn_name = 'slt'
 train_data_dir = prjdir + '/nndata/traindata/' + dnn_name 
 weights_data_dir = prjdir + '/nndata/weights/' + dnn_name
-#data_buffer_size = 100
 remove_unvoiced_frames = True
 validation_ratio = 0.2
 test_ratio = 0.1
 max_number_of_files = 30
-
-
-#train_set = [1, 2 , 3, 4, 5]
-#train_set = [3,4,5,6,7,8]
-#train_set = [1]
-#val_set = [3]
-#test_set = [4]
 
 # dnn train conf
 n_hidden = [150, 250, 300]

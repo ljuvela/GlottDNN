@@ -257,6 +257,7 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
 
 
             /* Waveform similarity PSOLA is available only when PAF waveforms haven't been windowed */
+            use_wsola = false;
             if (use_wsola) {
                // get unwindowed pulse from DNN
                pulse = GetDnnPulse(params.paf_pulse_length, energy, frame_index, data, excDnn);
@@ -491,11 +492,17 @@ void SpectralMatchExcitation(const Param &params,const SynthesisData &data, gsl:
       Poly2Lsf(a_gen,&lsf_gen);
       lsf_glot_syn.set_col_vec(frame_index,lsf_gen);
    }
-   if(params.use_trajectory_smoothing)
+   // TODO: do always? (in TTS synthesis filter is already smooth, but the analysis filter is not!)
+   //if(params.use_trajectory_smoothing)
+   {
+      MedianFilter(5, &(lsf_glot_syn));
       MovingAverageFilter(params.lsf_glot_smooth_len, &(lsf_glot_syn));
+   }
+
 
    StabilizeLsf(&(lsf_glot_syn));
 
+   std::cout << "Excitation spectral matching ... ";
 
    /* Spectral match excitation */
    gsl::vector excitation_orig(excitation_signal->size());
@@ -532,6 +539,7 @@ void SpectralMatchExcitation(const Param &params,const SynthesisData &data, gsl:
       (*excitation_signal)(sample_index) = sum;
    }
 
+   std::cout << " done." << std::endl;
 }
 
 

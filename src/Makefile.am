@@ -14,7 +14,7 @@ gslwrap/matrix_float.cc gslwrap/matrix_double.cc gslwrap/matrix_int.cc \
 gslwrap/vector_float.cc gslwrap/vector_double.cc gslwrap/vector_int.cc \
 gslwrap/random_generator.cc 
 
-bin_PROGRAMS = Analysis Synthesis
+bin_PROGRAMS = Analysis Synthesis LsfPostFilter
 
 Analysis_SOURCES = glott/Analysis.cpp Filters.h \
 					glott/definitions.h glott/definitions.cpp \
@@ -42,3 +42,16 @@ Synthesis_SOURCES = glott/Synthesis.cpp Filters.h \
 					glott/Utils.h glott/Utils.cpp
 
 Synthesis_LDADD = libgslwrap.a
+
+LsfPostFilter_SOURCES = glott/LsfPostFilterMain.cpp Filters.h \
+					glott/definitions.h glott/definitions.cpp \
+					glott/ReadConfig.h glott/ReadConfig.cpp \
+					glott/FileIo.h glott/FileIo.cpp \
+					glott/InverseFiltering.h glott/InverseFiltering.cpp \
+					glott/ComplexVector.h glott/ComplexVector.cpp \
+					glott/SpFunctions.h glott/SpFunctions.cpp \
+					glott/DnnClass.h glott/DnnClass.cpp \
+					glott/SynthesisFunctions.h glott/SynthesisFunctions.cpp \
+					glott/Utils.h glott/Utils.cpp
+
+LsfPostFilter_LDADD = libgslwrap.a

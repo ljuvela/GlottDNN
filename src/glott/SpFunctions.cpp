@@ -1334,14 +1334,32 @@ gsl::vector GetPulseWsola2(const gsl::vector &frame, const int &t0, const double
    FindPeaks(ac, 0.1, &peak_inds, &peak_values);
    //int first_peak = peak_inds(0);
    int first_peak = ac.max_index();
-   int second_peak_ind = 1;
-   int second_peak = peak_inds(second_peak_ind);
-   while (peak_values(second_peak_ind) < 0 || (second_peak - first_peak) < 0.1*t0 )
-      second_peak_ind++;
-   second_peak = peak_inds(second_peak_ind);
+//   int second_peak_ind = 1;
+//   int second_peak = peak_inds(second_peak_ind);
+//   while (peak_values(second_peak_ind) < 0 || (second_peak - first_peak) < 0.1*t0 )
+//      second_peak_ind++;
+//   second_peak = peak_inds(second_peak_ind);
+
+
+   // alternative: second_peak as the closest positive peak to t0
+   int t0_candidate;
+   int t0_estimate = 1;
+   for (i=0;i<peak_inds.size();i++) {
+      if (peak_values(i) < 0)
+         continue;
+      t0_candidate = abs(peak_inds(i) - first_peak);
+      if ( abs(t0 - t0_candidate) < abs(t0 - t0_estimate) ) {
+         t0_estimate = t0_candidate;
+      }
+   }
+
+
+
+
 
    // Pitch shift by interpolation
-   InterpolateSpline(frame, round(  (double)t0 / (double)(second_peak-first_peak) * frame.size()), &frame_interp);
+   //InterpolateSpline(frame, round(  (double)t0 / (double)(second_peak-first_peak) * frame.size()), &frame_interp);
+   InterpolateSpline(frame, round(  (double)t0 / (double)(t0_estimate) * frame.size()), &frame_interp);
 
 
    // waveform similarity overlap add (WSOLA)
@@ -1879,7 +1897,6 @@ double GetFilteringGain(const gsl::vector &b, const gsl::vector &a,
       WFilter(b,a,frame_full,warping_lambda,&result);
 
 	return LogEnergy2FrameEnergy(target_gain_db, result.size()) * (double)fmin(1/getEnergy(result),50.0); // prevent large values from divide by zero
-
 
 }
 
