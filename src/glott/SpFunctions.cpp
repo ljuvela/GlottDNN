@@ -870,12 +870,10 @@ void Roots(const gsl::vector &x, const size_t ncoef, ComplexVector *r) {
    /* Initialize root arrays */
     //size_t ncoef = x.size()-1; // no minus one?
     size_t nroots = ncoef-1;
-    //double coeffs[ncoef];
     double *coeffs = new double[ncoef];
 
     /* Complex values require 2 x space*/
     double *roots = new double[2*nroots];
-    //double roots[2*nroots];
 
     /* Copy coefficients to arrays */
     /* Copy coefficients to arrays */
@@ -1053,6 +1051,13 @@ void Poly2Lsf(const gsl::vector &a, gsl::vector *lsf) {
       return;
    }
 
+   bool poly_order_even;
+   if ((n+1)%2 == 0) {
+      poly_order_even = true;
+   } else {
+      poly_order_even = false;
+   }
+
    gsl::vector aa = gsl::vector(n+1,true);
    gsl::vector flip_aa = gsl::vector(n+1,true);
    gsl::vector p = gsl::vector(n+1,true);
@@ -1107,23 +1112,31 @@ void Poly2Lsf(const gsl::vector &a, gsl::vector *lsf) {
    }
 
    /* NOTE deconvolution leaves a trailing zero to vector */
-   size_t nroots_p = p.size()-2;
-   size_t nroots_q = q.size()-2;
-   size_t lsf_size = (nroots_p+nroots_p)/2;
+   size_t nroots_p;
+   size_t nroots_q;
+   if (poly_order_even) {
+       nroots_p = p.size()-2;
+       nroots_q = q.size()-2;
+   } else {
+       nroots_p = p.size()-1;
+       nroots_q = q.size()-3;
+   }
+   size_t lsf_size = (nroots_p+nroots_q)/2;
    size_t ind=0;
-   //double lsf_double[lsf_size];
    double *lsf_double = new double[lsf_size];
 
    /* Solve roots of P and convert to angle */
    ComplexVector r_p;
-   Roots(p, p.size()-1, &r_p); // ignore last coefficient (zero)
+//   Roots(p, p.size()-1, &r_p); // ignore last coefficient (zero)
+   Roots(p, nroots_p+1, &r_p); // ignore last coefficient (zero)
    /* skip odd roots (complex conjugates) */
    for(i=0; i<nroots_p; i+=2, ind++)
       lsf_double[ind] = r_p.getAng(i);
 
    /* Solve roots of Q and convert to angle */
    ComplexVector r_q;
-   Roots(q, q.size()-1, &r_q); // ignore last coefficient (zero)
+   //Roots(q, q.size()-1, &r_q); // ignore last coefficient (zero)
+   Roots(q, nroots_q+1, &r_q); // ignore last coefficient (zero)
    for(i=0; i<nroots_q; i+=2, ind++)
       lsf_double[ind] = r_q.getAng(i);
 
