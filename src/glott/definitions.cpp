@@ -77,6 +77,7 @@ Param::Param() {
 	use_spectral_matching = true;
 	postfilter_coefficient = 0.4;
    use_trajectory_smoothing = false;
+   use_wsola = false;
    lsf_vt_smooth_len = 3;
    lsf_glot_smooth_len = 5;
    gain_smooth_len = 5;

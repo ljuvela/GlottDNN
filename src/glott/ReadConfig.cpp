@@ -156,6 +156,9 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool required, Param 
    if (ConfigLookupBool("USE_PULSE_INTERPOLATION", cfg, required, &(params->use_pulse_interpolation)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
+   if (ConfigLookupBool("USE_WSOLA", cfg, false, &(params->use_wsola)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
    if (ConfigLookupBool("USE_PAF_UNVOICED", cfg, false, &(params->use_paf_unvoiced_synthesis)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 

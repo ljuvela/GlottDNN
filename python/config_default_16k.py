@@ -3,10 +3,10 @@ make_dirs = True
 make_scp = True
 do_sptk_pitch_analysis = False
 do_reaper_pitch_analysis = False
-do_glott_vocoder_analysis = True
-make_dnn_train_data = True
-make_dnn_infofile = True
-do_dnn_training = True
+do_glott_vocoder_analysis = False
+make_dnn_train_data = False
+make_dnn_infofile = False
+do_dnn_training = False
 do_glott_vocoder_synthesis = True
 
 # directories
@@ -53,4 +53,4 @@ max_epochs = 50
 patience = 10  # early stopping criterion
 
 # synthesis configs
-use_dnn_generated_excitation = True
+use_dnn_generated_excitation = False

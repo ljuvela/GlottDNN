@@ -51,6 +51,7 @@ public:
 	WindowingFunctionType default_windowing_function;
 	WindowingFunctionType psola_windowing_function;
 	WindowingFunctionType paf_analysis_window;
+	bool use_wsola;
 
 	double max_pulse_len_diff;
 	int paf_pulse_length;

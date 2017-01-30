@@ -42,12 +42,19 @@ void PostFilter(const double &postfilter_coefficient, const int &fs, gsl::matrix
 		/* Compute power spectrum */
 		FFTRadix2(poly_vec, POWER_SPECTRUM_FRAME_LEN, &poly_fft);
       fft_mag = poly_fft.getAbs();
-      for(i=0;i<fft_mag.size();i++)
+      gsl::vector log_mag(fft_mag);
+      for(i=0;i<fft_mag.size();i++) {
          fft_mag(i) = 1.0/pow(fft_mag(i),2);
+         log_mag(i) = 10*log10(fft_mag(i));
+      }
+
 
 		/* Modification of the power spectrum */
-		FindPeaks(fft_mag, 0.1, &peak_indices, &peak_values);
-		SharpenPowerSpectrumPeaks(peak_indices, postfilter_coefficient, POWER_SPECTRUM_WIN, &fft_mag);
+		//int peaks_found = FindPeaks(fft_mag, 0.1, &peak_indices, &peak_values);
+      // Find peaks in log magnitudes, (small values are easily below threshold in linear scale)
+      int peaks_found = FindPeaks(log_mag, 0.1, &peak_indices, &peak_values);
+		if (peaks_found > 0)
+		   SharpenPowerSpectrumPeaks(peak_indices, postfilter_coefficient, POWER_SPECTRUM_WIN, &fft_mag);
 
 		/* Construct autocorrelation r */
 		poly_fft.setReal(fft_mag);
@@ -88,16 +95,20 @@ gsl::vector GetSinglePulse(const size_t &pulse_len, const double &energy, const 
    gsl::vector pulse(pulse_len);
    //InterpolateSpline(base_pulse, pulse_len, &pulse);
    Interpolate(base_pulse, &pulse);
-   pulse *= energy/getEnergy(pulse);
+   gsl::vector pulse_win(pulse);
+   ApplyWindowingFunction(HANN, &pulse_win);
+   //pulse *= energy/getEnergy(pulse);
+   pulse *= energy/getEnergy(pulse_win);
 
    /* Window length normalization */
-
-   /*
-   gsl::vector ones(pulse_len);
-   ones.set_all(1.0);
-   ApplyWindowingFunction(HANN, &ones);
-   pulse *= pulse_len / pow(ones.norm2(),2);
-   */
+   gsl::vector win(pulse_len);
+   win.set_all(1.0);
+   ApplyWindowingFunction(HANN, &win);
+   double sum = 0.0;
+   for (size_t i=0;i<win.size();i++) {
+      sum += win(i);
+   }
+   pulse *= 0.375*pulse_len/sum; // 0.375 = 3/8 (HANN window area/length when N->INF)
 
    return pulse;
 }
@@ -142,11 +153,12 @@ gsl::vector GetExternalPulse(const size_t &pulse_len, const bool &use_interpolat
    ApplyWindowingFunction(HANN, &win);
    double sum = 0.0;
    for (i=0;i<win.size();i++) {
-       sum += win(i)*win(i); // probably wrong, this is for the case analysis and synthesis windows are the same, e.g. cosine
-      //sum += win(i);
+       //sum += win(i)*win(i); // probably wrong, this is for the case analysis and synthesis windows are the same, e.g. cosine
+      sum += win(i);
    }
 
-   pulse *= pulse_len/sum;
+   //pulse *= pulse_len/sum;
+   pulse *= 0.375*pulse_len/sum; // 0.375 = 3/8 (HANN window area/length when N->INF)
 
    return pulse;
 }
@@ -213,11 +225,11 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
    bool unvoiced_psola_flip = false; // alternatingly flip unvoiced frames in psola
 
    /* Waveform similarity PSOLA is available only when PAF waveforms haven't been windowed */
-   bool use_wsola = false;
-   if (params.paf_analysis_window == RECT && params.use_pulse_interpolation == false) {
-      use_wsola = true;
-   } else {
-      std::cerr << "Warning: PAF window is not NONE, WS-PSOLA can't be used" << std::endl;
+   bool use_wsola = params.use_wsola;
+   if ( use_wsola &&
+         (params.paf_analysis_window != RECT || params.use_pulse_interpolation != false)) {
+      use_wsola = false;
+      std::cerr << "Warning: WS-PSOLA can't be used if PAF window is not NONE or with pulse interpolation, " << std::endl;
    }
 
    size_t pulse_len;
@@ -257,7 +269,7 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
 
 
             /* Waveform similarity PSOLA is available only when PAF waveforms haven't been windowed */
-            use_wsola = false;
+            //use_wsola = false;
             if (use_wsola) {
                // get unwindowed pulse from DNN
                pulse = GetDnnPulse(params.paf_pulse_length, energy, frame_index, data, excDnn);
