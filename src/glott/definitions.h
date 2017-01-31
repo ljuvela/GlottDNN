@@ -51,7 +51,7 @@ public:
 	WindowingFunctionType default_windowing_function;
 	WindowingFunctionType psola_windowing_function;
 	WindowingFunctionType paf_analysis_window;
-	bool use_wsola;
+
 
 	double max_pulse_len_diff;
 	int paf_pulse_length;
@@ -80,6 +80,8 @@ public:
    double pitch_scale;
    bool use_postfiltering;
    bool use_spectral_matching;
+   bool use_original_excitation;
+   bool use_wsola;
    double postfilter_coefficient;
    bool use_trajectory_smoothing;
    int lsf_vt_smooth_len;

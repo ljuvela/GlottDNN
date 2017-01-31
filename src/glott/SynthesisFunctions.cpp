@@ -157,7 +157,6 @@ gsl::vector GetExternalPulse(const size_t &pulse_len, const bool &use_interpolat
       sum += win(i);
    }
 
-   //pulse *= pulse_len/sum;
    pulse *= 0.375*pulse_len/sum; // 0.375 = 3/8 (HANN window area/length when N->INF)
 
    return pulse;
@@ -222,7 +221,7 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
    gsl::vector noise(params.frame_shift*2);
    //gsl::vector noise(params.frame_shift);
    double T0, energy;
-   bool unvoiced_psola_flip = false; // alternatingly flip unvoiced frames in psola
+   bool unvoiced_psola_flip = true; // alternatingly flip unvoiced frames in psola
 
    /* Waveform similarity PSOLA is available only when PAF waveforms haven't been windowed */
    bool use_wsola = params.use_wsola;
@@ -240,7 +239,7 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
       if(data.fundf(frame_index) > 0) {
          T0 = params.fs/data.fundf(frame_index);
 
-         if(params.excitation_method == DNN_GENERATED_EXCITATION && T0 > params.paf_pulse_length)
+         if(params.excitation_method != SINGLE_PULSE_EXCITATION && T0 > params.paf_pulse_length)
             T0 = params.paf_pulse_length;
 
          /*  Experimental for accurate PSOLA */
@@ -257,6 +256,8 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
          pulse_len = rint(2*T0);
          energy = LogEnergy2FrameEnergy(data.frame_energy(frame_index),pulse_len);
 
+         //std::cout << "excitation method " << params.excitation_method << " "<< SINGLE_PULSE_EXCITATION << std::endl;
+
          switch (params.excitation_method) {
          case SINGLE_PULSE_EXCITATION:
             pulse = GetSinglePulse(pulse_len, energy, single_pulse_base);
@@ -264,6 +265,7 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
             //p2 = gsl::vector(pulse.size());
             //p2.set_all(1.0);
             //ApplyPsolaWindow(HANN, t0_pr, t0_nx, &p2);
+
             break;
          case DNN_GENERATED_EXCITATION:
 
@@ -295,6 +297,7 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
             }
             pulse_orig = pulse;
             ApplyWindowingFunction(params.psola_windowing_function, &pulse);
+
             break;
          }
 

@@ -119,6 +119,7 @@ int main(int argc, char *argv[]) {
    if(GetGci(params, data.signal, data.source_signal_iaif, data.fundf, &(data.gci_inds)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
+
    /* Estimate frame log-energy (Gain) */
    GetGain(params, data.fundf, data.signal, &(data.frame_energy));
 

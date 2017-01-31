@@ -130,7 +130,13 @@ int GetGci(const Param &params, const gsl::vector &signal, const gsl::vector &so
       gsl::vector mean_based_signal(signal.size(),true);
       MeanBasedSignal(signal, params.fs, getMeanF0(fundf),&mean_based_signal);
       SedreamsGciDetection(source_signal_iaif,mean_based_signal,gci_inds);
+
+      //VPrint1(*gci_inds);
+      //VPrint2(signal);
+      //VPrint3(mean_based_signal);
 	}
+
+
 
    std::cout << " done." << std::endl;
 	return EXIT_SUCCESS;
@@ -544,30 +550,36 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
 
       /* Find pulse center index, (sample index for unvoiced frame )*/
       int center_index = gci_inds(pulse_index);;
-      if(fundf(frame_index) == 0.0 || abs(center_index-(int)sample_index) > THRESH)
+      if(fundf(frame_index) == 0.0 || abs(center_index-(int)sample_index) > THRESH) {
          center_index = sample_index;
+      }
+
 
       int i;
       /* Refine center index by finding the local minimum of HANN-windowed pulse */
+      /* ljuvela 31-1-2017: this can cause jitter / harshness artefacts
+       *    --> just use the GCI's
+       *
+       *
       int minind;
       if(fundf(frame_index) != 0.0) {
          pulse = gsl::vector((int)rint(2.0*(double)params.fs/fundf(frame_index)),true);
          for(j=0;j<pulse.size();j++) {
-            i = center_index - round(pulse.size()/2) + j;
+            i = center_index - round(pulse.size()/2.0) + j;
             if (i >= 0 && i < (int)source_signal.size())
                pulse(j) = source_signal(i);
          }
-         ApplyWindowingFunction(HANNING, &pulse);
+         ApplyWindowingFunction(HANN, &pulse);
          minind = pulse.min_index();
-         center_index += minind - pulse.size()/2;
+         center_index += minind - round(pulse.size()/2.0);
       }
-
+        **/
 
       if (params.use_pulse_interpolation == true){
          /* Interpolate pitch-synchronous pulse segment */
          gsl::vector pulse_orig(pulselen);
          for(j=0;j<pulselen;j++) {
-            i = center_index - round(pulselen/2) + j;
+            i = center_index - round(pulselen/2.0) + j;
             if (i >= 0 && i < (int)source_signal.size())
                pulse_orig(j) = source_signal(i);
          }
@@ -582,7 +594,7 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
 
             size_t T;
             if(fundf(frame_index) != 0.0) {
-               T = rint(2.0*(double)params.fs/fundf(frame_index));
+               T = round(2.0*(double)params.fs/fundf(frame_index));
                if(T > paf_pulse.size())
                   T = paf_pulse.size();
             } else {
@@ -591,7 +603,7 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
 
             pulse = gsl::vector(T);
             for(j=0;j<T;j++) {
-               i = center_index - round(pulse.size()/2) + j;
+               i = center_index - round(pulse.size()/2.0) + j;
                if (i >= 0 && i < (int)source_signal.size())
                   pulse(j) = source_signal(i);
             }
@@ -599,13 +611,13 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
 
             for(j=0;j<pulse.size();j++) {
               // if (i >= 0 && i < (int)source_signal.size())
-                  paf_pulse((paf_pulse.size()/2-pulse.size()/2)+j) = pulse(j);
+                  paf_pulse((round(paf_pulse.size()/2.0)-round(pulse.size()/2.0))+j) = pulse(j);
                   //paf_pulse(j) = source_signal(i);
             }
          } else {
             // No windowing, fill the pulse with data
             for(j=0;j<paf_pulse.size();j++) {
-               i = center_index - round(paf_pulse.size()/2) + j;
+               i = center_index - round(paf_pulse.size()/2.0) + j;
                if (i >= 0 && i < (int)source_signal.size())
                   paf_pulse(j) = source_signal(i);
             }

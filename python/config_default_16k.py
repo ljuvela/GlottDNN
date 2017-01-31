@@ -1,9 +1,9 @@
 # run flags
 make_dirs = True
 make_scp = True
-do_sptk_pitch_analysis = False
-do_reaper_pitch_analysis = False
-do_glott_vocoder_analysis = False
+do_reaper_pitch_analysis = True
+do_sptk_pitch_analysis = True
+do_glott_vocoder_analysis = True
 make_dnn_train_data = False
 make_dnn_infofile = False
 do_dnn_training = False
@@ -16,7 +16,7 @@ datadir = prjdir + '/data/slt16'
 # general parameters
 sampling_frequency = 16000
 warping_lambda = 0.00
-use_external_gci = False
+use_external_gci = True
 
 
 # programs

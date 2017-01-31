@@ -162,6 +162,9 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool required, Param 
    if (ConfigLookupBool("USE_PAF_UNVOICED", cfg, false, &(params->use_paf_unvoiced_synthesis)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
+   if (ConfigLookupBool("USE_ORIGINAL_EXCITATION", cfg, false, &(params->use_original_excitation)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
    if (ConfigLookupBool("HP_FILTERING", cfg, required, &(params->use_highpass_filtering)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
@@ -360,8 +363,11 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool required, Param 
 	      params->excitation_method = DNN_GENERATED_EXCITATION;
 	   else if (str == "PULSES_AS_FEATURES")
 	      params->excitation_method = PULSES_AS_FEATURES_EXCITATION;
-	   else
+	   else {
+	      std::cerr << "Error: invalid excitation method flag" << std::endl;
 	      return EXIT_FAILURE;
+	   }
+
 	}
 
 	/* PSOLA window for synthesis */
@@ -419,7 +425,7 @@ int ReadConfig(const char *filename, const bool required, Param *params) {
 		return(EXIT_FAILURE);
 	}
 
-	AssignConfigParams(cfg, required, params);
-	return EXIT_SUCCESS;
+	return AssignConfigParams(cfg, required, params);
+	//return EXIT_SUCCESS;
 }
 

@@ -169,6 +169,7 @@ def glott_vocoder_analysis():
                 conf_file.write('SAMPLING_FREQUENCY = ' + str(conf.sampling_frequency) +';\n')
                 conf_file.write('WARPING_LAMBDA_VT = '+ str(conf.warping_lambda) +';\n')
                 conf_file.write('DATA_DIRECTORY = \"' + conf.datadir + '\";\n')
+                conf_file.write('SAVE_TO_DATADIR_ROOT = false;\n')
                 # force the use of float file format
                 conf_file.write('DATA_TYPE = \"FLOAT\";\n')
                 conf_file.close()
@@ -192,6 +193,7 @@ def glott_vocoder_synthesis():
                 conf_file.write('WARPING_LAMBDA_VT = '+ str(conf.warping_lambda) +';\n')
                 conf_file.write('DATA_DIRECTORY = \"' + conf.datadir + '\";\n')
                 conf_file.write('DATA_TYPE = \"FLOAT\";\n')
+                conf_file.write('SAVE_TO_DATADIR_ROOT = false;\n')
              #   if conf.use_dnn_generated_excitation:
              #       conf_file.write('EXCITATION_METHOD = \"DNN_GENERATED\";\n')   
              #
