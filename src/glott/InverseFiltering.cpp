@@ -315,8 +315,8 @@ void MeanBasedSignal(const gsl::vector &signal, const int &fs, const double &mea
 void SedreamsGciDetection(const gsl::vector &residual, const gsl::vector &mean_based_signal, gsl::vector_int *gci_inds) {
    gsl::vector_int peak_inds;
    gsl::vector peak_values;
-   //int number_of_peaks = FindPeaks(mean_based_signal, 0.1, &peak_inds, &peak_values);
-   int number_of_peaks = FindPeaks(mean_based_signal, 0.0001, &peak_inds, &peak_values);
+   int number_of_peaks = FindPeaks(mean_based_signal, 0.1, &peak_inds, &peak_values);
+   //int number_of_peaks = FindPeaks(mean_based_signal, 0.01, &peak_inds, &peak_values);
 
    gsl::vector_int start(number_of_peaks);
    gsl::vector_int stop(number_of_peaks);

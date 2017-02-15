@@ -1362,7 +1362,7 @@ gsl::vector GetPulseWsola2(const gsl::vector &frame, const int &t0, const double
    // Pitch shift by interpolation (don't do extreme modifications)
    double error_ratio = (double)abs(t0 - t0_estimate)/(double)t0;
    //std::cout << "error ratio = " << error_ratio << std::endl;
-   if (error_ratio < 0.5)
+   if (error_ratio < 2.0)
       InterpolateSpline(frame, round(  (double)t0 / (double)(t0_estimate) * frame.size()), &frame_interp);
 
    // waveform similarity overlap add (WSOLA)
