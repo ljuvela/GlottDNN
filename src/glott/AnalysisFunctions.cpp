@@ -129,6 +129,7 @@ int GetGci(const Param &params, const gsl::vector &signal, const gsl::vector &so
       std::cout << "GCI estimation using the SEDREAMS algorithm ...";
       gsl::vector mean_based_signal(signal.size(),true);
       MeanBasedSignal(signal, params.fs, getMeanF0(fundf),&mean_based_signal);
+      //MovingAverageFilter(3,&mean_based_signal); // remove small fluctuation
       SedreamsGciDetection(source_signal_iaif,mean_based_signal,gci_inds);
 
       //VPrint1(*gci_inds);
@@ -531,7 +532,8 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
    if (params.extract_pulses_as_features == false)
       return;
 
-   int THRESH = params.frame_length/2;
+   //int THRESH = params.frame_length/2;
+   int THRESH = 100*params.frame_length;
    size_t frame_index;
    for(frame_index=0;frame_index<(size_t)params.number_of_frames;frame_index++) {
       size_t sample_index = frame_index*params.frame_shift;
@@ -549,7 +551,11 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
       gsl::vector pulse;
 
       /* Find pulse center index, (sample index for unvoiced frame )*/
-      int center_index = gci_inds(pulse_index);;
+      int center_index = gci_inds(pulse_index);
+      if (fundf(frame_index) != 0.0 && abs(center_index-(int)sample_index) > THRESH) {
+         std::cout << "Warning: no suitable pulse in range" << std::endl;
+         std::cout << "frame: " << frame_index << ", distance: " << abs(center_index-(int)sample_index) << std::endl;
+      }
       if(fundf(frame_index) == 0.0 || abs(center_index-(int)sample_index) > THRESH) {
          center_index = sample_index;
       }
@@ -559,8 +565,8 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
       /* Refine center index by finding the local minimum of HANN-windowed pulse */
       /* ljuvela 31-1-2017: this can cause jitter / harshness artefacts
        *    --> just use the GCI's
-       *
-       *
+       */
+      /*
       int minind;
       if(fundf(frame_index) != 0.0) {
          pulse = gsl::vector((int)rint(2.0*(double)params.fs/fundf(frame_index)),true);
@@ -573,7 +579,7 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
          minind = pulse.min_index();
          center_index += minind - round(pulse.size()/2.0);
       }
-        **/
+       */
 
       if (params.use_pulse_interpolation == true){
          /* Interpolate pitch-synchronous pulse segment */

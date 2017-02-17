@@ -132,6 +132,10 @@ int main(int argc, char *argv[]) {
    /* Perform glottal inverse filtering with the estimated VT AR polynomials */
    InverseFilter(params, data, &(data.poly_glot), &(data.source_signal));
 
+   /* Re-estimate GCIs on the residual*/
+//   if(GetGci(params, data.signal, data.source_signal, data.fundf, &(data.gci_inds)) == EXIT_FAILURE)
+//      return EXIT_FAILURE;
+
       /* Extract pitch synchronous (excitation) waveforms at each frame */
    if (params.use_waveforms_directly)
       GetPulses(params, data.signal, data.gci_inds, data.fundf, &(data.excitation_pulses));
