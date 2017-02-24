@@ -115,7 +115,7 @@ def reaper_pitch_analysis():
                 gcifile = conf.datadir + '/gci/' + bname + '.GCI'
                 
                 # analysis commands
-                cmd =  conf.reaper + ' -a -i ' + wavfile + ' -f ' + f0tmp1 + ' -p ' + gcitmp
+                cmd =  conf.reaper + ' -a -i ' + wavfile + ' -f ' + f0tmp1 + ' -p ' + gcitmp + ' -u 0.05'
                 os.system(cmd)
                 cmd = 'tail +8 ' + f0tmp1 + '| awk \'{print $3}\' | x2x +af ' + \
                     '| sopr -magic -1.0 -MAGIC 0.0  > ' + f0tmp2
