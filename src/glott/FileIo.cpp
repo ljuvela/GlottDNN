@@ -389,29 +389,29 @@ int ReadSynthesisData(const char *filename, Param *params, SynthesisData *data) 
 
    std::string param_fname;
 
-   param_fname = GetParamPath("f0", ".F0", params->dir_f0, *params);
+   param_fname = GetParamPath("f0", ".f0", params->dir_f0, *params);
    if (ReadGslVector(param_fname, params->data_type, &(data->fundf)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-   param_fname = GetParamPath("gain", ".Gain", params->dir_gain, *params);
+   param_fname = GetParamPath("gain", ".gain", params->dir_gain, *params);
    if (ReadGslVector(param_fname, params->data_type, &(data->frame_energy)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-   param_fname = GetParamPath("lsf", ".LSF", params->dir_lsf, *params);
+   param_fname = GetParamPath("lsf", ".lsf", params->dir_lsf, *params);
    if (ReadGslMatrix(param_fname, params->data_type, params->lpc_order_vt, &(data->lsf_vocal_tract)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-   param_fname = GetParamPath("lsfg", ".LSFglot", params->dir_lsfg, *params);
+   param_fname = GetParamPath("slsf", ".slsf", params->dir_lsfg, *params);
    //if (params->use_spectral_matching) // TODO: may be needed for internal DNN excitation, make more elaborate check
       if (ReadGslMatrix(param_fname, params->data_type, params->lpc_order_glot, &(data->lsf_glot)) == EXIT_FAILURE)
          return EXIT_FAILURE;
 
-   param_fname = GetParamPath("hnr", ".HNR", params->dir_hnr, *params);
+   param_fname = GetParamPath("hnr", ".hnr", params->dir_hnr, *params);
    //if (params->noise_gain_voiced > 0.0) // TODO: may be needed for internal DNN excitation, make more elaborate check
       if (ReadGslMatrix(param_fname, params->data_type, params->hnr_order, &(data->hnr_glot)) == EXIT_FAILURE)
          return EXIT_FAILURE;
 
-   param_fname = GetParamPath("paf", ".PAF", params->dir_paf, *params);
+   param_fname = GetParamPath("pls", ".pls", params->dir_paf, *params);
    if (params->excitation_method == PULSES_AS_FEATURES_EXCITATION)
       if (ReadGslMatrix(param_fname, params->data_type, params->paf_pulse_length, &(data->excitation_pulses)) == EXIT_FAILURE)
          return EXIT_FAILURE;
