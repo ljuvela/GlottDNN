@@ -43,6 +43,10 @@ int main(int argc, char *argv[]) {
    const char *default_config_filename = argv[2];
    const char *user_config_filename = argv[3];
 
+   if (argc < 3) {
+      std::cout << "Usage: Synthesis <basename.wav> <config_default.cfg> (<config_usr.cfg>)" << std::endl;
+   }
+
    std::cout << "Synthesis of " << filename << std::endl;
 
    /* Read configuration file */

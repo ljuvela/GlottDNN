@@ -1362,8 +1362,8 @@ gsl::vector GetPulseWsola2(const gsl::vector &frame, const int &t0, const double
    // Pitch shift by interpolation (don't do extreme modifications)
    double error_ratio = (double)abs(t0 - t0_estimate)/(double)t0;
    //std::cout << "error ratio = " << error_ratio << std::endl;
-   if (error_ratio < 2.0)
-      InterpolateSpline(frame, round(  (double)t0 / (double)(t0_estimate) * frame.size()), &frame_interp);
+   //if (error_ratio < 2.0)
+   //   InterpolateSpline(frame, round(  (double)t0 / (double)(t0_estimate) * frame.size()), &frame_interp);
 
    // waveform similarity overlap add (WSOLA)
    int M = 0.5 * t0; //total range of  T0
@@ -1372,7 +1372,7 @@ gsl::vector GetPulseWsola2(const gsl::vector &frame, const int &t0, const double
    int m,m_ind;
 
    int m_opt = 0;
-   if (previous_unvoiced) { // previous frame was unvoiced, no modifications
+   if (previous_unvoiced == false) { // if previous frame was unvoiced, no modifications
       // Find the maximum cross-correlation
       for(m=-1*M, m_ind=0; m<M; m++, m_ind++) {
 
