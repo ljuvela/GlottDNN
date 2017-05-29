@@ -75,6 +75,8 @@ private:
    gsl::vector output_vector;
    DnnParams input_params;
 
+   int checkInput(const std::string &type, const size_t &target_size, const size_t &actual_size);
+
    DnnActivationFunction ActivationParse(std::string &str);
 
 };
