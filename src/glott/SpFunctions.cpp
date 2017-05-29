@@ -562,6 +562,10 @@ void Levinson(const gsl::vector &r, gsl::vector *A) {
     }
     (*A) *= -1.0; /* Invert coefficient signs */
     (*A)(0) = 1.0;
+    for(i=0;i<A->size();i++) {
+       if(gsl_isnan((*A)(i)))
+          (*A)(i) = (0.0);
+       } 
 }
 
 
@@ -1031,7 +1035,6 @@ void Lsf2Poly(const gsl::matrix &lsf_mat, gsl::matrix *poly_mat) {
 }
 
 void Poly2Lsf(const gsl::vector &a, gsl::vector *lsf) {
-
 
    /* by ljuvela, based on traitio and matlab implementation of poly2lsf */
    size_t i,n;
@@ -1874,7 +1877,7 @@ double GetFilteringGain(const gsl::vector &b, const gsl::vector &a,
 	int p = GSL_MAX(a.size(),b.size());
 
 	gsl::vector frame(frame_length);
-	gsl::vector pre_frame(3*p);
+	gsl::vector pre_frame(2*p);
 	gsl::vector frame_full(frame_length + p);
 
 	/* Get samples to frame */
@@ -1902,14 +1905,11 @@ double GetFilteringGain(const gsl::vector &b, const gsl::vector &a,
    else
       WFilter(b,a,frame_full,warping_lambda,&result);
 
-	// TODO: window filtering result before gain calculation!!
 	ApplyWindowingFunction(HANN, &result);
-	result *= 8/3;
+	result *= sqrt(8.0/3.0);
 
-	double max_gain = 50.0;
-	double normfactor = (double)fmin(1/getEnergy(result), max_gain);
-//	if (normfactor == max_gain) {std::cout << "Warning: filtering gain clipped" << std::endl ; }
-	return LogEnergy2FrameEnergy(target_gain_db, result.size()) * normfactor ; // prevent large values from divide by zero
+	return LogEnergy2FrameEnergy(target_gain_db, result.size()) * (double)fmin(1/getEnergy(result),100.0); // prevent large values from divide by zero
+
 
 }
 

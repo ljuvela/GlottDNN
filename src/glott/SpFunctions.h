@@ -79,5 +79,6 @@ void Leja(gsl::vector *lsfvec);
 void Lp2Walp(const gsl::vector &a_orig,const double &alpha, gsl::vector *a_w);
 void RandomizePhase(gsl::vector *frame);
 void WarpLP(const gsl::vector &a_orig, double alpha, gsl::vector *a_w);
+void FastAutocorr(const gsl::vector &x, gsl::vector *ac);
 
 #endif /* SRC_GLOTT_SPFUNCTIONS_H_ */

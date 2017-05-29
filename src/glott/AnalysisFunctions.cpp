@@ -70,7 +70,8 @@ int GetF0(const Param &params, const gsl::vector &signal, const gsl::vector &sou
 	} else {
       *fundf = gsl::vector(params.number_of_frames);
       gsl::vector signal_frame = gsl::vector(params.frame_length);
-      gsl::vector glottal_frame = gsl::vector(2*params.frame_length); // Longer frame
+      //gsl::vector glottal_frame = gsl::vector(2*params.frame_length); // Longer frame
+      gsl::vector glottal_frame = gsl::vector(params.frame_length_long); // Longer frame
       int frame_index;
       double ff;
       gsl::matrix fundf_candidates(params.number_of_frames, NUMBER_OF_F0_CANDIDATES);
@@ -127,9 +128,12 @@ int GetGci(const Param &params, const gsl::vector &signal, const gsl::vector &so
 		}
 	} else {
       std::cout << "GCI estimation using the SEDREAMS algorithm ...";
+
       gsl::vector mean_based_signal(signal.size(),true);
+
       MeanBasedSignal(signal, params.fs, getMeanF0(fundf),&mean_based_signal);
       //MovingAverageFilter(3,&mean_based_signal); // remove small fluctuation
+
       SedreamsGciDetection(source_signal_iaif,mean_based_signal,gci_inds);
 
       //VPrint1(*gci_inds);
@@ -149,9 +153,14 @@ int GetGain(const Param &params, const gsl::vector &fundf, const gsl::vector &si
    //double E_REF = 0.00001;
 	gsl::vector frame = gsl::vector(params.frame_length);
 	gsl::vector unvoiced_frame = gsl::vector(params.frame_length_unvoiced);
-
 	gsl::vector gain = gsl::vector(params.number_of_frames);
-	int frame_index;
+        ComplexVector frame_fft;
+	size_t NFFT = 4096; // Long FFT
+	double MIN_LOG_POWER = -60.0;
+	gsl::vector fft_mag(NFFT/2+1);
+        int min_uv_frequency = rint((double)NFFT/(double)(params.fs)*000.0);
+        
+	int frame_index, i;
 
 	frame.set_all(1.0);
 	ApplyWindowingFunction(params.default_windowing_function,&frame);
@@ -171,23 +180,13 @@ int GetGain(const Param &params, const gsl::vector &fundf, const gsl::vector &si
          GetFrame(signal, frame_index, params.frame_shift, &unvoiced_frame, NULL);
          ApplyWindowingFunction(params.default_windowing_function, &unvoiced_frame);
          frame_energy = getEnergy(unvoiced_frame);
+
          if(frame_energy == 0.0)
             frame_energy =+ DBL_MIN;
 
          frame_energy *= frame_energy_compensation;// Compensate windowing gain loss
          gain(frame_index) = FrameEnergy2LogEnergy(frame_energy, unvoiced_frame.size());
       }
-		/* Evaluate gain of frame, normalize energy per sample basis */
-	/*	double sum = 0.0;
-		double mean = getMean(frame);
-		size_t i;
-		for(i=0;i<frame.size();i++) {
-			sum =+ (frame(i)-mean)*(frame(i)-mean);
-		}
-		if(sum == 0.0)
-			sum =+ DBL_MIN;
-
-		gain(frame_index) = 10.0*log10(sum/((double)(frame.size() * frame.size()))); // energy per sample (not power)*/
 
 	}
 	*gain_ptr = gain;
@@ -209,10 +208,11 @@ int SpectralAnalysis(const Param &params, const AnalysisData &data, gsl::matrix 
 	gsl::vector G(params.lpc_order_glot_iaif,true);
 	gsl::vector B(1);B(0) = 1.0;
 	//gsl::vector lip_radiation(2);lip_radiation(0) = 1.0; lip_radiation(1) = 0.99;
-   gsl::vector frame_pre_emph(params.frame_length);
-   gsl::vector frame_full; // frame + preframe
-   gsl::vector residual(params.frame_length);
+        gsl::vector frame_pre_emph(params.frame_length);
+        gsl::vector frame_full; // frame + preframe
+        gsl::vector residual(params.frame_length);
 
+ 
 	if (params.use_external_lsf_vt == false) {
 
 	std::cout << "Spectral analysis ...";
@@ -236,6 +236,7 @@ int SpectralAnalysis(const Param &params, const AnalysisData &data, gsl::matrix 
 	         /* First-loop envelope */
 	         ArAnalysis(params.lpc_order_vt,params.warping_lambda_vt, params.lp_weighting_function, lp_weight, frame_pre_emph, &A);
 	         /* Second-loop envelope (if IAIF is used) */
+
 	         if(params.use_iterative_gif) {
 	            ConcatenateFrames(pre_frame, frame, &frame_full);
 	            if(params.warping_lambda_vt != 0.0) {
@@ -253,8 +254,7 @@ int SpectralAnalysis(const Param &params, const AnalysisData &data, gsl::matrix 
 	      } else {
 	         GetFrame(data.signal, frame_index, params.frame_shift, &unvoiced_frame, &pre_frame);
 	         ApplyWindowingFunction(params.default_windowing_function, &unvoiced_frame);
-	         //LPC(frame, params.lpc_order_vt, &A);
-	         ArAnalysis(params.lpc_order_vt,params.warping_lambda_vt, NONE, lp_weight, unvoiced_frame, &A);
+                 ArAnalysis(params.lpc_order_vt,params.warping_lambda_vt, NONE, lp_weight, unvoiced_frame, &A);
 	      }
 	      poly_vocal_tract->set_col_vec(frame_index, A);
 	   }
@@ -422,24 +422,19 @@ int InverseFilter(const Param &params, const AnalysisData &data, gsl::matrix *po
       if(params.warping_lambda_vt == 0.0) {
          Filter(data.poly_vocal_tract.get_col_vec(frame_index),b,frame_full,&frame_residual);
       } else {
-         // BOF inverse filter always with linear frequency axis high order fitted version
-        // WarpLP(data.poly_vocal_tract.get_col_vec(frame_index), -1.0*params.warping_lambda_vt, &a_lin);
+
          gsl::vector a_warp(data.poly_vocal_tract.get_col_vec(frame_index));
-       //  WarpLP(a_lin, 1.0*params.warping_lambda_vt, &a_warp);
-
-//         StabilizePoly(NFFT, &a_lin); // TODO: fit to higher order!!
-//         StabilizePoly(1024, a_lin, &a_lin_high_order);
-//         Filter(a_lin, b, frame_full, &frame_residual);
-         // EOF
-
          // get warped filter linear frequency response via impulse response
          imp_response.set_zero();
          impulse.set_zero();
-         impulse(a_lin_high_order.size()) = 1.0; // give pre-frame (only affects phase, not filter fit)
-//         WFilter(data.poly_vocal_tract.get_col_vec(frame_index), b,impulse, params.warping_lambda_vt, &imp_response); // get inverse filter impulse response
-         WFilter(a_warp, b,impulse, params.warping_lambda_vt, &imp_response); // get inverse filter impulse response
-         StabilizePoly(NFFT, imp_response, &a_lin_high_order); // Do high-order LP fit on the inverse filter (FIR polynomial)
-         Filter(a_lin_high_order, b, frame_full_high_order, &frame_residual); // Linear filtering
+         // give pre-frame (only affects phase, not filter fit)
+         impulse(a_lin_high_order.size()) = 1.0;
+         // get inverse filter impulse response
+         WFilter(a_warp, b,impulse, params.warping_lambda_vt, &imp_response);
+         // Do high-order LP fit on the inverse filter (FIR polynomial)
+         StabilizePoly(NFFT, imp_response, &a_lin_high_order);
+         // Linear filtering
+         Filter(a_lin_high_order, b, frame_full_high_order, &frame_residual);
       }
 
 
@@ -449,7 +444,11 @@ int InverseFilter(const Param &params, const AnalysisData &data, gsl::matrix *po
       ApplyWindowingFunction(params.default_windowing_function, &frame_residual);
 
       LPC(frame_residual,params.lpc_order_glot,&a_glot);
-
+      size_t i;
+      for(i=0;i<a_glot.size();i++) {
+         if(gsl_isnan((a_glot)(i)))
+            (a_glot)(i) = (0.0);
+      }
       poly_glot->set_col_vec(frame_index, a_glot);
 
       OverlapAdd(frame_residual, frame_index*params.frame_shift, source_signal); // center index = frame_index*params.frame_shift

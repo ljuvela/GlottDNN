@@ -91,7 +91,9 @@ int main(int argc, char *argv[]) {
       SpectralMatchExcitation(params, data, &(data.excitation_signal));
 
    FilterExcitation(params, data, &(data.signal));
-
+   
+   GenerateUnvoicedSignal(params, data, &(data.signal));
+   
    std::string out_fname;
    out_fname = GetParamPath("exc", ".exc.wav", params.dir_exc, params);
    if(WriteWavFile(out_fname, data.excitation_signal, params.fs) == EXIT_FAILURE)
