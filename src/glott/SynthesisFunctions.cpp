@@ -316,9 +316,9 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
       /** Unvoiced excitation **/
       } else {
 
+         pulse_prev = gsl::vector(1,true); // sets the previous pulse to undefined for WS-Psola
          if (params.noise_gain_unvoiced == 0.0) {
             sample_index += params.frame_shift;
-            pulse_prev = gsl::vector(1,true); // sets the previous pulse to undefined for WS-Psola
             continue;
          }
 
@@ -563,6 +563,7 @@ void SpectralMatchExcitation(const Param &params,const SynthesisData &data, gsl:
          InterpolateLinear(data.lsf_glot,frame_index_double,&lsf_tar_interpolated);
          Lsf2Poly(lsf_gen_interpolated,&a_gen);
          Lsf2Poly(lsf_tar_interpolated,&a_tar);
+         a_tar.set_all(0.0);
          //TODO: Add interpolation to frame_energy.
          gain_target_db = InterpolateLinear(data.frame_energy(floor(frame_index_double)),
                                           data.frame_energy(ceil(frame_index_double)),frame_index_double);
@@ -605,8 +606,8 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data, gsl:
    gsl::vector b(1);b(0) = 1.0;
    
       /* Define analysis and synthesis window */
-   //double kbd_alpha = 2.3;
-   //gsl::vector kbd_window = getKaiserBesselDerivedWindow(frame.size(), kbd_alpha);
+   double kbd_alpha = 2.3;
+   gsl::vector kbd_window = getKaiserBesselDerivedWindow(noise_vec.size(), kbd_alpha);
    
    
    size_t frame_index;
@@ -636,10 +637,12 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data, gsl:
          double ang;
 
          for(i=0;i<noise_vec_fft.getSize();i++) {
-            mag = GSL_MIN(1.0/(noise_vec_fft.getAbs(i)), 150);
-            ang = noise_vec_fft.getAng(i) + 2.0*M_PI*(rand_gen.uniform()-0.5);
+
+            mag = GSL_MIN(1.0/(noise_vec_fft.getAbs(i)),150);
+            ang = -1.0*noise_vec_fft.getAng(i) + 2.0*M_PI*(rand_gen.uniform()-0.5);
             noise_vec_fft.setReal(i, mag*cos(double(ang)));
             noise_vec_fft.setImag(i, mag*sin(double(ang)));
+
          }
          IFFTRadix2(noise_vec_fft,&noise_vec);
          double e_target;
@@ -647,7 +650,11 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data, gsl:
 
 //         noise_vec /= getEnergy(noise_vec);
          noise_vec *= params.noise_gain_unvoiced*e_target/getEnergy(noise_vec)*sqrt(8.0/3.0);
+
          ApplyWindowingFunction(HANN, &noise_vec);
+         //noise_vec *= kbd_window;
+         //noise_vec *= kbd_window;
+
          /* Normalize overlap-add window */
          noise_vec /= 0.5*(double)noise_vec.size()/(double)params.frame_shift;
          OverlapAdd(noise_vec, frame_index*rint(params.frame_shift/params.speed_scale), &uv_signal);
@@ -656,6 +663,108 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data, gsl:
    (*signal) += uv_signal;
 }
 
+void FftFilterExcitation(const Param &params, const SynthesisData &data, gsl::vector *signal) {
+   gsl::vector frame(params.frame_length);
+
+   gsl::vector excitation_frame(params.frame_length);
+   
+   gsl::vector A(params.lpc_order_vt+1,true);
+   gsl::vector A_tilt(params.lpc_order_glot+1,true);
+   gsl::vector A_tilt_exc(params.lpc_order_glot+1,true);
+   
+   ComplexVector frame_fft;
+   ComplexVector vt_fft;
+   ComplexVector tilt_fft;
+   ComplexVector tilt_exc_fft;
+   size_t NFFT = 4096; // Long FFT
+   gsl::vector fft_mag(NFFT/2+1);
+   gsl::vector frame_copy;
+   
+   // for de-warping filters
+   gsl::vector impulse(NFFT);
+   gsl::vector imp_response(NFFT);
+   gsl::vector b(1);b(0) = 1.0;
+
+   size_t i;
+   
+   
+      /* Define analysis and synthesis window */
+   double kbd_alpha = 2.3;
+   gsl::vector kbd_window = getKaiserBesselDerivedWindow(frame.size(), kbd_alpha);
+   
+   
+   size_t frame_index;
+   for(frame_index=0;frame_index<params.number_of_frames;frame_index++) {
+      if(data.fundf(frame_index) != 0) {
+         /* Get spectrum of vocal tract and glot filter */
+         Lsf2Poly(data.lsf_vocal_tract.get_col_vec(frame_index),&A);
+         if(params.warping_lambda_vt == 0.0) {
+            FFTRadix2(A, NFFT, &vt_fft);
+         } else {
+            // get warped filter linear frequency response via impulse response
+            imp_response.set_zero();
+            impulse.set_zero();
+            impulse(0) = 1.0;
+            // get inverse filter impulse response
+            WFilter(A, b,impulse, params.warping_lambda_vt, &imp_response);
+            FFTRadix2(imp_response, NFFT, &vt_fft);
+         }
+         
+         Lsf2Poly(data.lsf_glot.get_col_vec(frame_index),&A_tilt);
+         FFTRadix2(A_tilt, NFFT, &tilt_fft);
+         
+         /* Get spectrum of excitation */
+         GetFrame(data.excitation_signal, frame_index, rint(params.frame_shift/params.speed_scale), &frame, NULL);
+         frame_copy.copy(frame);
+         ApplyWindowingFunction(HANN,&frame);
+         LPC(frame_copy,params.lpc_order_glot,&A_tilt_exc);
+         FFTRadix2(A_tilt_exc, NFFT, &tilt_exc_fft);
+         
+         ApplyWindowingFunction(COSINE,&frame);
+         //frame *= kbd_window;
+         FFTRadix2(frame, NFFT, &frame_fft);
+         /* Normalize noise s.t. mean(abs(noise_fft)) == 1 */
+         //noise_vec_fft /= sqrt(noise_vec.size());
+
+         // TODO: Generate minimum phase to noise_vec_fft
+         
+         // Randomize phase
+         double mag_vt, mag_exc, ang_vt, ang_exc, mag_tilt, ang_tilt, mag_tilt_exc, ang_tilt_exc, mag, ang;
+
+         for(i=0;i<frame_fft.getSize();i++) {
+            mag_vt = GSL_MIN(1.0/(vt_fft.getAbs(i)),1000);
+            ang_vt = -1.0*vt_fft.getAng(i);
+            mag_tilt = GSL_MIN(1.0/(tilt_fft.getAbs(i)),1000);
+            ang_tilt = -1.0*tilt_fft.getAng(i);
+            mag_exc = frame_fft.getAbs(i);
+            ang_exc = frame_fft.getAng(i);
+            mag_tilt_exc = GSL_MIN(1.0/tilt_exc_fft.getAbs(i),1000);
+            ang_tilt_exc = -1.0*tilt_exc_fft.getAng(i);
+            if (params.use_spectral_matching) {
+               mag = mag_exc*mag_vt*mag_tilt/mag_tilt_exc;
+            } else {
+               mag = mag_exc*mag_vt;
+            }
+            ang = ang_exc + ang_vt;
+            frame_fft.setReal(i,mag*cos(double(ang)));
+            frame_fft.setImag(i,mag*sin(double(ang)));
+         }
+         IFFTRadix2(frame_fft,&frame);
+         double e_target = LogEnergy2FrameEnergy(data.frame_energy(frame_index), frame.size());
+
+//         noise_vec /= getEnergy(noise_vec);
+         
+         ApplyWindowingFunction(COSINE,&frame);
+         //frame *= kbd_window;
+         
+         frame *= e_target/getEnergy(frame)/sqrt(2.0);
+         
+         /* Normalize overlap-add window */
+         frame /= 0.5*(double)frame.size()/(double)params.frame_shift;
+         OverlapAdd(frame,frame_index*rint(params.frame_shift/params.speed_scale),signal); 
+      }
+   }
+}
 
 void FilterExcitation(const Param &params, const SynthesisData &data, gsl::vector *signal) {
 

@@ -200,6 +200,7 @@ def glott_vocoder_synthesis():
              #   conf_file.write('DNN_WEIGHT_PATH = \"' + conf.weights_data_dir + '/' + conf.dnn_name + '\";\n')
                 conf_file.close()
                 cmd = conf.Synthesis + ' ' + wavfile + ' ' + conf.config_default + ' ' + config_user
+                #print cmd
                 os.system(cmd)
 
 
