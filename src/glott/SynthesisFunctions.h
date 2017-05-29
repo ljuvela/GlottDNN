@@ -15,5 +15,6 @@ void HarmonicModification(const Param &params, const SynthesisData &data, gsl::v
 void SpectralMatchExcitation(const Param &params,const SynthesisData &data, gsl::vector *excitation_signal);
 void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data, gsl::vector *signal);
 void FilterExcitation(const Param &params, const SynthesisData &data, gsl::vector *signal);
+void FftFilterExcitation(const Param &params, const SynthesisData &data, gsl::vector *signal);
 
 #endif /* SRC_GLOTT_SYNTHESISFUNCTIONS_H_ */

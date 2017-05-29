@@ -91,7 +91,8 @@ int main(int argc, char *argv[]) {
    if(params.use_spectral_matching)
       SpectralMatchExcitation(params, data, &(data.excitation_signal));
 
-   FilterExcitation(params, data, &(data.signal));
+   FftFilterExcitation(params, data, &(data.signal));
+   //FilterExcitation(params, data, &(data.signal));
    
    GenerateUnvoicedSignal(params, data, &(data.signal));
    
