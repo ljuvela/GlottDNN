@@ -81,7 +81,7 @@ void LpWeightAme(const Param &params, const gsl::vector_int &gci_inds,
 
 	double d = 0.1;
 	//int nramp = DEFAULT_NRAMP;
-	int nramp = 12 * (double)params.fs/(double)16000;
+	int nramp = 6 * (double)params.fs/(double)16000;
 
 	/* Sanity check */
 	if(dq + pq > 1.0)
@@ -236,7 +236,12 @@ void WWLP(const gsl::vector &weight_function, const double &warping_lambda, cons
 
       // Stabilize polynomial
       StabilizePoly(frame.size(),A);
-
+      for(i=0;i<A->size();i++) {
+         if(gsl_isnan((*A)(i))) {
+            //std::cout << "Warning" << std::endl;
+            (*A)(i) = (0.0);
+         }
+      }
    /** Use Levinson if no LP weighting **/
    } else {
       Levinson(Rfull.get_col_vec(0), A);
@@ -277,18 +282,18 @@ void ArAnalysis(const int &lp_order,const double &warping_lambda, const LpWeight
    }
 
    /* Replace NaN-values with zeros in case of all-zero frames */
-   size_t i;
-   for(i=0;i<A->size();i++) {
-      if(gsl_isnan((*A)(i)))
-            (*A)(i) = (0.0);
-   }
+  // size_t i;
+   //for(i=0;i<A->size();i++) {
+   //   if(gsl_isnan((*A)(i)))
+   //         (*A)(i) = (0.0);
+   //}
 }
 
 void MeanBasedSignal(const gsl::vector &signal, const int &fs, const double &mean_f0, gsl::vector *mean_based_signal) {
 	int N,winlen;
-
+            
 	/* Round window length to nearest odd integer */
-	winlen = 2*lround((1.75*(double)fs/mean_f0 + 1)/2)-1;
+	winlen = 2*lround((1.75*(double)fs/GSL_MAX(mean_f0,80) + 1)/2)-1;
     N = (winlen-1)/2;
 
 	/* Calculate the mean-based signal */
@@ -315,9 +320,9 @@ void MeanBasedSignal(const gsl::vector &signal, const int &fs, const double &mea
 void SedreamsGciDetection(const gsl::vector &residual, const gsl::vector &mean_based_signal, gsl::vector_int *gci_inds) {
    gsl::vector_int peak_inds;
    gsl::vector peak_values;
-   //int number_of_peaks = FindPeaks(mean_based_signal, 0.1, &peak_inds, &peak_values);
-   int number_of_peaks = FindPeaks(mean_based_signal, 0.0001, &peak_inds, &peak_values);
-
+   int number_of_peaks = FindPeaks(mean_based_signal, 0.1, &peak_inds, &peak_values);
+   //int number_of_peaks = FindPeaks(mean_based_signal, 0.0001, &peak_inds, &peak_values);
+   
    gsl::vector_int start(number_of_peaks);
    gsl::vector_int stop(number_of_peaks);
 	int i,j, ii = 0;

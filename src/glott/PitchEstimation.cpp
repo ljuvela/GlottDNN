@@ -388,22 +388,13 @@ void FundamentalFrequency(const Param &params, const gsl::vector &glottal_frame,
 
    /* Autocorrelation sequence */
    // TODO: fast autocorrelation
-   gsl::vector r(glottal_frame.size());
-   for(i=0; i<glottal_frame.size(); i++)
-      for(n=i; n<glottal_frame.size(); n++)
-         r(i)+= glottal_frame(n)*glottal_frame(n-i);
-
-   /* Normalize r */
-   r /= r.max();
-
-   /* Copy vector r for interpolation */
-   gsl::vector r_copy(r);
-
-   /* Clear samples when the index exceeds the fundamental frequency limits */
-   for(i=0; i<(size_t)rint(params.fs/params.f0_max); i++)
-      r(i) = 0.0;
-   for(i=rint(params.fs/params.f0_min); i<r.size(); i++)
-      r(i) = 0.0;
+   gsl::vector r(glottal_frame.size(),true);
+   gsl::vector ac;
+   FastAutocorr(glottal_frame, &ac);
+ 
+   /* Copy relevant indeces of ac to r (according to f0_max and f0_min) */
+   for(i=(size_t)rint(params.fs/params.f0_max); i<GSL_MIN(rint(params.fs/params.f0_min)+1,glottal_frame.size()); i++)
+          r(i) = ac(ac.size()/2+1+i); // floor(ac.size/2)+1
 
    /* Clear samples descending from the end-points */
    int ind = rint(params.fs/params.f0_max);

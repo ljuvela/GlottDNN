@@ -261,6 +261,12 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
          switch (params.excitation_method) {
          case SINGLE_PULSE_EXCITATION:
             pulse = GetSinglePulse(pulse_len, energy, single_pulse_base);
+            //pulse.set_all(0.0);
+            //pulse(pulse.size()/2) = 1.0;
+            //pulse(pulse.size()/2+1) = 0.96;
+            //pulse(pulse.size()/2+2) = 0.9216;
+            //pulse(pulse.size()/2+3) = 0.8847;
+            //pulse(pulse.size()/2+4) = 0.8493;
             ApplyWindowingFunction(HANN, &pulse);
             //p2 = gsl::vector(pulse.size());
             //p2.set_all(1.0);
@@ -310,9 +316,15 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
       /** Unvoiced excitation **/
       } else {
          size_t i;
+         double tmp;
          for(i=0;i<noise.size();i++) {
-            noise(i) = gauss_gen.get();
+             tmp = gauss_gen.get();
+            noise(i) = tmp; //GSL_SIGN(tmp)*powf(fabs(tmp),2);
          };
+         //gsl::vector noise_cpy;
+         //noise_cpy.copy(noise);
+         //Filter(std::vector<double>{1.0},std::vector<double>{1.0, -params.gif_pre_emphasis_coefficient},noise_cpy, &noise);
+         noise += -1*getMean(noise);
          energy = LogEnergy2FrameEnergy(data.frame_energy(frame_index), noise.size());
 
          switch (params.excitation_method) {
@@ -327,6 +339,8 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
             pulse *= params.noise_gain_unvoiced*energy/getEnergy(noise);
             pulse /= 0.5*(double)noise.size()/(double)params.frame_shift; // Compensate OLA gain
             ApplyWindowingFunction(HANN, &pulse);
+
+           
             break;
          case PULSES_AS_FEATURES_EXCITATION:
             if (params.use_paf_unvoiced_synthesis) {
@@ -368,7 +382,7 @@ void HarmonicModification(const Param &params, const SynthesisData &data, gsl::v
    /* Variables */
    gsl::vector frame(params.frame_length_long);
    ComplexVector frame_fft;
-   size_t NFFT = 8192; // Long FFT
+   size_t NFFT = 4096; // Long FFT
    double MIN_LOG_POWER = -60.0;
    gsl::vector fft_mag(NFFT/2+1);
    gsl::vector fft_lower_env(NFFT/2+1);
@@ -381,6 +395,9 @@ void HarmonicModification(const Param &params, const SynthesisData &data, gsl::v
    gsl::random_generator rand_gen;
    gsl::gaussian_random random_gauss_gen(rand_gen);
    ComplexVector noise_vec_fft;
+   noise_vec_fft.setAllReal(1.0);
+   noise_vec_fft.setAllImag(0.0);
+   
    gsl::vector noise_vec(frame.size());
 
    /* Generate random Gaussian noise (whole signal length)*/
@@ -404,6 +421,7 @@ void HarmonicModification(const Param &params, const SynthesisData &data, gsl::v
 
       /* FFT with analysis window function */
       frame *= kbd_window;
+      if(data.fundf(frame_index) > 0) {
       FFTRadix2(frame, NFFT, &frame_fft);
       fft_mag = frame_fft.getAbs();
 
@@ -474,6 +492,7 @@ void HarmonicModification(const Param &params, const SynthesisData &data, gsl::v
 
       /* Add noise and apply synthesis window */
       frame += noise_vec;
+      }
       frame *= kbd_window;
       /* Normalize overlap-add window */
       frame /= 0.5*(double)frame.size()/(double)params.frame_shift;
@@ -543,8 +562,9 @@ void SpectralMatchExcitation(const Param &params,const SynthesisData &data, gsl:
 
          gain = GetFilteringGain(a_gen, a_tar, excitation_orig, gain_target_db,
                                     sample_index, params.frame_length, 0.0); // Should this be from ecitation_signal or excitation_orig?
-         if(data.fundf(rint(frame_index_double)) == 0.0)
-            gain *= params.noise_gain_unvoiced;
+         if(data.fundf(rint(frame_index_double)) == 0.0) {
+            gain *= 0.0;//params.noise_gain_unvoiced;
+         }
          a_tar(0) = 0.0;
       }
       sum = 0.0;
@@ -555,6 +575,62 @@ void SpectralMatchExcitation(const Param &params,const SynthesisData &data, gsl:
    }
 
    std::cout << " done." << std::endl;
+}
+
+
+
+void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data, gsl::vector *signal) {
+    gsl::vector uv_signal((*signal).size(),true);
+    gsl::vector noise_vec(params.frame_length);
+   gsl::random_generator rand_gen;
+
+   gsl::vector A(params.lpc_order_vt+1,true);
+   
+   ComplexVector noise_vec_fft;
+   size_t NFFT = 2048; // Long FFT
+   gsl::vector fft_mag(NFFT/2+1);
+   size_t i;
+   
+   
+      /* Define analysis and synthesis window */
+   //double kbd_alpha = 2.3;
+   //gsl::vector kbd_window = getKaiserBesselDerivedWindow(frame.size(), kbd_alpha);
+   
+   
+   size_t frame_index;
+   for(frame_index=0;frame_index<params.number_of_frames;frame_index++) {
+      if(data.fundf(frame_index) == 0) {
+          Lsf2Poly(data.lsf_vocal_tract.get_col_vec(frame_index),&A);
+         FFTRadix2(A, NFFT, &noise_vec_fft);
+
+         /* Normalize noise s.t. mean(abs(noise_fft)) == 1 */
+         //noise_vec_fft /= sqrt(noise_vec.size());
+
+         // TODO: Generate minimum phase to noise_vec_fft
+         
+         // Randomize phase
+         double mag;
+         double ang;
+
+         for(i=0;i<noise_vec_fft.getSize();i++) {
+            mag = GSL_MIN(1.0/(noise_vec_fft.getAbs(i)),150);
+            ang = noise_vec_fft.getAng(i) + 2.0*M_PI*(rand_gen.uniform()-0.5);
+            noise_vec_fft.setReal(i,mag*cos(double(ang)));
+            noise_vec_fft.setImag(i,mag*sin(double(ang)));
+         }
+         IFFTRadix2(noise_vec_fft,&noise_vec);
+         double e_target;
+         e_target = LogEnergy2FrameEnergy(data.frame_energy(frame_index), noise_vec.size());
+
+//         noise_vec /= getEnergy(noise_vec);
+         noise_vec *= params.noise_gain_unvoiced*e_target/getEnergy(noise_vec)*sqrt(8.0/3.0);
+         ApplyWindowingFunction(HANN,&noise_vec);
+         /* Normalize overlap-add window */
+         noise_vec /= 0.5*(double)noise_vec.size()/(double)params.frame_shift;
+         OverlapAdd(noise_vec,frame_index*rint(params.frame_shift/params.speed_scale),&uv_signal); 
+      }
+   }
+   (*signal) += uv_signal;
 }
 
 
@@ -589,8 +665,11 @@ void FilterExcitation(const Param &params, const SynthesisData &data, gsl::vecto
 
          gain = GetFilteringGain(B, a_interp, data.excitation_signal, gain_target_db,
                                  sample_index, params.frame_length, params.warping_lambda_vt);
-         if(data.fundf(rint(frame_index_double)) == 0.0)
-            gain *= params.noise_gain_unvoiced;
+         //gain = GetFilteringGain(B, a_interp, *signal, gain_target_db,
+          //                       sample_index, params.frame_length, params.warping_lambda_vt);
+         if(data.fundf(rint(frame_index_double)) == 0.0) {
+            gain *= 0.0;//params.noise_gain_unvoiced;
+         } 
 
       }
       /** Normal filtering **/

@@ -221,8 +221,9 @@ def package_data():
     for file_idx, wavfile in enumerate(filelist):
         if os.path.isfile(wavfile):
             bname = os.path.splitext(os.path.basename(wavfile))[0]
+            print bname
                 # todo: save n_frames
-            f0_file = conf.datadir + '/f0/' + bname + '.F0' 
+            f0_file = conf.datadir + '/f0/' + bname + '.f0' 
             n_frames[file_idx] = (np.fromfile(f0_file, dtype=np.float32, count=-1, sep='')).shape[0]
             # allocate file data
             input_data = np.empty([n_frames[file_idx], sum(conf.input_dims)], dtype=np.float32)

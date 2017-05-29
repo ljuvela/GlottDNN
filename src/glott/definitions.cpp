@@ -20,7 +20,7 @@ Param::Param() {
 	file_basename = "";
 	data_directory = "";
 	/* Enum parameters */
-	default_windowing_function = NUTTALL;
+	default_windowing_function = HANN;
 	signal_polarity = POLARITY_DEFAULT;
    lp_weighting_function = AME;
    excitation_method = SINGLE_PULSE_EXCITATION;
