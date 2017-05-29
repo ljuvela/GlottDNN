@@ -151,7 +151,6 @@ public:
    gsl::vector fundf;
    gsl::vector frame_energy;
    gsl::vector excitation_signal;
-  // gsl::vector excitation_pulse;
 
    gsl::matrix poly_vocal_tract;
    gsl::matrix lsf_vocal_tract;

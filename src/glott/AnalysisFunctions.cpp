@@ -169,13 +169,13 @@ int GetGain(const Param &params, const gsl::vector &fundf, const gsl::vector &si
          gain(frame_index) = FrameEnergy2LogEnergy(frame_energy,frame.size());
       } else {
          GetFrame(signal, frame_index, params.frame_shift, &unvoiced_frame, NULL);
-         ApplyWindowingFunction(params.default_windowing_function,&unvoiced_frame);
+         ApplyWindowingFunction(params.default_windowing_function, &unvoiced_frame);
          frame_energy = getEnergy(unvoiced_frame);
          if(frame_energy == 0.0)
             frame_energy =+ DBL_MIN;
 
          frame_energy *= frame_energy_compensation;// Compensate windowing gain loss
-         gain(frame_index) = FrameEnergy2LogEnergy(frame_energy,unvoiced_frame.size());
+         gain(frame_index) = FrameEnergy2LogEnergy(frame_energy, unvoiced_frame.size());
       }
 		/* Evaluate gain of frame, normalize energy per sample basis */
 	/*	double sum = 0.0;

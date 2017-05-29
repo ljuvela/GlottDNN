@@ -148,7 +148,34 @@ TODO: Rundown of block diagram etc.
 
 \subsubsection{Quadrature mirror filter (QMF) sub-band analysis}
 
+\subsection{Pitch estimation}
+
+\subsubsection{Fundamental frequency analysis}
+
+\subsubsection{Glottal closure instant detection}
+
+
 \subsection{Harmonic-to-noise ratio (HNR) estimation}
+
+Harmonic-to-noise ratio describes the amount of aperiodicity in the glottal excitation signal
+
+The excitation signal model is a simple additive one: excitation signal $g(t)$ consists of a deterministic harmonic component $h(t)$ and a stochastic noise component $n(t)$.
+
+\begin{equation}
+g(t) = h(t) + n(t)
+\end{equation}
+
+In practice, the HNR codes the ratio between upper and lower spectral envelopes, where the upper envelope is interpolated from the harmonic spectrum peaks, and the lower envelope is interpolated from spectral valleys between the peaks. 
+
+Harmonic peak-picking is performed iteratively on the FFT magnitude at frame level. The first harmonic peak is taken as the highest FFT magnitude near $f_0$ 
+
+For modeling, the HNR values are compressed in ERB bands
+
+\begin{equation}
+\mathrm{HNR}_i = \sum_{\omega \in \mathrm{ERB}_i}  20 \log \vert N(\omega) \vert - 20\log \vert H(\omega) \vert
+\end{equation}
+
+This is actually a noise-to-harmonic ratio
 
 \subsection{Analysis features}
 

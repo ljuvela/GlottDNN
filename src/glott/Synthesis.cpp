@@ -62,7 +62,6 @@ int main(int argc, char *argv[]) {
    if(ReadSynthesisData(filename, &params, &data) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-
    //   read original excitation
    if (false) {
       std::string src_filename = GetParamPath("src", ".src.wav", params.dir_syn, params);

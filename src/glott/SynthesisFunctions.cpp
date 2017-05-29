@@ -309,6 +309,12 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
 
       /** Unvoiced excitation **/
       } else {
+
+         if (params.noise_gain_unvoiced == 0.0) {
+            sample_index += params.frame_shift;
+            continue;
+         }
+
          size_t i;
          for(i=0;i<noise.size();i++) {
             noise(i) = gauss_gen.get();
@@ -341,10 +347,7 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
                } else {
                   unvoiced_psola_flip = true;
                }
-
-               // TODO: phase scramble
                // RandomizePhase(&pulse);
-               // TODO: add psola compensation that takes different windows and their energies into account
                ApplyWindowingFunction(params.psola_windowing_function, &pulse);
             } else {
                pulse = noise;
@@ -576,9 +579,9 @@ void FilterExcitation(const Param &params, const SynthesisData &data, gsl::vecto
    int bdim = params.lpc_order_vt+1;
    double tmpr;
 
+
    int UPDATE_INTERVAL = params.filter_update_interval_vt;
    signal->copy(data.excitation_signal);
-  // std::cout << *signal << std::endl;
    for(sample_index=0;sample_index<(int)signal->size();sample_index++) {
 
       if(sample_index % UPDATE_INTERVAL == 0) {
@@ -591,8 +594,14 @@ void FilterExcitation(const Param &params, const SynthesisData &data, gsl::vecto
          gain_target_db = InterpolateLinear(data.frame_energy(floor(frame_index_double)),
                         data.frame_energy(ceil(frame_index_double)),frame_index_double);
 
-         gain = GetFilteringGain(B, a_interp, data.excitation_signal, gain_target_db,
-                                 sample_index, params.frame_length, params.warping_lambda_vt);
+
+         if (data.fundf(round(frame_index_double)) > 0.0) {
+            gain = GetFilteringGain(B, a_interp, data.excitation_signal, gain_target_db,
+                  sample_index, params.frame_length, params.warping_lambda_vt);
+         } else {
+            gain = 0.0;
+         }
+
          if(data.fundf(rint(frame_index_double)) == 0.0)
             gain *= params.noise_gain_unvoiced;
 

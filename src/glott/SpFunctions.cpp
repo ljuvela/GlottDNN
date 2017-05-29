@@ -1434,7 +1434,19 @@ gsl::vector GetPulseWsola2(const gsl::vector &frame, const int &t0, const double
    for (i=0;i<win.size();i++) {
       sum += win(i);
    }
-   pulse *= 0.375 * pulse.size() / sum;
+   // TODO: find the right coefficient
+   pulse *= 0.375 * pulse.size() / sum; // sqrt(3/8) ? 
+
+   //pulse /= sqrt(2.0); // y tho?
+
+   /*
+   double normfactor = 0.0;
+   for (i=0;i<win.size();i++)
+      normfactor += win(i)*win(i);
+   normfactor = sqrt(normfactor/win.size());
+   pulse *= normfactor ;
+  // std::cout << normfactor << std::endl;
+   */
 
    return pulse;
 }
@@ -1870,7 +1882,7 @@ double GetFilteringGain(const gsl::vector &b, const gsl::vector &a,
 	for(i=0; i<(int)frame_length; i++){
 		k = (int)center_index-offset+i ;
 		if (k >= 0 && k<(int)signal.size())
-			frame(i) =  signal(k);
+			frame(i) = signal(k);
 	}
 
 	/* Get pre-frame samples for smooth filtering */
@@ -1890,7 +1902,14 @@ double GetFilteringGain(const gsl::vector &b, const gsl::vector &a,
    else
       WFilter(b,a,frame_full,warping_lambda,&result);
 
-	return LogEnergy2FrameEnergy(target_gain_db, result.size()) * (double)fmin(1/getEnergy(result),50.0); // prevent large values from divide by zero
+	// TODO: window filtering result before gain calculation!!
+	ApplyWindowingFunction(HANN, &result);
+	result *= 8/3;
+
+	double max_gain = 50.0;
+	double normfactor = (double)fmin(1/getEnergy(result), max_gain);
+//	if (normfactor == max_gain) {std::cout << "Warning: filtering gain clipped" << std::endl ; }
+	return LogEnergy2FrameEnergy(target_gain_db, result.size()) * normfactor ; // prevent large values from divide by zero
 
 }
 
