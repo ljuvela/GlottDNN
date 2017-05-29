@@ -346,6 +346,16 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
             if (params.use_paf_unvoiced_synthesis) {
                pulse = GetExternalPulse(noise.size(), false, energy, frame_index,
                      params.psola_windowing_function, data.excitation_pulses);
+
+               // alternate between time flipping or not
+               if (unvoiced_psola_flip) {
+                  for (size_t k=0; k< pulse.size(); k++)
+                     pulse.swap_elements(k, pulse.size()-1-k);
+                  unvoiced_psola_flip = false;
+               } else {
+                  unvoiced_psola_flip = true;
+               }
+
                // TODO: phase scramble
                // RandomizePhase(&pulse);
                // TODO: add psola compensation that takes different windows and their energies into account
@@ -354,13 +364,7 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
                pulse = noise;
                pulse *= params.noise_gain_unvoiced*energy/getEnergy(noise);
                pulse /= 0.5*(double)noise.size()/(double)params.frame_shift; // Compensate OLA gain
-               if (unvoiced_psola_flip) { // alternate between flipping or not
-                  for (size_t k=0; k< pulse.size(); k++)
-                     pulse.swap_elements(k, pulse.size()-1-k);
-                  unvoiced_psola_flip = false;
-               } else {
-                  unvoiced_psola_flip = true;
-               }
+
                ApplyWindowingFunction(HANN, &pulse);
             }
             break;

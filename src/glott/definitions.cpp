@@ -140,27 +140,27 @@ int AnalysisData::SaveData(const Param &params) {
 
    std::string filename;
    if (params.extract_gain) {
-      filename = GetParamPath("gain", ".Gain", params.dir_gain, params);
+      filename = GetParamPath("gain", ".gain", params.dir_gain, params);
       WriteGslVector(filename, params.data_type, frame_energy);
    }
    if (params.extract_lsf_vt) {
-      filename = GetParamPath("lsf", ".LSF", params.dir_lsf, params);
+      filename = GetParamPath("lsf", ".lsf", params.dir_lsf, params);
       WriteGslMatrix(filename, params.data_type, lsf_vocal_tract);
    }
    if (params.extract_lsf_glot) {
-      filename = GetParamPath("lsfg", ".LSFglot", params.dir_lsfg, params);
+      filename = GetParamPath("slsf", ".slsf", params.dir_lsfg, params);
       WriteGslMatrix(filename, params.data_type, lsf_glot);
    }
    if (params.extract_hnr) {
-      filename = GetParamPath("hnr", ".HNR", params.dir_hnr, params);
+      filename = GetParamPath("hnr", ".hnr", params.dir_hnr, params);
       WriteGslMatrix(filename, params.data_type, hnr_glot);
    }
    if (params.extract_pulses_as_features) {
-      filename = GetParamPath("paf", ".PAF", params.dir_paf, params);
+      filename = GetParamPath("pls", ".pls", params.dir_paf, params);
       WriteGslMatrix(filename, params.data_type, excitation_pulses);
    }
    if (params.extract_f0) {
-      filename = GetParamPath("f0", ".F0", params.dir_f0, params);
+      filename = GetParamPath("f0", ".f0", params.dir_f0, params);
       WriteGslVector(filename, params.data_type, fundf);
    }
    if (params.extract_glottal_excitation) {

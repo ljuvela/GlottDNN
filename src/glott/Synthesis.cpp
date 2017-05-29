@@ -43,6 +43,10 @@ int main(int argc, char *argv[]) {
    const char *default_config_filename = argv[2];
    const char *user_config_filename = argv[3];
 
+   if (argc < 3) {
+      std::cout << "Usage: Synthesis <basename.wav> <config_default.cfg> (<config_usr.cfg>)" << std::endl;
+   }
+
    std::cout << "Synthesis of " << filename << std::endl;
 
    /* Read configuration file */
@@ -79,14 +83,14 @@ int main(int argc, char *argv[]) {
    /* Create excitation with overlap-add */
    CreateExcitation(params, data, &(data.excitation_signal));
 
+   /* Add noise to excitation to satisfy Harmonic-to-noise ratio*/
+   if(params.noise_gain_voiced > 0.0)
+      HarmonicModification(params, data, &(data.excitation_signal));
+
    /* Excitation spectral matching */
    if(params.use_spectral_matching)
       SpectralMatchExcitation(params, data, &(data.excitation_signal));
 
-   /* Add noise to excitation to satisfy Harmonic-to-noise ratio*/
-     if(params.noise_gain_voiced > 0.0)
-        HarmonicModification(params, data, &(data.excitation_signal));
-     
    FilterExcitation(params, data, &(data.signal));
    
    GenerateUnvoicedSignal(params, data, &(data.signal));

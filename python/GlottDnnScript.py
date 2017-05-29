@@ -64,9 +64,9 @@ def make_directories():
     mkdir_p(conf.datadir + '/gci')
     mkdir_p(conf.datadir + '/gain')
     mkdir_p(conf.datadir + '/lsf')
-    mkdir_p(conf.datadir + '/lsfg')
+    mkdir_p(conf.datadir + '/slsf')
     mkdir_p(conf.datadir + '/hnr')
-    mkdir_p(conf.datadir + '/paf')
+    mkdir_p(conf.datadir + '/pls')
     mkdir_p(conf.datadir + '/scp')
     mkdir_p(conf.datadir + '/exc')
     mkdir_p(conf.datadir + '/syn')
@@ -90,7 +90,7 @@ def sptk_pitch_analysis():
                     bname = os.path.splitext(os.path.basename(wavfile))[0]
                     # convert to .raw
                     rawfile = conf.datadir + '/raw/' + bname + '.raw'
-                    f0file = conf.datadir + '/f0/' + bname + '.F0'
+                    f0file = conf.datadir + '/f0/' + bname + '.f0'
                     cmd = conf.sox + ' ' + wavfile + ' ' + rawfile
                     os.system(cmd)
                     # sptk pitch estimation 
@@ -107,15 +107,15 @@ def reaper_pitch_analysis():
             if os.path.isfile(wavfile):
                 # define paths
                 bname = os.path.splitext(os.path.basename(wavfile))[0]
-                f0tmp1 = conf.datadir + '/f0/' + bname + '.F0tmp1'
-                f0tmp2 = conf.datadir + '/f0/' + bname + '.F0tmp2'                
-                f0file = conf.datadir + '/f0/' + bname + '.F0'
+                f0tmp1 = conf.datadir + '/f0/' + bname + '.f0tmp1'
+                f0tmp2 = conf.datadir + '/f0/' + bname + '.f0tmp2'                
+                f0file = conf.datadir + '/f0/' + bname + '.f0'
             
                 gcitmp = conf.datadir + '/gci/' + bname + '.GCItmp'                
                 gcifile = conf.datadir + '/gci/' + bname + '.GCI'
                 
                 # analysis commands
-                cmd =  conf.reaper + ' -a -i ' + wavfile + ' -f ' + f0tmp1 + ' -p ' + gcitmp
+                cmd =  conf.reaper + ' -a -i ' + wavfile + ' -f ' + f0tmp1 + ' -p ' + gcitmp + ' -u 0.05'
                 os.system(cmd)
                 cmd = 'tail +8 ' + f0tmp1 + '| awk \'{print $3}\' | x2x +af ' + \
                     '| sopr -magic -1.0 -MAGIC 0.0  > ' + f0tmp2
@@ -153,7 +153,7 @@ def glott_vocoder_analysis():
             if os.path.isfile(wavfile):
                 # define file paths
                 bname = os.path.splitext(os.path.basename(wavfile))[0]
-                f0file = conf.datadir + '/f0/' + bname + '.F0'
+                f0file = conf.datadir + '/f0/' + bname + '.f0'
                 gcifile = conf.datadir + '/gci/' + bname + '.GCI'
                 # create temporary analysis config for file 
                 config_user = 'config_user.cfg'
@@ -186,7 +186,7 @@ def glott_vocoder_synthesis():
             wavfile = file.rstrip()
             if os.path.isfile(wavfile):
                 bname = os.path.splitext(os.path.basename(wavfile))[0]
-                f0file = conf.datadir + '/f0/' + bname + '.F0'
+                f0file = conf.datadir + '/f0/' + bname + '.f0'
                 config_user = 'config_user.cfg'
                 conf_file = open(config_user,'w');
                 conf_file.write('SAMPLING_FREQUENCY = ' + str(conf.sampling_frequency) +';\n')
