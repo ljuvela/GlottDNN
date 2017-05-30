@@ -266,7 +266,16 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool required, Param 
 
    if (ConfigLookupBool("USE_PAF_ENERGY_NORM", cfg, required, &(params->use_paf_energy_normalization)) == EXIT_FAILURE)
       return EXIT_FAILURE;
-
+   
+  if (ConfigLookupBool("NOISE_GATED_SYNTHESIS", cfg, required, &(params->noise_gated_synthesis)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+  
+     if (ConfigLookupDouble("NOISE_GATE_LIMIT_DB", cfg, required, &(params->noise_gate_limit_db)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+     
+    if (ConfigLookupDouble("NOISE_REDUCTION_DB", cfg, required, &(params->noise_reduction_db)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+     
 
    double update_interval_ms=0;
 	if (ConfigLookupDouble("FILTER_UPDATE_INTERVAL_VT", cfg, required, &(update_interval_ms)) == EXIT_FAILURE)

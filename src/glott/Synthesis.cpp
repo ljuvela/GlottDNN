@@ -68,7 +68,10 @@ int main(int argc, char *argv[]) {
       if(ReadWavFile(src_filename.c_str(), &(data.excitation_signal)) == EXIT_FAILURE)
          return EXIT_FAILURE;
    }
-
+   
+   if(params.noise_gated_synthesis)
+      NoiseGating(params, &(data.frame_energy));
+   
    if(params.use_postfiltering)
       PostFilter(params.postfilter_coefficient, params.fs, &(data.lsf_vocal_tract));
 

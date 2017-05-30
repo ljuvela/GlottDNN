@@ -82,6 +82,9 @@ public:
    bool use_spectral_matching;
    bool use_original_excitation;
    bool use_wsola;
+   bool noise_gated_synthesis;
+   double noise_reduction_db;
+   double noise_gate_limit_db;
    double postfilter_coefficient;
    bool use_trajectory_smoothing;
    int lsf_vt_smooth_len;

@@ -597,9 +597,11 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data, gsl:
    gsl::gaussian_random random_gauss_gen(rand_gen);
    
    gsl::vector A(params.lpc_order_vt+1,true);
+   gsl::vector A_tilt(params.lpc_order_glot+1,true);
    
    ComplexVector noise_vec_fft;
    ComplexVector vt_fft;
+   ComplexVector tilt_fft;
    size_t NFFT = 4096; // Long FFT
    gsl::vector fft_mag(NFFT/2+1);
    //gsl::vector hnr_interp(NFFT/2+1,true);
@@ -640,9 +642,14 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data, gsl:
                 noise_vec(i) = random_gauss_gen.get();
          }
          ApplyWindowingFunction(COSINE,&noise_vec);
+         //noise_vec *= kbd_window;
          FFTRadix2(noise_vec, NFFT, &noise_vec_fft);
          /* Normalize noise s.t. mean(abs(noise_fft)) == 1 */
          //noise_vec_fft /= sqrt(noise_vec.size());
+        Lsf2Poly(data.lsf_glot.get_col_vec(frame_index),&A_tilt);
+         FFTRadix2(A_tilt, NFFT, &tilt_fft);
+         
+         
          
          // Randomize phase
          double mag;
@@ -650,13 +657,13 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data, gsl:
          //double hnr_ratio;
          //Erb2Linear(data.hnr_glot.get_col_vec(frame_index), params.fs, &hnr_interp);
          for(i=0;i<noise_vec_fft.getSize();i++) {
-            mag = noise_vec_fft.getAbs(i) * GSL_MIN(1.0/(vt_fft.getAbs(i)),10000);
+            mag = noise_vec_fft.getAbs(i) * GSL_MIN(1.0/(vt_fft.getAbs(i)),10000) * GSL_MIN(1.0/tilt_fft.getAbs(i),10000);
              //mag = rand_gen.uniform() * GSL_MIN(1.0/(vt_fft.getAbs(i)),10000);
             //hnr_ratio = powf(10.0,hnr_interp(i)/20.0);
-           // mag = GSL_MIN(1.0/(vt_fft.getAbs(i)),10000);
+          // mag = GSL_MIN(1.0/(vt_fft.getAbs(i)),10000);
             //mag = mag * (1.0 - (1.0-hnr_ratio)*2.0*(rand_gen.uniform()));
-            ang = noise_vec_fft.getAng(i) - vt_fft.getAng(i);
-            // ang = 2.0*M_PI*rand_gen.uniform() - vt_fft.getAng(i);
+            ang = noise_vec_fft.getAng(i);
+             //ang = 2.0*M_PI*rand_gen.uniform() - vt_fft.getAng(i);
             
             noise_vec_fft.setReal(i,mag*cos(double(ang)));
             noise_vec_fft.setImag(i,mag*sin(double(ang)));
@@ -666,12 +673,15 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data, gsl:
          e_target = LogEnergy2FrameEnergy(data.frame_energy(frame_index), noise_vec.size());
 
          IFFTRadix2(noise_vec_fft,&noise_vec);
-
+    
+         
          //noise_vec *= params.noise_gain_unvoiced*e_target/getEnergy(noise_vec)*sqrt(8.0/3.0);
          ApplyWindowingFunction(COSINE,&noise_vec);
-         noise_vec *= e_target/getEnergy(noise_vec)/sqrt(2.0);
-
          //noise_vec *= kbd_window;
+         //noise_vec *= kbd_window;
+         noise_vec *= params.noise_gain_unvoiced*e_target/getEnergy(noise_vec)/sqrt(2.0);
+
+         
          //noise_vec *= kbd_window;
 
          /* Normalize overlap-add window */
@@ -680,6 +690,15 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data, gsl:
       }
    }
    (*signal) += uv_signal;
+}
+
+void NoiseGating(const Param &params, gsl::vector *frame_energy) {
+    size_t i;
+    for(i=0;i<frame_energy->size();i++) {
+        if((*frame_energy)(i) < -1.0*params.noise_gate_limit_db)
+            (*frame_energy)(i) -= params.noise_reduction_db;
+    }
+    
 }
 
 void FftFilterExcitation(const Param &params, const SynthesisData &data, gsl::vector *signal) {

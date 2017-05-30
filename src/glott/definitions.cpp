@@ -76,6 +76,9 @@ Param::Param() {
 	pitch_scale = 1.0;
 	use_postfiltering = false;
 	use_spectral_matching = true;
+        noise_gated_synthesis = false;
+        noise_reduction_db = 20.0;
+        noise_gate_limit_db = 80.0;
 	postfilter_coefficient = 0.4;
    use_trajectory_smoothing = false;
    use_wsola = false;
