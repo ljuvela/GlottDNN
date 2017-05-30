@@ -115,6 +115,18 @@ const gsl::vector & Dnn::getOutput() {
 
 }
 
+int Dnn::checkInput(const std::string &type, const size_t &target_size, const size_t &actual_size) {
+
+   if (target_size != actual_size ) {
+      std::cerr << "Error: DNN input " << type <<" order (" << target_size << ")"
+            <<  " differs from input features (" << actual_size << ")"
+            << std::endl;
+      assert(target_size == actual_size);
+   }
+
+   return EXIT_SUCCESS;
+}
+
 void Dnn::setInput(const SynthesisData &data, const size_t &frame_index) {
 
    input_matrix.set_dimensions(this->input_params.getInputDimension(),1);
@@ -131,19 +143,25 @@ void Dnn::setInput(const SynthesisData &data, const size_t &frame_index) {
          input_matrix(ind++,0) = data.frame_energy(frame_index);
 
    //hnr
-   if (this->input_params.hnr_order > 0)
+   if (this->input_params.hnr_order > 0) {
+      this->checkInput("HNR", input_params.hnr_order, data.hnr_glot.size1());
       for (i=0;i<input_params.hnr_order;i++)
          input_matrix(ind++,0) = data.hnr_glot(i,frame_index);
+   }
 
    // lsf_glot
-   if (this->input_params.lpc_order_glot > 0)
+   if (this->input_params.lpc_order_glot > 0) {
+      this->checkInput("LSF_GL", input_params.lpc_order_glot, data.lsf_glot.size1());
       for (i=0;i<input_params.lpc_order_glot;i++)
          input_matrix(ind++,0) = data.lsf_glot(i,frame_index);
+   }
 
    // lsf_vt
-   if (this->input_params.lpc_order_vt > 0)
+   if (this->input_params.lpc_order_vt > 0) {
+      this->checkInput("LSF_VT", input_params.lpc_order_vt, data.lsf_vocal_tract.size1());
       for (i=0;i<input_params.lpc_order_vt;i++)
          input_matrix(ind++,0) = data.lsf_vocal_tract(i,frame_index);
+   }
 
 }
 
