@@ -297,7 +297,7 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
             if (use_wsola) {
 //               pulse = GetPulseWsola(data.excitation_pulses.get_col_vec(frame_index), pulse_prev, T0, energy);
                pulse =  GetPulseWsola2(data.excitation_pulses.get_col_vec(frame_index), T0, energy,
-                     sample_index,  (pulse_prev.size() > 1), excitation_signal) ;
+                     sample_index,  (pulse_prev.size() == 1), excitation_signal) ;
             } else {
                pulse = GetExternalPulse(pulse_len, params.use_pulse_interpolation, energy,
                                  frame_index, params.psola_windowing_function, data.excitation_pulses);
