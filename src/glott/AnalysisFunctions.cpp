@@ -178,27 +178,15 @@ int GetGain(const Param &params, const gsl::vector &fundf, const gsl::vector &si
          gain(frame_index) = FrameEnergy2LogEnergy(frame_energy,frame.size());
       } else {
          GetFrame(signal, frame_index, params.frame_shift, &unvoiced_frame, NULL);
-         ApplyWindowingFunction(params.default_windowing_function,&unvoiced_frame);
-         
+         ApplyWindowingFunction(params.default_windowing_function, &unvoiced_frame);
          frame_energy = getEnergy(unvoiced_frame);
 
          if(frame_energy == 0.0)
             frame_energy =+ DBL_MIN;
 
          frame_energy *= frame_energy_compensation;// Compensate windowing gain loss
-         gain(frame_index) = FrameEnergy2LogEnergy(frame_energy,unvoiced_frame.size());
+         gain(frame_index) = FrameEnergy2LogEnergy(frame_energy, unvoiced_frame.size());
       }
-		/* Evaluate gain of frame, normalize energy per sample basis */
-	/*	double sum = 0.0;
-		double mean = getMean(frame);
-		size_t i;
-		for(i=0;i<frame.size();i++) {
-			sum =+ (frame(i)-mean)*(frame(i)-mean);
-		}
-		if(sum == 0.0)
-			sum =+ DBL_MIN;
-
-		gain(frame_index) = 10.0*log10(sum/((double)(frame.size() * frame.size()))); // energy per sample (not power)*/
 
 	}
 	*gain_ptr = gain;
@@ -413,8 +401,8 @@ int InverseFilter(const Param &params, const AnalysisData &data, gsl::matrix *po
    gsl::vector a_lin(params.lpc_order_vt+1);
    gsl::vector a_lin_high_order(3*params.lpc_order_vt+1); // arbitrary high order
    size_t NFFT = 4096;
-   gsl::vector impulse(NFFT);
-   gsl::vector imp_response(NFFT);
+   gsl::vector impulse(params.frame_length);
+   gsl::vector imp_response(params.frame_length);
    gsl::vector pre_frame_high_order(3*a_lin_high_order.size());
    gsl::vector frame_full_high_order(frame.size() + pre_frame_high_order.size());
 
@@ -434,24 +422,19 @@ int InverseFilter(const Param &params, const AnalysisData &data, gsl::matrix *po
       if(params.warping_lambda_vt == 0.0) {
          Filter(data.poly_vocal_tract.get_col_vec(frame_index),b,frame_full,&frame_residual);
       } else {
-         // BOF inverse filter always with linear frequency axis high order fitted version
-        // WarpLP(data.poly_vocal_tract.get_col_vec(frame_index), -1.0*params.warping_lambda_vt, &a_lin);
+
          gsl::vector a_warp(data.poly_vocal_tract.get_col_vec(frame_index));
-       //  WarpLP(a_lin, 1.0*params.warping_lambda_vt, &a_warp);
-
-//         StabilizePoly(NFFT, &a_lin); // TODO: fit to higher order!!
-//         StabilizePoly(1024, a_lin, &a_lin_high_order);
-//         Filter(a_lin, b, frame_full, &frame_residual);
-         // EOF
-
          // get warped filter linear frequency response via impulse response
          imp_response.set_zero();
          impulse.set_zero();
-         impulse(a_lin_high_order.size()) = 1.0; // give pre-frame (only affects phase, not filter fit)
-//         WFilter(data.poly_vocal_tract.get_col_vec(frame_index), b,impulse, params.warping_lambda_vt, &imp_response); // get inverse filter impulse response
-         WFilter(a_warp, b,impulse, params.warping_lambda_vt, &imp_response); // get inverse filter impulse response
-         StabilizePoly(NFFT, imp_response, &a_lin_high_order); // Do high-order LP fit on the inverse filter (FIR polynomial)
-         Filter(a_lin_high_order, b, frame_full_high_order, &frame_residual); // Linear filtering
+         // give pre-frame (only affects phase, not filter fit)
+         impulse(a_lin_high_order.size()) = 1.0;
+         // get inverse filter impulse response
+         WFilter(a_warp, b,impulse, params.warping_lambda_vt, &imp_response);
+         // Do high-order LP fit on the inverse filter (FIR polynomial)
+         StabilizePoly(NFFT, imp_response, &a_lin_high_order);
+         // Linear filtering
+         Filter(a_lin_high_order, b, frame_full_high_order, &frame_residual);
       }
 
 
@@ -739,7 +722,7 @@ void HnrAnalysis(const Param &params, const gsl::vector &source_signal, const gs
 	int hnr_channels = params.hnr_order;
 	gsl::vector frame(params.frame_length_long);
    ComplexVector frame_fft;
-	size_t NFFT = 8192; // Long FFT
+	size_t NFFT = 4096; // Long FFT
 	double MIN_LOG_POWER = -60.0;
 	gsl::vector fft_mag(NFFT/2+1);
 

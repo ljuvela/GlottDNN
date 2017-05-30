@@ -2,8 +2,8 @@
 make_dirs = True
 make_scp = False
 do_reaper_pitch_analysis = False
-do_sptk_pitch_analysis = True
-do_glott_vocoder_analysis = True
+do_sptk_pitch_analysis = False
+do_glott_vocoder_analysis = False
 make_dnn_train_data = False
 make_dnn_infofile = False
 do_dnn_training = False
@@ -15,7 +15,7 @@ datadir = '/l/CODE/GlottDNN/data/nick16'
 
 # general parameters
 sampling_frequency = 16000
-warping_lambda = 0.0
+warping_lambda = 0.54
 use_external_gci = False
 
 

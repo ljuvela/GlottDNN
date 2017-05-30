@@ -1340,36 +1340,41 @@ gsl::vector GetPulseWsola2(const gsl::vector &frame, const int &t0, const double
 
    gsl::vector frame_interp(frame);
 
-   // Calculate autocorrelation
-   gsl::vector ac_full;
-   gsl::vector ac(frame.size());
-   FastAutocorr(frame, &ac_full);
-   for(i=0; i<ac.size(); i++)
-      ac(i) = ac_full(ac.size()-1+i);
-   gsl::vector_int peak_inds;
-   gsl::vector peak_values;
-   FindPeaks(ac, 0.1, &peak_inds, &peak_values);
-   int first_peak = ac.max_index();
-   // second_peak as the closest positive peak to t0
-   int t0_candidate;
-   int t0_estimate = 1;
-   for (i=0;i<peak_inds.size();i++) {
-      if (peak_values(i) < 0)
-         continue;
-      t0_candidate = abs(peak_inds(i) - first_peak);
-      if ( abs(t0 - t0_candidate) < abs(t0 - t0_estimate) ) {
-         t0_estimate = t0_candidate;
-      }
-   }
+   if (false) {
 
-   // Pitch shift by interpolation (don't do extreme modifications)
-   double error_ratio = (double)abs(t0 - t0_estimate)/(double)t0;
-   //std::cout << "error ratio = " << error_ratio << std::endl;
-   //if (error_ratio < 2.0)
-   //   InterpolateSpline(frame, round(  (double)t0 / (double)(t0_estimate) * frame.size()), &frame_interp);
+      // Calculate autocorrelation
+      gsl::vector ac_full;
+      gsl::vector ac(frame.size());
+      FastAutocorr(frame, &ac_full);
+      for(i=0; i<ac.size(); i++)
+         ac(i) = ac_full(ac.size()-1+i);
+      gsl::vector_int peak_inds;
+      gsl::vector peak_values;
+      FindPeaks(ac, 0.1, &peak_inds, &peak_values);
+      int first_peak = ac.max_index();
+      // second_peak as the closest positive peak to t0
+      int t0_candidate;
+      int t0_estimate = 1;
+      for (i=0;i<peak_inds.size();i++) {
+         if (peak_values(i) < 0)
+            continue;
+         t0_candidate = abs(peak_inds(i) - first_peak);
+         if ( abs(t0 - t0_candidate) < abs(t0 - t0_estimate) ) {
+            t0_estimate = t0_candidate;
+         }
+      }
+
+      // Pitch shift by interpolation (don't do extreme modifications)
+      double error_ratio = (double)abs(t0 - t0_estimate)/(double)t0;
+      //std::cout << "error ratio = " << error_ratio << std::endl;
+      //if (error_ratio < 2.0)
+      //   InterpolateSpline(frame, round(  (double)t0 / (double)(t0_estimate) * frame.size()), &frame_interp);
+
+   }
 
    // waveform similarity overlap add (WSOLA)
    int M = 0.5 * t0; //total range of  T0
+   //int M = 1.0 * t0; //total range of  T0
    int  mid = round(frame_interp.size()/2.0); // PAF frame midpoint
    gsl::vector corr(2*M+1,true); // correlations, init to zero
    int m,m_ind;
@@ -1437,7 +1442,11 @@ gsl::vector GetPulseWsola2(const gsl::vector &frame, const int &t0, const double
    for (i=0;i<win.size();i++) {
       sum += win(i);
    }
-   pulse *= 0.375 * pulse.size() / sum;
+   // TODO: find the right coefficient
+   pulse *= 0.375 * pulse.size() / sum; // sqrt(3/8) ? 
+
+   //pulse /= sqrt(2.0); // y tho?
+
 
    return pulse;
 }
@@ -1873,7 +1882,7 @@ double GetFilteringGain(const gsl::vector &b, const gsl::vector &a,
 	for(i=0; i<(int)frame_length; i++){
 		k = (int)center_index-offset+i ;
 		if (k >= 0 && k<(int)signal.size())
-			frame(i) =  signal(k);
+			frame(i) = signal(k);
 	}
 
 	/* Get pre-frame samples for smooth filtering */
@@ -1893,9 +1902,11 @@ double GetFilteringGain(const gsl::vector &b, const gsl::vector &a,
    else
       WFilter(b,a,frame_full,warping_lambda,&result);
 
-        ApplyWindowingFunction(HANN, &result);
-        result *= sqrt(8.0/3.0);
+	ApplyWindowingFunction(HANN, &result);
+	result *= sqrt(8.0/3.0);
+
 	return LogEnergy2FrameEnergy(target_gain_db, result.size()) * (double)fmin(1/getEnergy(result),100.0); // prevent large values from divide by zero
+
 
 }
 

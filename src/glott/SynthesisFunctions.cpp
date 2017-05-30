@@ -316,6 +316,13 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
 
       /** Unvoiced excitation **/
       } else {
+
+         pulse_prev = gsl::vector(1,true); // sets the previous pulse to undefined for WS-Psola
+         if (params.noise_gain_unvoiced == 0.0) {
+            sample_index += params.frame_shift;
+            continue;
+         }
+
          size_t i;
          double tmp;
          for(i=0;i<noise.size();i++) {
@@ -356,10 +363,7 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
                } else {
                   unvoiced_psola_flip = true;
                }
-
-               // TODO: phase scramble
                // RandomizePhase(&pulse);
-               // TODO: add psola compensation that takes different windows and their energies into account
                ApplyWindowingFunction(params.psola_windowing_function, &pulse);
             } else {
                pulse = noise;
@@ -601,6 +605,12 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data, gsl:
    //gsl::vector hnr_interp(NFFT/2+1,true);
    size_t i;
    
+   // for de-warping filters
+   gsl::vector impulse(params.frame_length);
+   gsl::vector imp_response(params.frame_length);
+   //gsl::vector impulse(NFFT);
+   //gsl::vector imp_response(NFFT);
+   gsl::vector b(1);b(0) = 1.0;
    
       /* Define analysis and synthesis window */
    double kbd_alpha = 2.3;
@@ -611,9 +621,20 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data, gsl:
    size_t frame_index;
    for(frame_index=0;frame_index<params.number_of_frames;frame_index++) {
       if(data.fundf(frame_index) == 0) {
- 
-          Lsf2Poly(data.lsf_vocal_tract.get_col_vec(frame_index),&A);
-         FFTRadix2(A, NFFT, &vt_fft);
+
+         Lsf2Poly(data.lsf_vocal_tract.get_col_vec(frame_index),&A);
+
+         if(params.warping_lambda_vt == 0.0) {
+            FFTRadix2(A, NFFT, &vt_fft);
+         } else {
+            // get warped filter linear frequency response via impulse response
+            imp_response.set_zero();
+            impulse.set_zero();
+            impulse(0) = 1.0;
+            // get inverse filter impulse response
+            WFilter(A, b,impulse, params.warping_lambda_vt, &imp_response);
+            FFTRadix2(imp_response, NFFT, &vt_fft);
+         }
 
          for(i=0;i<noise_vec.size();i++) {
                 noise_vec(i) = random_gauss_gen.get();
@@ -649,11 +670,13 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data, gsl:
          //noise_vec *= params.noise_gain_unvoiced*e_target/getEnergy(noise_vec)*sqrt(8.0/3.0);
          ApplyWindowingFunction(COSINE,&noise_vec);
          noise_vec *= e_target/getEnergy(noise_vec)/sqrt(2.0);
+
          //noise_vec *= kbd_window;
          //noise_vec *= kbd_window;
+
          /* Normalize overlap-add window */
          noise_vec /= 0.5*(double)noise_vec.size()/(double)params.frame_shift;
-         OverlapAdd(noise_vec,frame_index*rint(params.frame_shift/params.speed_scale),&uv_signal); 
+         OverlapAdd(noise_vec, frame_index*rint(params.frame_shift/params.speed_scale), &uv_signal);
       }
    }
    (*signal) += uv_signal;
@@ -676,6 +699,13 @@ void FftFilterExcitation(const Param &params, const SynthesisData &data, gsl::ve
    gsl::vector fft_mag(NFFT/2+1);
    gsl::vector frame_copy;
    
+   // for de-warping filters
+   gsl::vector impulse(params.frame_length);
+   gsl::vector imp_response(params.frame_length);
+   //gsl::vector impulse(NFFT);
+   //gsl::vector imp_response(NFFT);
+   gsl::vector b(1);b(0) = 1.0;
+
    size_t i;
    
    
@@ -689,7 +719,17 @@ void FftFilterExcitation(const Param &params, const SynthesisData &data, gsl::ve
       if(data.fundf(frame_index) != 0) {
          /* Get spectrum of vocal tract and glot filter */
          Lsf2Poly(data.lsf_vocal_tract.get_col_vec(frame_index),&A);
-         FFTRadix2(A, NFFT, &vt_fft);
+         if(params.warping_lambda_vt == 0.0) {
+            FFTRadix2(A, NFFT, &vt_fft);
+         } else {
+            // get warped filter linear frequency response via impulse response
+            imp_response.set_zero();
+            impulse.set_zero();
+            impulse(0) = 1.0;
+            // get inverse filter impulse response
+            WFilter(A, b,impulse, params.warping_lambda_vt, &imp_response);
+            FFTRadix2(imp_response, NFFT, &vt_fft);
+         }
          
          Lsf2Poly(data.lsf_glot.get_col_vec(frame_index),&A_tilt);
          FFTRadix2(A_tilt, NFFT, &tilt_fft);
@@ -718,8 +758,14 @@ void FftFilterExcitation(const Param &params, const SynthesisData &data, gsl::ve
             ang_exc = frame_fft.getAng(i);
             mag_tilt_exc = GSL_MIN(1.0/tilt_exc_fft.getAbs(i),10000);
             ang_tilt_exc = -1.0*tilt_exc_fft.getAng(i);
-            mag = mag_exc*mag_vt*mag_tilt/mag_tilt_exc;
-            ang = ang_exc + ang_vt - ang_tilt + ang_tilt_exc;
+
+            if (params.use_spectral_matching) {
+               mag = mag_exc*mag_vt*mag_tilt/mag_tilt_exc;
+              ang = ang_exc + ang_vt - ang_tilt + ang_tilt_exc;
+            } else {
+               mag = mag_exc*mag_vt;
+               ang = ang_exc + ang_vt;
+            }
             frame_fft.setReal(i,mag*cos(double(ang)));
             frame_fft.setImag(i,mag*sin(double(ang)));
          }
@@ -752,9 +798,9 @@ void FilterExcitation(const Param &params, const SynthesisData &data, gsl::vecto
    int bdim = params.lpc_order_vt+1;
    double tmpr;
 
+
    int UPDATE_INTERVAL = params.filter_update_interval_vt;
    signal->copy(data.excitation_signal);
-  // std::cout << *signal << std::endl;
    for(sample_index=0;sample_index<(int)signal->size();sample_index++) {
 
       if(sample_index % UPDATE_INTERVAL == 0) {
@@ -767,13 +813,13 @@ void FilterExcitation(const Param &params, const SynthesisData &data, gsl::vecto
          gain_target_db = InterpolateLinear(data.frame_energy(floor(frame_index_double)),
                         data.frame_energy(ceil(frame_index_double)),frame_index_double);
 
-         gain = GetFilteringGain(B, a_interp, data.excitation_signal, gain_target_db,
-                                 sample_index, params.frame_length, params.warping_lambda_vt);
-         //gain = GetFilteringGain(B, a_interp, *signal, gain_target_db,
-          //                       sample_index, params.frame_length, params.warping_lambda_vt);
-         if(data.fundf(rint(frame_index_double)) == 0.0) {
-            gain *= 0.0;//params.noise_gain_unvoiced;
-         } 
+         if (data.fundf(round(frame_index_double)) > 0.0) {
+            gain = GetFilteringGain(B, a_interp, data.excitation_signal, gain_target_db,
+                  sample_index, params.frame_length, params.warping_lambda_vt);
+         } else {
+            /*  Set filter gain for unvoiced to zero, UV is synthesis is fully in frequency domain*/
+            gain = 0.0;
+         }
 
       }
       /** Normal filtering **/

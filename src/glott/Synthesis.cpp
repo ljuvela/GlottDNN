@@ -62,7 +62,6 @@ int main(int argc, char *argv[]) {
    if(ReadSynthesisData(filename, &params, &data) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-
    //   read original excitation
    if (false) {
       std::string src_filename = GetParamPath("src", ".src.wav", params.dir_syn, params);
@@ -88,14 +87,13 @@ int main(int argc, char *argv[]) {
       HarmonicModification(params, data, &(data.excitation_signal));
 
    /* Excitation spectral matching */
-   if(params.use_spectral_matching)
-      SpectralMatchExcitation(params, data, &(data.excitation_signal));
+   //if(params.use_spectral_matching)
+    //  SpectralMatchExcitation(params, data, &(data.excitation_signal));
 
    FftFilterExcitation(params, data, &(data.signal));
    //FilterExcitation(params, data, &(data.signal));
    
    GenerateUnvoicedSignal(params, data, &(data.signal));
-   
    
    std::string out_fname;
    out_fname = GetParamPath("exc", ".exc.wav", params.dir_exc, params);
