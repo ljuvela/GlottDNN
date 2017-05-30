@@ -79,7 +79,7 @@ void LpWeightAme(const Param &params, const gsl::vector_int &gci_inds,
 	double pq = params.ame_position_quotient;
 	double dq = params.ame_duration_quotient;
 
-	double d = 0.1;
+	double d = 0.001;
 	//int nramp = DEFAULT_NRAMP;
 	int nramp = 6 * (double)params.fs/(double)16000;
 

@@ -1,6 +1,6 @@
 # run flags
 make_dirs = True
-make_scp = True
+make_scp = False
 do_reaper_pitch_analysis = False
 do_sptk_pitch_analysis = False
 do_glott_vocoder_analysis = False
@@ -11,11 +11,11 @@ do_glott_vocoder_synthesis = True
 
 # directories
 prjdir = '/l/CODE/GlottDNN' # add your own local install dir here
-datadir = '/l/CODE/GlottDNN/data/iliad_mod'
+datadir = '/l/CODE/GlottDNN/data/nick16'
 
 # general parameters
 sampling_frequency = 16000
-warping_lambda = 0.0
+warping_lambda = 0.54
 use_external_gci = False
 
 

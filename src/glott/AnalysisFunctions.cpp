@@ -401,8 +401,8 @@ int InverseFilter(const Param &params, const AnalysisData &data, gsl::matrix *po
    gsl::vector a_lin(params.lpc_order_vt+1);
    gsl::vector a_lin_high_order(3*params.lpc_order_vt+1); // arbitrary high order
    size_t NFFT = 4096;
-   gsl::vector impulse(NFFT);
-   gsl::vector imp_response(NFFT);
+   gsl::vector impulse(params.frame_length);
+   gsl::vector imp_response(params.frame_length);
    gsl::vector pre_frame_high_order(3*a_lin_high_order.size());
    gsl::vector frame_full_high_order(frame.size() + pre_frame_high_order.size());
 
@@ -722,7 +722,7 @@ void HnrAnalysis(const Param &params, const gsl::vector &source_signal, const gs
 	int hnr_channels = params.hnr_order;
 	gsl::vector frame(params.frame_length_long);
    ComplexVector frame_fft;
-	size_t NFFT = 8192; // Long FFT
+	size_t NFFT = 4096; // Long FFT
 	double MIN_LOG_POWER = -60.0;
 	gsl::vector fft_mag(NFFT/2+1);
 

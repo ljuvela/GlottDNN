@@ -87,8 +87,8 @@ int main(int argc, char *argv[]) {
       HarmonicModification(params, data, &(data.excitation_signal));
 
    /* Excitation spectral matching */
-   if(params.use_spectral_matching)
-      SpectralMatchExcitation(params, data, &(data.excitation_signal));
+   //if(params.use_spectral_matching)
+    //  SpectralMatchExcitation(params, data, &(data.excitation_signal));
 
    FftFilterExcitation(params, data, &(data.signal));
    //FilterExcitation(params, data, &(data.signal));
