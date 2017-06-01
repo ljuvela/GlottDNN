@@ -72,8 +72,10 @@ int main(int argc, char *argv[]) {
    if(params.noise_gated_synthesis)
       NoiseGating(params, &(data.frame_energy));
    
-   if(params.use_postfiltering)
+   if(params.use_postfiltering) {
       PostFilter(params.postfilter_coefficient, params.fs, &(data.lsf_vocal_tract));
+      PostFilter(params.postfilter_coefficient_glot, params.fs, &(data.lsf_glot));
+   }
 
    if(params.use_trajectory_smoothing)
       ParameterSmoothing(params, &data);
@@ -91,10 +93,10 @@ int main(int argc, char *argv[]) {
 
    /* Excitation spectral matching */
    //if(params.use_spectral_matching)
-    //  SpectralMatchExcitation(params, data, &(data.excitation_signal));
-
-   FftFilterExcitation(params, data, &(data.signal));
+   //   SpectralMatchExcitation(params, data, &(data.excitation_signal)); // Use only with direct form filtering
+   
    //FilterExcitation(params, data, &(data.signal));
+   FftFilterExcitation(params, data, &(data.signal)); // Inbuilt spectral matching
    
    GenerateUnvoicedSignal(params, data, &(data.signal));
    

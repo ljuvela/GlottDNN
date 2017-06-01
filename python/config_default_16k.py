@@ -11,11 +11,11 @@ do_glott_vocoder_synthesis = True
 
 # directories
 prjdir = '/l/CODE/GlottDNN' # add your own local install dir here
-datadir = '/l/CODE/GlottDNN/data/nick16'
+datadir = '/l/CODE/GlottDNN/data/iliad_mod'
 
 # general parameters
 sampling_frequency = 16000
-warping_lambda = 0.54
+warping_lambda = 0.0
 use_external_gci = False
 
 

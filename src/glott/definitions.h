@@ -86,6 +86,7 @@ public:
    double noise_reduction_db;
    double noise_gate_limit_db;
    double postfilter_coefficient;
+   double postfilter_coefficient_glot;
    bool use_trajectory_smoothing;
    int lsf_vt_smooth_len;
    int lsf_glot_smooth_len;

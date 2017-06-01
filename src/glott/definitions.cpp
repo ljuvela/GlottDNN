@@ -80,6 +80,7 @@ Param::Param() {
         noise_reduction_db = 20.0;
         noise_gate_limit_db = 80.0;
 	postfilter_coefficient = 0.4;
+        postfilter_coefficient_glot = 1.0;
    use_trajectory_smoothing = false;
    use_wsola = false;
    lsf_vt_smooth_len = 3;

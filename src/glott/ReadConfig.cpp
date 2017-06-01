@@ -230,6 +230,9 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool required, Param 
 
    if (ConfigLookupDouble("POSTFILTER_COEFFICIENT", cfg, required, &(params->postfilter_coefficient)) == EXIT_FAILURE)
          return EXIT_FAILURE;
+   
+   if (ConfigLookupDouble("POSTFILTER_COEFFICIENT_GLOT", cfg, required, &(params->postfilter_coefficient_glot)) == EXIT_FAILURE)
+         return EXIT_FAILURE;
 
    if (ConfigLookupBool("USE_POSTFILTERING", cfg, required, &(params->use_postfiltering)) == EXIT_FAILURE)
       return EXIT_FAILURE;
