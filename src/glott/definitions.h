@@ -82,6 +82,7 @@ public:
    bool use_spectral_matching;
    bool use_original_excitation;
    bool use_wsola;
+   bool use_wsola_pitch_shift;
    bool noise_gated_synthesis;
    double noise_reduction_db;
    double noise_gate_limit_db;
@@ -111,6 +112,17 @@ public:
    std::string dir_f0;
    std::string dir_exc;
    std::string dir_syn;
+
+   /* extensions for parameter types */
+   std::string extension_gain;
+   std::string extension_lsf;
+   std::string extension_lsfg;
+   std::string extension_hnr;
+   std::string extension_paf;
+   std::string extension_f0;
+   std::string extension_exc;
+   std::string extension_src;
+   std::string extension_syn;
 
 
 

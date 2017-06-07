@@ -76,13 +76,14 @@ Param::Param() {
 	pitch_scale = 1.0;
 	use_postfiltering = false;
 	use_spectral_matching = true;
-        noise_gated_synthesis = false;
-        noise_reduction_db = 20.0;
-        noise_gate_limit_db = 80.0;
+   noise_gated_synthesis = false;
+   noise_reduction_db = 20.0;
+   noise_gate_limit_db = 80.0;
 	postfilter_coefficient = 0.4;
-        postfilter_coefficient_glot = 1.0;
+   postfilter_coefficient_glot = 1.0;
    use_trajectory_smoothing = false;
    use_wsola = false;
+   use_wsola_pitch_shift = true;
    lsf_vt_smooth_len = 3;
    lsf_glot_smooth_len = 5;
    gain_smooth_len = 5;
@@ -94,9 +95,20 @@ Param::Param() {
    filter_update_interval_specmatch = 80;
    use_pitch_synchronous_analysis = false;
    save_to_datadir_root = true;
+
+   extension_gain = ".gain";
+   extension_lsf = ".lsf";
+   extension_lsfg = ".slsf";
+   extension_hnr = ".hnr";
+   extension_paf = ".pls" ;
+   extension_f0 = ".f0";
+   extension_exc = ".exc.wav";
+   extension_exc = ".src.wav";
+   extension_syn = ".syn.wav";
 }
 
 Param::~Param() {
+   // Replaced with std::string (automatic delete)
 	/*if (external_f0_filename)
 		delete[] external_f0_filename;
 	if (external_gci_filename)
@@ -144,31 +156,31 @@ int AnalysisData::SaveData(const Param &params) {
 
    std::string filename;
    if (params.extract_gain) {
-      filename = GetParamPath("gain", ".gain", params.dir_gain, params);
+      filename = GetParamPath("gain", params.extension_gain, params.dir_gain, params);
       WriteGslVector(filename, params.data_type, frame_energy);
    }
    if (params.extract_lsf_vt) {
-      filename = GetParamPath("lsf", ".lsf", params.dir_lsf, params);
+      filename = GetParamPath("lsf", params.extension_lsf, params.dir_lsf, params);
       WriteGslMatrix(filename, params.data_type, lsf_vocal_tract);
    }
    if (params.extract_lsf_glot) {
-      filename = GetParamPath("slsf", ".slsf", params.dir_lsfg, params);
+      filename = GetParamPath("slsf", params.extension_lsfg, params.dir_lsfg, params);
       WriteGslMatrix(filename, params.data_type, lsf_glot);
    }
    if (params.extract_hnr) {
-      filename = GetParamPath("hnr", ".hnr", params.dir_hnr, params);
+      filename = GetParamPath("hnr", params.extension_hnr, params.dir_hnr, params);
       WriteGslMatrix(filename, params.data_type, hnr_glot);
    }
    if (params.extract_pulses_as_features) {
-      filename = GetParamPath("pls", ".pls", params.dir_paf, params);
+      filename = GetParamPath("pls", params.extension_paf, params.dir_paf, params);
       WriteGslMatrix(filename, params.data_type, excitation_pulses);
    }
    if (params.extract_f0) {
-      filename = GetParamPath("f0", ".f0", params.dir_f0, params);
+      filename = GetParamPath("f0", params.extension_f0, params.dir_f0, params);
       WriteGslVector(filename, params.data_type, fundf);
    }
    if (params.extract_glottal_excitation) {
-      filename = GetParamPath("exc", ".src.wav", params.dir_exc, params);
+      filename = GetParamPath("exc", params.extension_src, params.dir_exc, params);
       if(WriteWavFile(filename, source_signal, params.fs) == EXIT_FAILURE)
          return EXIT_FAILURE;
    }

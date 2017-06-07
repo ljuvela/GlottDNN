@@ -1192,144 +1192,10 @@ void OverlapAdd(const gsl::vector &frame, const size_t center_index, gsl::vector
 }
 
 
-gsl::vector GetPulseWsola(const gsl::vector &frame, const gsl::vector &pulse_prev, const int &t0, const double &energy) {
 
-  // int t0_prev = (int)pulse_prev.size()/2; // size should be multiple of 2
-   gsl::vector pulse(2*t0);
-
-   int ind,i;
-   int start_ind=0;
-   int stop_ind=0;
-
-   gsl::vector frame_interp(frame);
-
-   // Calculate autocorrelation
-   gsl::vector ac_full;
-   gsl::vector ac(frame.size());
-   FastAutocorr(frame, &ac_full);
-   for(i=0; i<ac.size(); i++)
-      ac(i) = ac_full(ac.size()-1+i);
-   gsl::vector_int peak_inds;
-   gsl::vector peak_values;
-   FindPeaks(ac, 0.1, &peak_inds, &peak_values);
-   int first_peak = peak_inds(0);
-   int second_peak_ind = 1;
-   while (peak_values(second_peak_ind) < 0)
-      second_peak_ind++;
-   int second_peak = peak_inds(second_peak_ind);
-
-   // Pitch shift by interpolation
-   InterpolateSpline(frame, round(  (double)t0 / (double)(second_peak-first_peak) * frame.size()), &frame_interp);
-   //VPrint1(frame);
-   //VPrint2(frame_interp);
-
-   // waveform similarity overlap add (WSOLA)
-    int M = 0.5 * t0;
-   // int M = ceil(0.10 * t0);
-  // int M = 0.375 * t0; // total range of 3/4 T0
-   // int M = 0.6250 * t0; // total range of 1.25 T0
-  // int M = 0.75 * t0; // total range of 1.5 T0
-   int  mid = round(frame_interp.size()/2.0); // PAF frame midpoint
-   gsl::vector corr(2*M+1,true); // correlations, init to zero
-   int m,m_ind;
-
-   int m_opt = 0;
-
-   //std::cout << "prev pulse size " << pulse_prev.size() << std::endl;
-
-   if (pulse_prev.size() > 1) { // pulse_prev is of size 1 if previous frame is unvoiced
-      // Find the maximum cross-correlation
-      for(m=-1*M, m_ind=0; m<M; m++, m_ind++) {
-
-         bool edge_clipped = false;
-
-         // Select pulse with lag
-         pulse.set_zero();
-         for (i=0; i<2*t0;i++) {
-            ind = mid-t0+i+m;
-            if (ind >= 0 && ind < (int)frame_interp.size()) {
-                      pulse(i) = frame_interp(ind);
-            } else {
-               std::cerr << "Warning: edges clipping" << std::endl;
-               edge_clipped = true;
-               break;
-            }
-
-         }
-
-         if (edge_clipped) {
-            corr(m_ind) = -1*DBL_MAX;
-            continue;
-         }
-
-         // Window pulse for xcorr calculation
-         ApplyWindowingFunction(HANN, &pulse);
-         pulse *= getEnergy(pulse_prev)/getEnergy(pulse);
-
-         // determine index range where signals overlap
-         start_ind = (int)pulse_prev.size() - t0;
-         stop_ind = start_ind + 2*t0 - 1;
-         if(start_ind < 0)
-            start_ind = 0;
-         if(stop_ind > (int)pulse_prev.size())
-            stop_ind = (int)pulse_prev.size();
-
-         // cross-correlation
-         for(i=start_ind; i<stop_ind; i++) {
-            corr(m_ind) += pulse_prev(i) * pulse(i-start_ind);
-         }
-      }
-      m_opt = (int)corr.max_index() - M;
-
-     // std::cout << "max xcorr at m = " << m_opt << std::endl;
-     // VPrint1(corr);
-//      VPrint2(frame_interp);
-//      VPrint3(pulse_prev);
-//
-//      std::cout << "" << std::endl;
-//      VPrint3(pulse_prev);
-
-   }
-
-
-//   std::cout << "start:" << start_ind << ", stop: " << stop_ind << std::endl;
-//   std::cout << "length:" << (stop_ind - start_ind) << " t0 = " << t0 <<  std::endl;
-
-
-  // m_opt = 0;
-
-   /* Make non-windowed pulse at optimum lag */
-   pulse.set_zero();
-   for (i=0; i<2*t0;i++) {
-      ind = mid-t0+i+m_opt;
-      if (ind >= 0 && ind < (int)frame_interp.size())
-         pulse(i) = frame_interp(ind);
-   }
-
-   gsl::vector pulse_win(pulse);
-   ApplyWindowingFunction(HANN, &pulse_win);
-
-   // Scale with correct energy
-   pulse *= energy/getEnergy(pulse_win);
-
-   /* Window length normalization */
-   gsl::vector win(pulse.size());
-   win.set_all(1.0);
-   ApplyWindowingFunction(HANN, &win);
-   double sum = 0.0;
-   for (i=0;i<win.size();i++) {
-      sum += win(i)*win(i);
-   }
-
-   //pulse *= pulse.size() / sum;
-
-   return pulse;
-}
-
-
-
-gsl::vector GetPulseWsola2(const gsl::vector &frame, const int &t0, const double &energy,
-      const int &sample_index,  const bool &previous_unvoiced, gsl::vector *signal) {
+gsl::vector GetPulseWsola(const gsl::vector &frame, const int &t0, const double &energy,
+      const int &sample_index,  const bool &previous_unvoiced, const bool &pitch_shift,
+      gsl::vector *signal) {
 
    gsl::vector pulse(2*t0);
 
@@ -1340,8 +1206,8 @@ gsl::vector GetPulseWsola2(const gsl::vector &frame, const int &t0, const double
 
    gsl::vector frame_interp(frame);
 
-   if (true) {
-
+   /* Autocorrelation based pitch shift */
+   if (pitch_shift) {
       // Calculate autocorrelation
       gsl::vector ac_full;
       gsl::vector ac(frame.size());
@@ -1366,10 +1232,8 @@ gsl::vector GetPulseWsola2(const gsl::vector &frame, const int &t0, const double
 
       // Pitch shift by interpolation (don't do extreme modifications)
       double error_ratio = (double)abs(t0 - t0_estimate)/(double)t0;
-      //std::cout << "error ratio = " << error_ratio << std::endl;
       if (error_ratio < 2.0)
          InterpolateSpline(frame, round(  (double)t0 / (double)(t0_estimate) * frame.size()), &frame_interp);
-
    }
 
    // waveform similarity overlap add (WSOLA)
