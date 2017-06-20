@@ -415,6 +415,11 @@ int ReadSynthesisData(const char *filename, Param *params, SynthesisData *data) 
    if (params->excitation_method == PULSES_AS_FEATURES_EXCITATION)
       if (ReadGslMatrix(param_fname, params->data_type, params->paf_pulse_length, &(data->excitation_pulses)) == EXIT_FAILURE)
          return EXIT_FAILURE;
+      
+   param_fname = GetParamPath("sp", ".sp", params->dir_sp, *params);
+   if (params->use_generic_envelope)
+        if (ReadGslMatrix(param_fname, params->data_type, 2049, &(data->spectrum)) == EXIT_FAILURE)
+         return EXIT_FAILURE;
 
    /* Read number of frames & compute signal length */
    params->number_of_frames = (int)(data->fundf.size());

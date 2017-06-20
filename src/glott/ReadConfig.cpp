@@ -240,6 +240,9 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool required, Param 
    if (ConfigLookupBool("USE_TRAJECTORY_SMOOTHING", cfg, required, &(params->use_trajectory_smoothing)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
+   if (ConfigLookupBool("USE_GENERIC_ENVELOPE", cfg, required, &(params->use_generic_envelope)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+   
    if (ConfigLookupBool("USE_SPECTRAL_MATCHING", cfg, required, &(params->use_spectral_matching)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
@@ -309,6 +312,7 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool required, Param 
    ConfigLookupString("DIR_HNR", cfg, false, params->dir_hnr);
    ConfigLookupString("DIR_PULSES_AS_FEATURES", cfg, false, params->dir_paf);
    ConfigLookupString("DIR_EXCITATION", cfg, false, params->dir_exc);
+   ConfigLookupString("DIR_SPECTRUM", cfg, false, params->dir_sp);
 
 
 

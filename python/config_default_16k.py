@@ -11,22 +11,23 @@ do_glott_vocoder_synthesis = True
 
 # directories
 prjdir = '/l/CODE/GlottDNN' # add your own local install dir here
-datadir = '/l/CODE/GlottDNN/data/iliad_mod'
+datadir = '/l/CODE/GlottDNN/data/nancy'
 
 # general parameters
-sampling_frequency = 16000
-warping_lambda = 0.0
+sampling_frequency = 48000
+warping_lambda = 0.54
 use_external_gci = False
 
 
 # programs
 reaper = 'reaper'
 sox = 'sox'
-pitch = '/u/76/mairaksi/data/Documents/SPTK-3.8/bin/pitch/pitch -a 0 -s 16.0 -o 1 -p 80 -H 350 '
+#pitch = '/u/76/mairaksi/data/Documents/SPTK-3.8/bin/pitch/pitch -a 0 -s 16.0 -o 1 -p 80 -H 350 '
+pitch = '/u/76/mairaksi/unix/Documents/SPTK-3.8/bin/pitch/pitch -a 0 -s 48.0 -o 1 -p 240 -T 0.0 -L 50 -H 500 '
 x2x = '/u/76/mairaksi/data/Documents/SPTK-3.8/bin/x2x/x2x'
 Analysis = prjdir + '/src/Analysis'
 Synthesis = prjdir + '/src/Synthesis'
-config_default = prjdir + '/config/config_default_16k.cfg'
+config_default = prjdir + '/config/config_default_48k.cfg'
 
 # nn input params
 inputs = ['f0', 'gain', 'hnr', 'slsf', 'lsf']
@@ -37,7 +38,7 @@ output_exts = ['.paf']
 output_dims = [400]
 
 # dnn data conf
-dnn_name = 'gdnn_jenny'
+dnn_name = 'gdnn_nancy'
 train_data_dir = prjdir + '/nndata/traindata/' + dnn_name 
 weights_data_dir = '/work/t405/T40521/shared/vocomp/jenny/glottdnn/' + dnn_name
 remove_unvoiced_frames = True
