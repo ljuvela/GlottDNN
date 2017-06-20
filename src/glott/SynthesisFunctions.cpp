@@ -285,9 +285,9 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
             if (use_wsola) {
                // get unwindowed pulse from DNN
                pulse = GetDnnPulse(params.paf_pulse_length, energy, frame_index, data, excDnn);
-              // pulse = GetPulseWsola(pulse, pulse_prev, T0, energy);
-               pulse =  GetPulseWsola2(pulse, T0, energy,
-                     sample_index,  (pulse_prev.size() > 1), excitation_signal) ;
+               pulse =  GetPulseWsola(pulse, T0, energy,
+                     sample_index,  (pulse_prev.size() == 1),
+                     params.use_wsola_pitch_shift, excitation_signal) ;
             } else {
                pulse = GetDnnPulse(pulse_len, energy, frame_index, data, excDnn);
             }
@@ -300,9 +300,13 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
          case PULSES_AS_FEATURES_EXCITATION:
             /* Waveform similarity PSOLA is available only when PAF waveforms haven't been windowed */
             if (use_wsola) {
-//               pulse = GetPulseWsola(data.excitation_pulses.get_col_vec(frame_index), pulse_prev, T0, energy);
-               pulse =  GetPulseWsola2(data.excitation_pulses.get_col_vec(frame_index), T0, energy,
-                     sample_index,  (pulse_prev.size() == 1), excitation_signal) ;
+               pulse =  GetPulseWsola(data.excitation_pulses.get_col_vec(frame_index), T0, energy,
+                     sample_index,  (pulse_prev.size() == 1),
+                     params.use_wsola_pitch_shift, excitation_signal) ;
+
+               //GetPulseWsola(const gsl::vector &frame, const int &t0, const double &energy,
+               //      const int &sample_index,  const bool &previous_unvoiced, const bool &pitch_shift,
+               //      gsl::vector *signal)
             } else {
                pulse = GetExternalPulse(pulse_len, params.use_pulse_interpolation, energy,
                                  frame_index, params.psola_windowing_function, data.excitation_pulses);

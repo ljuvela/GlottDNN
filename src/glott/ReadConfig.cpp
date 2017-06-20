@@ -159,6 +159,9 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool required, Param 
    if (ConfigLookupBool("USE_WSOLA", cfg, false, &(params->use_wsola)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
+   if (ConfigLookupBool("USE_WSOLA_PITCH_SHIFT", cfg, false, &(params->use_wsola_pitch_shift)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
    if (ConfigLookupBool("USE_PAF_UNVOICED", cfg, false, &(params->use_paf_unvoiced_synthesis)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
@@ -231,7 +234,7 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool required, Param 
    if (ConfigLookupDouble("POSTFILTER_COEFFICIENT", cfg, required, &(params->postfilter_coefficient)) == EXIT_FAILURE)
          return EXIT_FAILURE;
    
-   if (ConfigLookupDouble("POSTFILTER_COEFFICIENT_GLOT", cfg, required, &(params->postfilter_coefficient_glot)) == EXIT_FAILURE)
+   if (ConfigLookupDouble("POSTFILTER_COEFFICIENT_GLOT", cfg, false, &(params->postfilter_coefficient_glot)) == EXIT_FAILURE)
          return EXIT_FAILURE;
 
    if (ConfigLookupBool("USE_POSTFILTERING", cfg, required, &(params->use_postfiltering)) == EXIT_FAILURE)
@@ -273,13 +276,13 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool required, Param 
    if (ConfigLookupBool("USE_PAF_ENERGY_NORM", cfg, required, &(params->use_paf_energy_normalization)) == EXIT_FAILURE)
       return EXIT_FAILURE;
    
-  if (ConfigLookupBool("NOISE_GATED_SYNTHESIS", cfg, required, &(params->noise_gated_synthesis)) == EXIT_FAILURE)
+  if (ConfigLookupBool("NOISE_GATED_SYNTHESIS", cfg, false, &(params->noise_gated_synthesis)) == EXIT_FAILURE)
       return EXIT_FAILURE;
   
-     if (ConfigLookupDouble("NOISE_GATE_LIMIT_DB", cfg, required, &(params->noise_gate_limit_db)) == EXIT_FAILURE)
+     if (ConfigLookupDouble("NOISE_GATE_LIMIT_DB", cfg, false, &(params->noise_gate_limit_db)) == EXIT_FAILURE)
       return EXIT_FAILURE;
      
-    if (ConfigLookupDouble("NOISE_REDUCTION_DB", cfg, required, &(params->noise_reduction_db)) == EXIT_FAILURE)
+    if (ConfigLookupDouble("NOISE_REDUCTION_DB", cfg, false, &(params->noise_reduction_db)) == EXIT_FAILURE)
       return EXIT_FAILURE;
      
 
@@ -314,8 +317,15 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool required, Param 
    ConfigLookupString("DIR_EXCITATION", cfg, false, params->dir_exc);
    ConfigLookupString("DIR_SPECTRUM", cfg, false, params->dir_sp);
 
-
-
+   /* Lookup for parameter extensions,  optional */
+   ConfigLookupString("EXT_GAIN", cfg, false, params->extension_gain);
+   ConfigLookupString("EXT_F0", cfg, false, params->extension_f0);
+   ConfigLookupString("EXT_LSF_VT", cfg, false, params->extension_lsf);
+   ConfigLookupString("EXT_LSF_GLOT", cfg, false, params->extension_lsfg);
+   ConfigLookupString("EXT_HNR", cfg, false, params->extension_hnr);
+   ConfigLookupString("EXT_PULSES_AS_FEATURES", cfg, false, params->extension_paf);
+   ConfigLookupString("EXT_EXCITATION", cfg, false, params->extension_exc);
+   ConfigLookupString("EXT_EXCITATION_ORIG", cfg, false, params->extension_src);
 
 
 	/* Read enum style configurations */
