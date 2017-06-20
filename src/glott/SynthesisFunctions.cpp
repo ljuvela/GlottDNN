@@ -608,9 +608,10 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data, gsl:
    gsl::vector A_tilt(params.lpc_order_glot+1,true);
    
    ComplexVector noise_vec_fft;
-   ComplexVector vt_fft;
+   
    ComplexVector tilt_fft;
    size_t NFFT = 4096; // Long FFT
+   ComplexVector vt_fft(NFFT/2+1);
    gsl::vector fft_mag(NFFT/2+1);
    size_t i;
    
@@ -628,20 +629,27 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data, gsl:
    size_t frame_index;
    for(frame_index=0;frame_index<params.number_of_frames;frame_index++) {
       if(data.fundf(frame_index) == 0) {
-
-         Lsf2Poly(data.lsf_vocal_tract.get_col_vec(frame_index),&A);
-
-         if(params.warping_lambda_vt == 0.0) {
-            FFTRadix2(A, NFFT, &vt_fft);
+         if(params.use_generic_envelope) {
+            for(i=0;i<vt_fft.getSize();i++) {
+               vt_fft.setReal(i,data.spectrum(i,frame_index));
+               vt_fft.setImag(i,0.0);
+            }
+            //Spectrum2MinPhase(&vt_fft);    
          } else {
-            // get warped filter linear frequency response via impulse response
-            imp_response.set_zero();
-            impulse.set_zero();
-            impulse(0) = 1.0;
-            // get inverse filter impulse response
-            WFilter(A, b,impulse, params.warping_lambda_vt, &imp_response);
-            FFTRadix2(imp_response, NFFT, &vt_fft);
+            Lsf2Poly(data.lsf_vocal_tract.get_col_vec(frame_index),&A);
+            if(params.warping_lambda_vt == 0.0) {
+               FFTRadix2(A, NFFT, &vt_fft);
+            } else {
+               // get warped filter linear frequency response via impulse response
+               imp_response.set_zero();
+               impulse.set_zero();
+               impulse(0) = 1.0;
+               // get inverse filter impulse response
+               WFilter(A, b,impulse, params.warping_lambda_vt, &imp_response);
+               FFTRadix2(imp_response, NFFT, &vt_fft);
+            }
          }
+         
 
          for(i=0;i<noise_vec.size();i++)
             noise_vec(i) = random_gauss_gen.get();
@@ -660,17 +668,16 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data, gsl:
          //double hnr_ratio;
          //Erb2Linear(data.hnr_glot.get_col_vec(frame_index), params.fs, &hnr_interp);
          for(i=0;i<noise_vec_fft.getSize();i++) {
-            if (params.use_spectral_matching) {
-               mag = noise_vec_fft.getAbs(i) * GSL_MIN(1.0/(vt_fft.getAbs(i)),10000) * GSL_MIN(1.0/tilt_fft.getAbs(i),10000);
-            } else {
+
+            if(params.use_generic_envelope) {
+               mag = noise_vec_fft.getAbs(i) * vt_fft.getAbs(i);
+            } else if (!params.use_spectral_matching) {
                mag = noise_vec_fft.getAbs(i) * GSL_MIN(1.0/(vt_fft.getAbs(i)),10000);
+            } else {
+               mag = noise_vec_fft.getAbs(i) * GSL_MIN(1.0/(vt_fft.getAbs(i)),10000) * GSL_MIN(1.0/tilt_fft.getAbs(i),10000);
             }
-             //mag = rand_gen.uniform() * GSL_MIN(1.0/(vt_fft.getAbs(i)),10000);
-            //hnr_ratio = powf(10.0,hnr_interp(i)/20.0);
-          // mag = GSL_MIN(1.0/(vt_fft.getAbs(i)),10000);
-            //mag = mag * (1.0 - (1.0-hnr_ratio)*2.0*(rand_gen.uniform()));
+             
             ang = noise_vec_fft.getAng(i);
-             //ang = 2.0*M_PI*rand_gen.uniform() - vt_fft.getAng(i);
             
             noise_vec_fft.setReal(i,mag*cos(double(ang)));
             noise_vec_fft.setImag(i,mag*sin(double(ang)));
@@ -712,11 +719,12 @@ void FftFilterExcitation(const Param &params, const SynthesisData &data, gsl::ve
    gsl::vector A_tilt_exc(params.lpc_order_glot+1,true);
    
    ComplexVector frame_fft;
-   ComplexVector vt_fft;
+  
    ComplexVector tilt_fft;
    ComplexVector tilt_exc_fft;
    //ComplexVector postfilter_fft;
    size_t NFFT = 4096; // Long FFT
+   ComplexVector vt_fft(NFFT/2+1);
    gsl::vector frame_copy;
    
    // for de-warping filters
@@ -735,23 +743,6 @@ void FftFilterExcitation(const Param &params, const SynthesisData &data, gsl::ve
    size_t frame_index;
    for(frame_index=0;frame_index<params.number_of_frames;frame_index++) {
       if(data.fundf(frame_index) != 0) {
-         /* Get spectrum of vocal tract and glot filter */
-         Lsf2Poly(data.lsf_vocal_tract.get_col_vec(frame_index),&A);
-         if(params.warping_lambda_vt == 0.0) {
-            FFTRadix2(A, NFFT, &vt_fft);
-         } else {
-            // get warped filter linear frequency response via impulse response
-            imp_response.set_zero();
-            impulse.set_zero();
-            impulse(0) = 1.0;
-            // get inverse filter impulse response
-            WFilter(A, b,impulse, params.warping_lambda_vt, &imp_response);
-            FFTRadix2(imp_response, NFFT, &vt_fft);
-         }
-         
-         Lsf2Poly(data.lsf_glot.get_col_vec(frame_index),&A_tilt);
-         FFTRadix2(A_tilt, NFFT, &tilt_fft);
-         
          /* Get spectrum of excitation */
          GetFrame(data.excitation_signal, frame_index, rint(params.frame_shift/params.speed_scale), &frame, NULL);
          frame_copy.copy(frame);
@@ -763,7 +754,35 @@ void FftFilterExcitation(const Param &params, const SynthesisData &data, gsl::ve
          //frame *= kbd_window;
          FFTRadix2(frame, NFFT, &frame_fft);
           
-         // Randomize phase
+         if(params.use_generic_envelope) {
+            for(i=0;i<vt_fft.getSize();i++) {
+               vt_fft.setReal(i,data.spectrum(i,frame_index)*tilt_exc_fft.getAbs(i));
+               vt_fft.setImag(i,0.0);
+            }
+            Spectrum2MinPhase(&vt_fft);    
+         } else {
+            /* Get spectrum of vocal tract and glot filter */
+            Lsf2Poly(data.lsf_vocal_tract.get_col_vec(frame_index),&A);
+            if(params.warping_lambda_vt == 0.0) {
+               FFTRadix2(A, NFFT, &vt_fft);
+            } else {
+               // get warped filter linear frequency response via impulse response
+               imp_response.set_zero();
+               impulse.set_zero();
+               impulse(0) = 1.0;
+               // get inverse filter impulse response
+               WFilter(A, b,impulse, params.warping_lambda_vt, &imp_response);
+               FFTRadix2(imp_response, NFFT, &vt_fft);
+            }
+         }
+         
+         
+         Lsf2Poly(data.lsf_glot.get_col_vec(frame_index),&A_tilt);
+         FFTRadix2(A_tilt, NFFT, &tilt_fft);
+         
+
+         
+        
          double mag_vt, mag_exc, ang_vt, ang_exc, mag_tilt, ang_tilt, mag_tilt_exc, ang_tilt_exc, mag, ang;
 
          for(i=0;i<frame_fft.getSize();i++) {
@@ -776,12 +795,18 @@ void FftFilterExcitation(const Param &params, const SynthesisData &data, gsl::ve
             mag_tilt_exc = GSL_MIN(1.0/tilt_exc_fft.getAbs(i),10000);
             ang_tilt_exc = -1.0*tilt_exc_fft.getAng(i);
 
-            if (params.use_spectral_matching) {
-              mag = mag_exc*mag_vt*mag_tilt/mag_tilt_exc;
-              ang = ang_exc + ang_vt - ang_tilt + ang_tilt_exc; // Maximum phase filtering for glottal contribution
+            if (params.use_generic_envelope) {
+               //mag = mag_exc/mag_vt/mag_tilt_exc;
+                mag = mag_exc/mag_vt;
+               ang = ang_exc + ang_vt;// - ang_tilt + ang_tilt_exc; // Maximum phase filtering for glottal contribution
             } else {
-               mag = mag_exc*mag_vt;
-               ang = ang_exc + ang_vt;
+               if (params.use_spectral_matching) {
+                  mag = mag_exc*mag_vt*mag_tilt/mag_tilt_exc;
+                  ang = ang_exc + ang_vt - ang_tilt + ang_tilt_exc; // Maximum phase filtering for glottal contribution
+               } else {
+                  mag = mag_exc*mag_vt;
+                  ang = ang_exc + ang_vt;
+               }
             }
             frame_fft.setReal(i,mag*cos(double(ang)));
             frame_fft.setImag(i,mag*sin(double(ang)));

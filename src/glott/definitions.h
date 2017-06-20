@@ -102,7 +102,7 @@ public:
    //double f0_check_range;
    ExcitationMethod excitation_method;
    bool use_pitch_synchronous_analysis;
-
+   bool use_generic_envelope;
 
    /* directory paths for storing parameters */
    std::string dir_gain;
@@ -113,6 +113,7 @@ public:
    std::string dir_f0;
    std::string dir_exc;
    std::string dir_syn;
+   std::string dir_sp;
 
    /* extensions for parameter types */
    std::string extension_gain;
@@ -175,7 +176,9 @@ public:
    gsl::matrix lsf_glot;
    gsl::matrix excitation_pulses;
    gsl::matrix hnr_glot;
-
+   
+   gsl::matrix spectrum;
+   
    /* QMF analysis specific */
    //gsl::matrix lsf_vt_qmf1;
    //gsl::matrix lsf_vt_qmf2;

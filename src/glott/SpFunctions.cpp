@@ -466,7 +466,7 @@ void ApplyPsolaWindow(const WindowingFunctionType &window_function, const double
 
       /* Left-hand side */
 	   if (t0 <= t0_previous) { /* Use normal windowing */
-	      for(i=0;i<t0;i++)
+	      for(i=0;i<rint(t0);i++)
 	         (*frame)(i) *= 0.5*(1.0-cos(2.0*M_PI*((double)i)/((n_dbl)-1.0)));
 	   } else { /*  */
 	      //n_temp = GSL_MAX(2*t0_previous,2*MINIMUM_W_LENGTH);
@@ -2117,3 +2117,26 @@ void WarpLP(const gsl::vector &a_orig, double alpha, gsl::vector *a_w) {
    }
    (*a_w) *= 1.0/(*a_w)(0);
 }
+
+void Spectrum2MinPhase(ComplexVector *sp) {
+    size_t i;  
+    int NFFT = 2*(sp->getSize()-1);
+    gsl::vector ac(100);
+    gsl::vector poly(100);
+    for(i=0;i<sp->getSize();i++) {
+        sp->setReal(i,pow(sp->getAbs(i),2));
+        sp->setImag(i,0.0);
+    }
+    IFFTRadix2((*sp),&ac);
+    Levinson(ac,&poly);
+    FFTRadix2(poly,NFFT,sp);
+    double mag;
+    double ang;
+    for(i=0;i<sp->getSize();i++) {
+        mag = 1.0/(*sp).getAbs(i);
+        ang = -(*sp).getAng(i);
+        (*sp).setReal(i,mag*sin(ang));
+        (*sp).setImag(i,mag*cos(ang));
+    }
+}
+    

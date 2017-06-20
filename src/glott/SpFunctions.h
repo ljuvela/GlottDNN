@@ -80,5 +80,6 @@ void Lp2Walp(const gsl::vector &a_orig,const double &alpha, gsl::vector *a_w);
 void RandomizePhase(gsl::vector *frame);
 void WarpLP(const gsl::vector &a_orig, double alpha, gsl::vector *a_w);
 void FastAutocorr(const gsl::vector &x, gsl::vector *ac);
+void Spectrum2MinPhase(ComplexVector *sp);
 
 #endif /* SRC_GLOTT_SPFUNCTIONS_H_ */

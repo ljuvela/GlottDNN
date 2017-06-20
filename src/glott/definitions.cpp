@@ -95,7 +95,7 @@ Param::Param() {
    filter_update_interval_specmatch = 80;
    use_pitch_synchronous_analysis = false;
    save_to_datadir_root = true;
-
+   use_generic_envelope = false;
    extension_gain = ".gain";
    extension_lsf = ".lsf";
    extension_lsfg = ".slsf";
