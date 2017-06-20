@@ -37,6 +37,7 @@ public:
 	std::string dnn_path_basename;
 	std::string data_directory;
 	std::string file_basename;
+	std::string file_path;
 	bool save_to_datadir_root;
 	DataType data_type;
 	bool qmf_subband_analysis;

@@ -660,7 +660,11 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data, gsl:
          //double hnr_ratio;
          //Erb2Linear(data.hnr_glot.get_col_vec(frame_index), params.fs, &hnr_interp);
          for(i=0;i<noise_vec_fft.getSize();i++) {
-            mag = noise_vec_fft.getAbs(i) * GSL_MIN(1.0/(vt_fft.getAbs(i)),10000) * GSL_MIN(1.0/tilt_fft.getAbs(i),10000);
+            if (params.use_spectral_matching) {
+               mag = noise_vec_fft.getAbs(i) * GSL_MIN(1.0/(vt_fft.getAbs(i)),10000) * GSL_MIN(1.0/tilt_fft.getAbs(i),10000);
+            } else {
+               mag = noise_vec_fft.getAbs(i) * GSL_MIN(1.0/(vt_fft.getAbs(i)),10000);
+            }
              //mag = rand_gen.uniform() * GSL_MIN(1.0/(vt_fft.getAbs(i)),10000);
             //hnr_ratio = powf(10.0,hnr_interp(i)/20.0);
           // mag = GSL_MIN(1.0/(vt_fft.getAbs(i)),10000);

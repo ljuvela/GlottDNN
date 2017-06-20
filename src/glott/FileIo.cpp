@@ -107,13 +107,16 @@ int ReadWavFile(const char *fname, gsl::vector *signal, Param *params) {
 	params->signal_length = signal->size();
 
 	/* Get basename (without extension) for saving parameters later*/
-
-   std::string str(fname);
+	/*
+	std::string str(fname);
    size_t firstindex;
    firstindex = str.find_last_of("/");
    size_t lastindex = str.find_last_of(".");
-   //params->basename = std::string("Foo");
    params->file_basename = str.substr(firstindex+1,lastindex-firstindex-1);
+   params->file_path = str.substr(0,firstindex);
+   */
+	FilePathBasename(fname, &(params->file_path), &(params->file_basename));
+
 
    free(buffer);
 
@@ -372,11 +375,27 @@ int WriteGslMatrix(const std::string &filename, const DataType &format, const gs
    return EXIT_SUCCESS;
 }
 
+int FilePathBasename(const char *filename, std::string *filepath, std::string *basename) {
+
+   std::string str(filename);
+   size_t firstindex;
+   firstindex = str.find_last_of("/");
+   size_t lastindex = str.find_last_of(".");
+   //if (lastindex <= firstindex)
+   if (lastindex == std::string::npos) // not found
+      lastindex = str.size();
+
+   *basename = str.substr(firstindex+1,lastindex-firstindex-1);
+   *filepath = str.substr(0, firstindex);
+
+   return EXIT_SUCCESS;
+}
+
 int ReadSynthesisData(const char *filename, Param *params, SynthesisData *data) {
 
 
    /* Get basename (without extension) for saving parameters later*/
-
+   /*
    std::string str(filename);
    size_t firstindex;
    firstindex = str.find_last_of("/");
@@ -385,17 +404,25 @@ int ReadSynthesisData(const char *filename, Param *params, SynthesisData *data) 
       lastindex = str.size();
 
    params->file_basename = str.substr(firstindex+1,lastindex-firstindex-1);
+   */
 
+   FilePathBasename(filename, &(params->file_path), &(params->file_basename));
 
    std::string param_fname;
 
    param_fname = GetParamPath("f0", params->extension_f0, params->dir_f0, *params);
    if (ReadGslVector(param_fname, params->data_type, &(data->fundf)) == EXIT_FAILURE)
       return EXIT_FAILURE;
+   params->number_of_frames = (int)(data->fundf.size());
 
    param_fname = GetParamPath("gain", params->extension_gain, params->dir_gain, *params);
    if (ReadGslVector(param_fname, params->data_type, &(data->frame_energy)) == EXIT_FAILURE)
       return EXIT_FAILURE;
+   if (params->number_of_frames != (int)data->frame_energy.size()) {
+      std::cerr << "Error: Number of frames in input files do not match." << std::endl;
+      std::cerr << "In file"  << param_fname << std::endl;
+      return EXIT_FAILURE;
+   }
 
    param_fname = GetParamPath("lsf", params->extension_lsf, params->dir_lsf, *params);
    if (ReadGslMatrix(param_fname, params->data_type, params->lpc_order_vt, &(data->lsf_vocal_tract)) == EXIT_FAILURE)
@@ -417,7 +444,7 @@ int ReadSynthesisData(const char *filename, Param *params, SynthesisData *data) 
          return EXIT_FAILURE;
 
    /* Read number of frames & compute signal length */
-   params->number_of_frames = (int)(data->fundf.size());
+
    if(params->number_of_frames != (int)data->frame_energy.size() ||
       params->number_of_frames != (int)data->lsf_vocal_tract.get_cols() ||
       params->number_of_frames != (int)data->lsf_glot.get_cols() ||
@@ -511,15 +538,19 @@ int WriteFileFloat(const std::string &fname_str, const float *data, const size_t
 std::string GetParamPath(const std::string &default_dir, const std::string &extension, const std::string &custom_dir, const Param &params)  {
    std::string param_path;
 
-   std::string basedir(params.data_directory) ;
+   std::string basedir(params.data_directory);
    if (basedir.back() != '/')
       basedir += "/";
 
    if (custom_dir.empty()) {
-          if (params.save_to_datadir_root)
-             param_path = basedir + params.file_basename + extension;
-          else
+          if (params.save_to_datadir_root) {
+             //param_path = basedir + params.file_basename + extension;
+             // changed to GlottHMM default behavior
+             param_path = params.file_path + "/" + params.file_basename + extension;
+             std::cout << param_path << std::endl;
+          } else {
              param_path = basedir + default_dir + "/" + params.file_basename + extension;
+          }
        } else {
           param_path = custom_dir + "/" + params.file_basename + extension;
        }
