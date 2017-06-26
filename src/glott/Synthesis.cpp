@@ -69,6 +69,8 @@ int main(int argc, char *argv[]) {
          return EXIT_FAILURE;
    }
    
+
+
    if(params.noise_gated_synthesis)
       NoiseGating(params, &(data.frame_energy));
    
@@ -82,7 +84,8 @@ int main(int argc, char *argv[]) {
 
    /* Check LSF stability and fix if needed */
    StabilizeLsf(&(data.lsf_vocal_tract));
-   StabilizeLsf(&(data.lsf_glot));
+   if (params.use_spectral_matching)
+      StabilizeLsf(&(data.lsf_glot));
 
    /* Create excitation with overlap-add */
    CreateExcitation(params, data, &(data.excitation_signal));

@@ -395,26 +395,25 @@ int ReadSynthesisData(const char *filename, Param *params, SynthesisData *data) 
 
 
    /* Get basename (without extension) for saving parameters later*/
-   /*
-   std::string str(filename);
-   size_t firstindex;
-   firstindex = str.find_last_of("/");
-   size_t lastindex = str.find_last_of(".");
-   if (lastindex <= firstindex)
-      lastindex = str.size();
-
-   params->file_basename = str.substr(firstindex+1,lastindex-firstindex-1);
-   */
-
    FilePathBasename(filename, &(params->file_path), &(params->file_basename));
 
    std::string param_fname;
 
+   /* F0 (expected length for other features is taken from F0) */
    param_fname = GetParamPath("f0", params->extension_f0, params->dir_f0, *params);
    if (ReadGslVector(param_fname, params->data_type, &(data->fundf)) == EXIT_FAILURE)
       return EXIT_FAILURE;
    params->number_of_frames = (int)(data->fundf.size());
 
+   /* Pre-allocate and initialize everything for safety */
+   data->frame_energy = gsl::vector(params->number_of_frames, true);
+   data->lsf_vocal_tract = gsl::matrix(params->lpc_order_vt, params->number_of_frames, true);
+   data->lsf_glot = gsl::matrix(params->lpc_order_glot, params->number_of_frames, true);
+   data->hnr_glot = gsl::matrix( params->hnr_order, params->number_of_frames, true);
+   data->excitation_pulses = gsl::matrix(params->paf_pulse_length, params->number_of_frames, true);
+   // TODO: add generic spectrum
+
+   /* Gain */
    param_fname = GetParamPath("gain", params->extension_gain, params->dir_gain, *params);
    if (ReadGslVector(param_fname, params->data_type, &(data->frame_energy)) == EXIT_FAILURE)
       return EXIT_FAILURE;
@@ -424,39 +423,69 @@ int ReadSynthesisData(const char *filename, Param *params, SynthesisData *data) 
       return EXIT_FAILURE;
    }
 
-   param_fname = GetParamPath("lsf", params->extension_lsf, params->dir_lsf, *params);
-   if (ReadGslMatrix(param_fname, params->data_type, params->lpc_order_vt, &(data->lsf_vocal_tract)) == EXIT_FAILURE)
-      return EXIT_FAILURE;
+   /* Vocal tract LSFs */
+   if (! params->use_generic_envelope) {
+      param_fname = GetParamPath("lsf", params->extension_lsf, params->dir_lsf, *params);
+      if (ReadGslMatrix(param_fname, params->data_type, params->lpc_order_vt, &(data->lsf_vocal_tract)) == EXIT_FAILURE)
+         return EXIT_FAILURE;
+      if (params->number_of_frames != (int)data->lsf_vocal_tract.get_cols()) {
+         std::cerr << "Error: Number of frames in input files do not match." << std::endl;
+         std::cerr << "In file"  << param_fname << std::endl;
+         return EXIT_FAILURE;
+      }
+   }
 
-   param_fname = GetParamPath("slsf", params->extension_lsfg, params->dir_lsfg, *params);
-   //if (params->use_spectral_matching) // TODO: may be needed for internal DNN excitation, make more elaborate check
+   /* Glottal source LSFs */
+   if (params->use_spectral_matching || params->excitation_method == DNN_GENERATED_EXCITATION) {
+      // TODO: more elaborate check for whether the features are actually used in internal DNN
+      param_fname = GetParamPath("slsf", params->extension_lsfg, params->dir_lsfg, *params);
       if (ReadGslMatrix(param_fname, params->data_type, params->lpc_order_glot, &(data->lsf_glot)) == EXIT_FAILURE)
          return EXIT_FAILURE;
+      if (params->number_of_frames != (int)data->lsf_glot.get_cols()) {
+         std::cerr << "Error: Number of frames in input files do not match." << std::endl;
+         std::cerr << "In file"  << param_fname << std::endl;
+         return EXIT_FAILURE;
+      }
+   }
 
-   param_fname = GetParamPath("hnr", params->extension_hnr, params->dir_hnr, *params);
-   //if (params->noise_gain_voiced > 0.0) // TODO: may be needed for internal DNN excitation, make more elaborate check
+   /* Harmonic-to-Noise Ratio*/
+   if (params->noise_gain_voiced > 0.0 || params->excitation_method == DNN_GENERATED_EXCITATION) {
+      // TODO: more elaborate check for whether the features are actually used in internal DNN
+      param_fname = GetParamPath("hnr", params->extension_hnr, params->dir_hnr, *params);
       if (ReadGslMatrix(param_fname, params->data_type, params->hnr_order, &(data->hnr_glot)) == EXIT_FAILURE)
          return EXIT_FAILURE;
-
-   param_fname = GetParamPath("pls", params->extension_paf, params->dir_paf, *params);
-   if (params->excitation_method == PULSES_AS_FEATURES_EXCITATION)
-      if (ReadGslMatrix(param_fname, params->data_type, params->paf_pulse_length, &(data->excitation_pulses)) == EXIT_FAILURE)
+      if (params->number_of_frames != (int)data->hnr_glot.get_cols()) {
+         std::cerr << "Error: Number of frames in input files do not match." << std::endl;
+         std::cerr << "In file"  << param_fname << std::endl;
          return EXIT_FAILURE;
-      
-   param_fname = GetParamPath("sp", ".sp", params->dir_sp, *params);
-   if (params->use_generic_envelope)
-        if (ReadGslMatrix(param_fname, params->data_type, 2049, &(data->spectrum)) == EXIT_FAILURE)
+      }
+   }
+
+   /* External excitation pulses as features */
+   if (params->excitation_method == PULSES_AS_FEATURES_EXCITATION) {
+      param_fname = GetParamPath("pls", params->extension_paf, params->dir_paf, *params);
+      if (params->excitation_method == PULSES_AS_FEATURES_EXCITATION) {
+         if (ReadGslMatrix(param_fname, params->data_type, params->paf_pulse_length, &(data->excitation_pulses)) == EXIT_FAILURE)
+            return EXIT_FAILURE;
+      }
+      if (params->number_of_frames != (int)data->excitation_pulses.get_cols()) {
+         std::cerr << "Error: Number of frames in input files do not match." << std::endl;
+         std::cerr << "In file"  << param_fname << std::endl;
          return EXIT_FAILURE;
+      }
+   }
 
-   /* Read number of frames & compute signal length */
-
-   if(params->number_of_frames != (int)data->frame_energy.size() ||
-      params->number_of_frames != (int)data->lsf_vocal_tract.get_cols() ||
-      params->number_of_frames != (int)data->lsf_glot.get_cols() ||
-      params->number_of_frames != (int)data->hnr_glot.get_cols() ) {
-
-      std::cerr << "Error: Number of frames in input files do not match." << std::endl;
-      return EXIT_FAILURE;
+   /* Generic spectrum for filter envelope */
+   if (params->use_generic_envelope) {
+      param_fname = GetParamPath("sp", ".sp", params->dir_sp, *params);
+      // TODO: add parameter for generic spectrum length
+      if (ReadGslMatrix(param_fname, params->data_type, 2049, &(data->spectrum)) == EXIT_FAILURE)
+         return EXIT_FAILURE;
+      if (params->number_of_frames != (int)data->spectrum.get_cols()) {
+         std::cerr << "Error: Number of frames in input files do not match." << std::endl;
+         std::cerr << "In file"  << param_fname << std::endl;
+         return EXIT_FAILURE;
+      }
    }
 
    params->signal_length = rint(params->number_of_frames * params->frame_shift/params->speed_scale);

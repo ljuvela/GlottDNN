@@ -87,7 +87,6 @@ void ParameterSmoothing(const Param &params, SynthesisData *data) {
       MovingAverageFilter(params.gain_smooth_len, &(data->frame_energy));
    }
 
-
    if(params.hnr_smooth_len > 2)
       MovingAverageFilter(params.hnr_smooth_len, &(data->hnr_glot));
 
