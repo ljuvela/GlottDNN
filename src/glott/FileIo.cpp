@@ -377,6 +377,8 @@ int WriteGslMatrix(const std::string &filename, const DataType &format, const gs
 
 int FilePathBasename(const char *filename, std::string *filepath, std::string *basename) {
 
+   //* TODO: migrate to boost library to make this portable * //
+
    std::string str(filename);
    size_t firstindex;
    firstindex = str.find_last_of("/");
@@ -386,7 +388,13 @@ int FilePathBasename(const char *filename, std::string *filepath, std::string *b
       lastindex = str.size();
 
    *basename = str.substr(firstindex+1,lastindex-firstindex-1);
-   *filepath = str.substr(0, firstindex);
+   if (firstindex == std::string::npos) {
+      // '/' not found, assume file is in working directory
+      *filepath = ".";
+   } else {
+      *filepath = str.substr(0, firstindex);
+   }
+
 
    return EXIT_SUCCESS;
 }
