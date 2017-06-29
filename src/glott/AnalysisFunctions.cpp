@@ -156,9 +156,9 @@ int GetGain(const Param &params, const gsl::vector &fundf, const gsl::vector &si
 	gsl::vector gain = gsl::vector(params.number_of_frames);
         ComplexVector frame_fft;
 	size_t NFFT = 4096; // Long FFT
-	double MIN_LOG_POWER = -60.0;
+	double MIN_LOG_POWER = -100.0;
 	gsl::vector fft_mag(NFFT/2+1);
-        int min_uv_frequency = rint((double)NFFT/(double)(params.fs)*000.0);
+	int min_uv_frequency = rint((double)NFFT/(double)(params.fs)*000.0);
         
 	int frame_index, i;
 
@@ -176,6 +176,7 @@ int GetGain(const Param &params, const gsl::vector &fundf, const gsl::vector &si
 
          frame_energy *= frame_energy_compensation; //(8.0/3.0);// Compensate windowing gain loss
          gain(frame_index) = FrameEnergy2LogEnergy(frame_energy,frame.size());
+
       } else {
          GetFrame(signal, frame_index, params.frame_shift, &unvoiced_frame, NULL);
          ApplyWindowingFunction(params.default_windowing_function, &unvoiced_frame);
@@ -187,6 +188,10 @@ int GetGain(const Param &params, const gsl::vector &fundf, const gsl::vector &si
          frame_energy *= frame_energy_compensation;// Compensate windowing gain loss
          gain(frame_index) = FrameEnergy2LogEnergy(frame_energy, unvoiced_frame.size());
       }
+
+      /* Clip gain at lower bound (prevent very low values for zero frames) */
+      if (gain(frame_index) < MIN_LOG_POWER)
+         gain(frame_index) = MIN_LOG_POWER;
 
 	}
 	*gain_ptr = gain;

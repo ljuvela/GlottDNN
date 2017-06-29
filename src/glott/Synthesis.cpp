@@ -100,7 +100,7 @@ int main(int argc, char *argv[]) {
    
    //FilterExcitation(params, data, &(data.signal));
    FftFilterExcitation(params, data, &(data.signal)); // Inbuilt spectral matching
-   
+
    GenerateUnvoicedSignal(params, data, &(data.signal));
    
    std::string out_fname;

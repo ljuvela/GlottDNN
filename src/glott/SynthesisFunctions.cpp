@@ -778,10 +778,7 @@ void FftFilterExcitation(const Param &params, const SynthesisData &data, gsl::ve
          
          Lsf2Poly(data.lsf_glot.get_col_vec(frame_index),&A_tilt);
          FFTRadix2(A_tilt, NFFT, &tilt_fft);
-         
 
-         
-        
          double mag_vt, mag_exc, ang_vt, ang_exc, mag_tilt, ang_tilt, mag_tilt_exc, ang_tilt_exc, mag, ang;
 
          for(i=0;i<frame_fft.getSize();i++) {
@@ -804,6 +801,7 @@ void FftFilterExcitation(const Param &params, const SynthesisData &data, gsl::ve
                   ang = ang_exc + ang_vt - ang_tilt + ang_tilt_exc; // Maximum phase filtering for glottal contribution
                } else {
                   mag = mag_exc*mag_vt;
+                  //mag = mag_exc*mag_vt / mag_tilt_exc; // whiten excitation
                   ang = ang_exc + ang_vt;
                }
             }
