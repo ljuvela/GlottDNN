@@ -316,6 +316,7 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool required, Param 
    ConfigLookupString("DIR_PULSES_AS_FEATURES", cfg, false, params->dir_paf);
    ConfigLookupString("DIR_EXCITATION", cfg, false, params->dir_exc);
    ConfigLookupString("DIR_SPECTRUM", cfg, false, params->dir_sp);
+   ConfigLookupString("DIR_SYN", cfg, false, params->dir_syn);
 
    /* Lookup for parameter extensions,  optional */
    ConfigLookupString("EXT_GAIN", cfg, false, params->extension_gain);

@@ -75,8 +75,11 @@ int main(int argc, char *argv[]) {
       NoiseGating(params, &(data.frame_energy));
    
    if(params.use_postfiltering) {
-      PostFilter(params.postfilter_coefficient, params.fs, &(data.lsf_vocal_tract));
-      PostFilter(params.postfilter_coefficient_glot, params.fs, &(data.lsf_glot));
+      PostFilter(params.postfilter_coefficient, params.fs, data.fundf, &(data.lsf_vocal_tract));
+   }
+
+   if(params.use_postfiltering || params.use_spectral_matching) {
+      PostFilter(params.postfilter_coefficient_glot, params.fs, data.fundf, &(data.lsf_glot));
    }
 
    if(params.use_trajectory_smoothing)
