@@ -105,6 +105,7 @@ Param::Param() {
    extension_exc = ".exc.wav";
    extension_exc = ".src.wav";
    extension_syn = ".syn.wav";
+}
 
 Param::~Param() {
    // Replaced with std::string (automatic delete)

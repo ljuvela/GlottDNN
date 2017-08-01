@@ -417,7 +417,9 @@ void HarmonicModification(const Param &params, const SynthesisData &data, gsl::v
    noise_vec_fft.setAllImag(0.0);
    
    gsl::vector noise_vec(frame.size());
-
+   gsl::vector flow_vec(frame.size());
+   std::vector<double> B = {1.0};
+   std::vector<double> A_integrator = {1.0, -0.99};//{1.0, -1.0*params.gif_pre_emphasis_coefficient};
    /* Generate random Gaussian noise (whole signal length)*/
    //gsl::vector noise_long(excitation_signal->size());
    //for(size_t j=0;j<noise_long.size();j++)
@@ -433,10 +435,14 @@ void HarmonicModification(const Param &params, const SynthesisData &data, gsl::v
 
    int frame_index,i;
    double val;
+   double g_tar;
    for(frame_index=0;frame_index<params.number_of_frames;frame_index++) {
 
       GetFrame(excitation_orig, frame_index, rint(params.frame_shift/params.speed_scale), &frame, NULL);
-
+      Filter(B,A_integrator,frame,&flow_vec);
+      flow_vec += -1.0*flow_vec.min();
+      flow_vec /= flow_vec.max();
+      flow_vec *= kbd_window;
       /* FFT with analysis window function */
       frame *= kbd_window;
       if(data.fundf(frame_index) > 0) {
@@ -475,6 +481,7 @@ void HarmonicModification(const Param &params, const SynthesisData &data, gsl::v
       for(i=0;i<(int)noise_vec.size();i++)
          noise_vec(i) = random_gauss_gen.get();
 
+      
       /* Noise FFT with analysis window */
       noise_vec *= kbd_window;
       FFTRadix2(noise_vec, NFFT, &noise_vec_fft);
@@ -507,7 +514,9 @@ void HarmonicModification(const Param &params, const SynthesisData &data, gsl::v
       }
 
       IFFTRadix2(noise_vec_fft,&noise_vec);
-
+      g_tar = getEnergy(noise_vec);
+      noise_vec *= flow_vec;
+      noise_vec *= g_tar/getEnergy(noise_vec);
       /* Add noise and apply synthesis window */
       frame += noise_vec;
       }
