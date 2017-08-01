@@ -9,6 +9,10 @@ import random
 import wave
 import math
 import imp # for importing argv[1]
+import warnings
+
+
+
 
 # Config file 
 if len(sys.argv) < 2:
@@ -21,36 +25,44 @@ else:
 # Import Theano-based DNN training if used 
 if conf.do_dnn_training:
     import TrainDnn
+    
+# Import dynamic numpy data provider and Keras training    
+try:
+    if conf.make_data_provider:
+            import data_utils as dutil
+            import TrainDnnKeras as ktrain  
+except AttributeError:
+        warnings.warn("Config file does not have attribute 'make_data_provider'" )    
 
 def write_dnn_infofile():
-    file = open(conf.weights_data_dir + '/' + conf.dnn_name + '.dnnInfo', 'w')
+    f = open(conf.weights_data_dir + '/' + conf.dnn_name + '.dnnInfo', 'w')
     # write layer sizes
     n_input = sum(conf.input_dims)
     n_output = sum(conf.output_dims)
-    file.write('LAYERS = [')
-    file.write(str(n_input) + ', ')
+    f.write('LAYERS = [')
+    f.write(str(n_input) + ', ')
     for n_hidden in conf.n_hidden:
-        file.write(str(n_hidden) + ', ')
-    file.write(str(n_output))
-    file.write('];\n')
+        f.write(str(n_hidden) + ', ')
+    f.write(str(n_output))
+    f.write('];\n')
     # write activations
     n_input = sum(conf.input_dims)
     n_output = sum(conf.output_dims)
-    file.write('ACTIVATIONS = [')
-    #file.write(str(n_input) + ', ')
+    f.write('ACTIVATIONS = [')
+    #f.write(str(n_input) + ', ')
     for n_hidden in conf.n_hidden:
-        file.write( '\"S\", ')
-    file.write('\"L\", \"L\"')
-    file.write('];\n')    
+        f.write( '\"S\", ')
+    f.write('\"L\", \"L\"')
+    f.write('];\n')    
     # write feature orders 
-    file.write('F0_ORDER = ' + str(conf.input_dims[0]) + ';\n')
-    file.write('GAIN_ORDER = ' + str(conf.input_dims[1]) + ';\n')
-    file.write('HNR_ORDER = ' + str(conf.input_dims[2]) + ';\n')
-    file.write('LPC_ORDER_GLOT = ' + str(conf.input_dims[3]) + ';\n')
-    file.write('LPC_ORDER_VT = ' + str(conf.input_dims[4]) + ';\n')
-    file.write('SAMPLING_FREQUENCY = ' + str(conf.sampling_frequency) + ';\n')
-    file.write('WARPING_LAMBDA_VT = ' + str(conf.warping_lambda) + ';\n')
-    file.close()
+    f.write('F0_ORDER = ' + str(conf.input_dims[0]) + ';\n')
+    f.write('GAIN_ORDER = ' + str(conf.input_dims[1]) + ';\n')
+    f.write('HNR_ORDER = ' + str(conf.input_dims[2]) + ';\n')
+    f.write('LPC_ORDER_GLOT = ' + str(conf.input_dims[3]) + ';\n')
+    f.write('LPC_ORDER_VT = ' + str(conf.input_dims[4]) + ';\n')
+    f.write('SAMPLING_FREQUENCY = ' + str(conf.sampling_frequency) + ';\n')
+    f.write('WARPING_LAMBDA_VT = ' + str(conf.warping_lambda) + ';\n')
+    f.close()
 
 def mkdir_p(dirpath):
     if not os.path.exists(dirpath):
@@ -60,32 +72,56 @@ def make_directories():
     # Prepare environment 
     mkdir_p(conf.datadir + '/wav')
     mkdir_p(conf.datadir + '/raw')
-    mkdir_p(conf.datadir + '/f0')
     mkdir_p(conf.datadir + '/gci')
-    mkdir_p(conf.datadir + '/gain')
-    mkdir_p(conf.datadir + '/lsf')
-    mkdir_p(conf.datadir + '/slsf')
-    mkdir_p(conf.datadir + '/hnr')
-    mkdir_p(conf.datadir + '/pls')
     mkdir_p(conf.datadir + '/scp')
     mkdir_p(conf.datadir + '/exc')
     mkdir_p(conf.datadir + '/syn')
+    #mkdir_p(conf.datadir + '/f0')
+    #mkdir_p(conf.datadir + '/gain')
+    #mkdir_p(conf.datadir + '/lsf')
+    #mkdir_p(conf.datadir + '/slsf')
+    #mkdir_p(conf.datadir + '/hnr')
+    #mkdir_p(conf.datadir + '/pls')
+
+    for t in conf.inputs:
+        mkdir_p(conf.datadir + '/' + t)
+    for t in conf.outputs:
+        mkdir_p(conf.datadir + '/' + t)
+        
     # Dnn directiories
     mkdir_p(conf.train_data_dir)
     mkdir_p(conf.weights_data_dir)
             
 def make_file_lists():
+    
+    scp_types = ['wav']
+    scp_types.extend(conf.inputs)
+    scp_types.extend(conf.outputs)
+    
+    extensions = ['.wav']
+    extensions.extend(conf.input_exts)
+    extensions.extend(conf.output_exts)
+    
+    for t,e in zip(scp_types, extensions):
+        scpfile = open(conf.datadir + '/scp/' + t + '.scp','w') 
+        for f in sorted(set(os.listdir(conf.datadir + '/' + t))):
+            if f.endswith(e):
+                scpfile.write(os.path.abspath(conf.datadir + '/' + t + '/' + f + '\n'))
+        scpfile.close()
+        
+    """
     scpfile = open(conf.datadir + '/scp/wav.scp','w') 
     for f in sorted(set(os.listdir(conf.datadir + '/wav'))):
         if f.endswith(".wav"):
             scpfile.write(os.path.abspath(conf.datadir + '/wav/' + f + '\n'))
     scpfile.close()
+    """
 
 def sptk_pitch_analysis():
         wavscp = conf.datadir + '/scp/wav.scp'
         with open(wavscp,'r') as wavfiles:
-            for file in wavfiles:
-                wavfile = file.rstrip()
+            for f in wavfiles:
+                wavfile = f.rstrip()
                 if os.path.isfile(wavfile):
                     bname = os.path.splitext(os.path.basename(wavfile))[0]
                     # convert to .raw
@@ -102,8 +138,8 @@ def sptk_pitch_analysis():
 def reaper_pitch_analysis():
     wavscp = conf.datadir + '/scp/wav.scp'
     with open(wavscp,'r') as wavfiles:
-        for file in wavfiles:
-            wavfile = file.rstrip()
+        for f in wavfiles:
+            wavfile = f.rstrip()
             if os.path.isfile(wavfile):
                 # define paths
                 bname = os.path.splitext(os.path.basename(wavfile))[0]
@@ -182,8 +218,8 @@ def glott_vocoder_analysis():
 def glott_vocoder_synthesis():
     wavscp = conf.datadir + '/scp/wav.scp'
     with open(wavscp,'r') as wavfiles:
-        for file in wavfiles:
-            wavfile = file.rstrip()
+        for f in wavfiles:
+            wavfile = f.rstrip()
             if os.path.isfile(wavfile):
                 bname = os.path.splitext(os.path.basename(wavfile))[0]
                 f0file = conf.datadir + '/f0/' + bname + '.f0'
@@ -342,6 +378,65 @@ def package_data():
     in_max.astype(np.float32).tofile(fid, sep='', format="%f")
     fid.close()
     
+def make_data_provider(conf):
+
+    dataset = dutil.Dataset()
+
+    # add inputs to dataset
+    for key, ext, dim in zip(conf.inputs, conf.input_exts, conf.input_dims):
+        scp = conf.datadir + '/scp/' + key + '.scp'
+        dobj = dutil.DataObj(key, dim, scp, ext)   
+        dataset.addDataObj(dobj, scaler='minmax')
+        
+    # add outputs to dataset    
+    for key, ext, dim in zip(conf.outputs, conf.output_exts, conf.output_dims):
+        scp = conf.datadir + '/scp/' + key + '.scp'
+        dobj = dutil.DataObj(key, dim, scp, ext)
+        dataset.addDataObj(dobj, scaler=None)
+     
+    # compute and save dataset scaler statistics
+    dataset.compute_stats()
+    
+    # save dataset provider (no data is copied)
+    dataset.saveDataProvider('./data_provider.dat')
+    
+    
+    #x, y = dataset.getDataInputOutput(0, ['lsf','f0'], ['pls'])
+    #print x.shape
+    #print x
+    #print y.shape
+  
+    """
+      
+    for data in Dataset_iter(dataset, shuffle=False, io_keys=[conf.inputs, conf.outputs]):
+        print data.tag
+        print data.inputs.shape
+        print data.outputs.shape
+        
+    
+        
+    for data_batch in DatasetBatchBuffer_iter(dataset, shuffle=False, batch_size=128, io_keys=[conf.inputs, conf.outputs]):
+        print data_batch[0].shape
+        print data_batch[1].shape
+    
+    """
+    
+    print dataset.getFileTag()
+    
+    ktrain.train_model(dataset, batch_size=128,
+                input_keys=conf.inputs, output_keys=conf.outputs)
+    
+    ktrain.generate(dataset,
+                input_keys=conf.inputs, output_keys=conf.outputs,
+                out_dir=conf.gen_out_dir)
+    
+    # test for training 
+    #for data in Dataset_iter(dataset, shuffle=True):
+    #    print data['pls'].shape
+    
+def train_model_keras(conf):
+    
+    print "not implemented yet"
 
 def main(argv):
    
@@ -368,6 +463,13 @@ def main(argv):
     # Package data for Theano
     if conf.make_dnn_train_data:
         package_data()
+        
+    # Make data provider for generic excitation model training
+    try:
+        if conf.make_data_provider:
+            make_data_provider(conf)
+    except AttributeError:
+        warnings.warn("Config file does not have attribute 'make_data_provider'" )
 
     # Write Dnn infofile
     if conf.make_dnn_infofile:

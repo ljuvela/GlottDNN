@@ -15,6 +15,7 @@ int ReadSynthesisData(const char *basename, Param *params, SynthesisData *data);
 int ReadFileFloat(const std::string &fname_str, float **file_data, size_t *n_read);
 int WriteFileFloat(const std::string &fname_str, const float *data, const size_t &n_values);
 
+int FilePathBasename(const char *filename, std::string *filepath, std::string *basename);
 std::string GetParamPath(const std::string &default_dir, const std::string &extension, const std::string &custom_dir, const Param &params);
 
 #endif /* FILEIO_H_ */

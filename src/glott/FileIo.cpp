@@ -107,13 +107,16 @@ int ReadWavFile(const char *fname, gsl::vector *signal, Param *params) {
 	params->signal_length = signal->size();
 
 	/* Get basename (without extension) for saving parameters later*/
-
-   std::string str(fname);
+	/*
+	std::string str(fname);
    size_t firstindex;
    firstindex = str.find_last_of("/");
    size_t lastindex = str.find_last_of(".");
-   //params->basename = std::string("Foo");
    params->file_basename = str.substr(firstindex+1,lastindex-firstindex-1);
+   params->file_path = str.substr(0,firstindex);
+   */
+	FilePathBasename(fname, &(params->file_path), &(params->file_basename));
+
 
    free(buffer);
 
@@ -372,65 +375,127 @@ int WriteGslMatrix(const std::string &filename, const DataType &format, const gs
    return EXIT_SUCCESS;
 }
 
-int ReadSynthesisData(const char *filename, Param *params, SynthesisData *data) {
+int FilePathBasename(const char *filename, std::string *filepath, std::string *basename) {
 
-
-   /* Get basename (without extension) for saving parameters later*/
+   //* TODO: migrate to boost library to make this portable * //
 
    std::string str(filename);
    size_t firstindex;
    firstindex = str.find_last_of("/");
    size_t lastindex = str.find_last_of(".");
-   if (lastindex <= firstindex)
+   //if (lastindex <= firstindex)
+   if (lastindex == std::string::npos) // not found
       lastindex = str.size();
 
-   params->file_basename = str.substr(firstindex+1,lastindex-firstindex-1);
+   *basename = str.substr(firstindex+1,lastindex-firstindex-1);
+   if (firstindex == std::string::npos) {
+      // '/' not found, assume file is in working directory
+      *filepath = ".";
+   } else {
+      *filepath = str.substr(0, firstindex);
+   }
 
+
+   return EXIT_SUCCESS;
+}
+
+int ReadSynthesisData(const char *filename, Param *params, SynthesisData *data) {
+
+
+   /* Get basename (without extension) for saving parameters later*/
+   FilePathBasename(filename, &(params->file_path), &(params->file_basename));
 
    std::string param_fname;
 
+   /* F0 (expected length for other features is taken from F0) */
    param_fname = GetParamPath("f0", params->extension_f0, params->dir_f0, *params);
    if (ReadGslVector(param_fname, params->data_type, &(data->fundf)) == EXIT_FAILURE)
       return EXIT_FAILURE;
-   data->fundf *= params->pitch_scale;
 
+   data->fundf *= params->pitch_scale;
+   params->number_of_frames = (int)(data->fundf.size());
+
+   /* Pre-allocate and initialize everything for safety */
+   data->frame_energy = gsl::vector(params->number_of_frames, true);
+   data->lsf_vocal_tract = gsl::matrix(params->lpc_order_vt, params->number_of_frames, true);
+   data->lsf_glot = gsl::matrix(params->lpc_order_glot, params->number_of_frames, true);
+   data->hnr_glot = gsl::matrix( params->hnr_order, params->number_of_frames, true);
+   data->excitation_pulses = gsl::matrix(params->paf_pulse_length, params->number_of_frames, true);
+   // TODO: add generic spectrum
+
+   /* Gain */
    param_fname = GetParamPath("gain", params->extension_gain, params->dir_gain, *params);
    if (ReadGslVector(param_fname, params->data_type, &(data->frame_energy)) == EXIT_FAILURE)
       return EXIT_FAILURE;
-
-   param_fname = GetParamPath("lsf", params->extension_lsf, params->dir_lsf, *params);
-   if (ReadGslMatrix(param_fname, params->data_type, params->lpc_order_vt, &(data->lsf_vocal_tract)) == EXIT_FAILURE)
+   if (params->number_of_frames != (int)data->frame_energy.size()) {
+      std::cerr << "Error: Number of frames in input files do not match." << std::endl;
+      std::cerr << "In file"  << param_fname << std::endl;
       return EXIT_FAILURE;
+   }
 
-   param_fname = GetParamPath("slsf", params->extension_lsfg, params->dir_lsfg, *params);
-   //if (params->use_spectral_matching) // TODO: may be needed for internal DNN excitation, make more elaborate check
+   /* Vocal tract LSFs */
+   if (! params->use_generic_envelope) {
+      param_fname = GetParamPath("lsf", params->extension_lsf, params->dir_lsf, *params);
+      if (ReadGslMatrix(param_fname, params->data_type, params->lpc_order_vt, &(data->lsf_vocal_tract)) == EXIT_FAILURE)
+         return EXIT_FAILURE;
+      if (params->number_of_frames != (int)data->lsf_vocal_tract.get_cols()) {
+         std::cerr << "Error: Number of frames in input files do not match." << std::endl;
+         std::cerr << "In file"  << param_fname << std::endl;
+         return EXIT_FAILURE;
+      }
+   }
+
+   /* Glottal source LSFs */
+   if (params->use_spectral_matching || params->excitation_method == DNN_GENERATED_EXCITATION) {
+      // TODO: more elaborate check for whether the features are actually used in internal DNN
+      param_fname = GetParamPath("slsf", params->extension_lsfg, params->dir_lsfg, *params);
       if (ReadGslMatrix(param_fname, params->data_type, params->lpc_order_glot, &(data->lsf_glot)) == EXIT_FAILURE)
          return EXIT_FAILURE;
+      if (params->number_of_frames != (int)data->lsf_glot.get_cols()) {
+         std::cerr << "Error: Number of frames in input files do not match." << std::endl;
+         std::cerr << "In file"  << param_fname << std::endl;
+         return EXIT_FAILURE;
+      }
+   }
 
-   param_fname = GetParamPath("hnr", params->extension_hnr, params->dir_hnr, *params);
-   //if (params->noise_gain_voiced > 0.0) // TODO: may be needed for internal DNN excitation, make more elaborate check
+   /* Harmonic-to-Noise Ratio*/
+   if (params->noise_gain_voiced > 0.0 || params->excitation_method == DNN_GENERATED_EXCITATION) {
+      // TODO: more elaborate check for whether the features are actually used in internal DNN
+      param_fname = GetParamPath("hnr", params->extension_hnr, params->dir_hnr, *params);
       if (ReadGslMatrix(param_fname, params->data_type, params->hnr_order, &(data->hnr_glot)) == EXIT_FAILURE)
          return EXIT_FAILURE;
-
-   param_fname = GetParamPath("pls", params->extension_paf, params->dir_paf, *params);
-   if (params->excitation_method == PULSES_AS_FEATURES_EXCITATION)
-      if (ReadGslMatrix(param_fname, params->data_type, params->paf_pulse_length, &(data->excitation_pulses)) == EXIT_FAILURE)
+      if (params->number_of_frames != (int)data->hnr_glot.get_cols()) {
+         std::cerr << "Error: Number of frames in input files do not match." << std::endl;
+         std::cerr << "In file"  << param_fname << std::endl;
          return EXIT_FAILURE;
-      
-   param_fname = GetParamPath("sp", ".sp", params->dir_sp, *params);
-   if (params->use_generic_envelope)
-        if (ReadGslMatrix(param_fname, params->data_type, 2049, &(data->spectrum)) == EXIT_FAILURE)
+      }
+   }
+
+   /* External excitation pulses as features */
+   if (params->excitation_method == PULSES_AS_FEATURES_EXCITATION) {
+      param_fname = GetParamPath("pls", params->extension_paf, params->dir_paf, *params);
+      if (params->excitation_method == PULSES_AS_FEATURES_EXCITATION) {
+         if (ReadGslMatrix(param_fname, params->data_type, params->paf_pulse_length, &(data->excitation_pulses)) == EXIT_FAILURE)
+            return EXIT_FAILURE;
+      }
+      if (params->number_of_frames != (int)data->excitation_pulses.get_cols()) {
+         std::cerr << "Error: Number of frames in input files do not match." << std::endl;
+         std::cerr << "In file"  << param_fname << std::endl;
          return EXIT_FAILURE;
+      }
+   }
 
-   /* Read number of frames & compute signal length */
-   params->number_of_frames = (int)(data->fundf.size());
-   if(params->number_of_frames != (int)data->frame_energy.size() ||
-      params->number_of_frames != (int)data->lsf_vocal_tract.get_cols() ||
-      params->number_of_frames != (int)data->lsf_glot.get_cols() ||
-      params->number_of_frames != (int)data->hnr_glot.get_cols() ) {
-
-      std::cerr << "Error: Number of frames in input files do not match." << std::endl;
-      return EXIT_FAILURE;
+   /* Generic spectrum for filter envelope */
+   if (params->use_generic_envelope) {
+      param_fname = GetParamPath("sp", ".sp", params->dir_sp, *params);
+      // TODO: add parameter for generic spectrum length
+      if (ReadGslMatrix(param_fname, params->data_type, 2049, &(data->spectrum)) == EXIT_FAILURE)
+         return EXIT_FAILURE;
+      if (params->number_of_frames != (int)data->spectrum.get_cols()) {
+         std::cerr << "Error: Number of frames in input files do not match." << std::endl;
+         std::cerr << "In file"  << param_fname << std::endl;
+         return EXIT_FAILURE;
+      }
    }
 
    params->signal_length = rint(params->number_of_frames * params->frame_shift/params->speed_scale);
@@ -518,15 +583,19 @@ int WriteFileFloat(const std::string &fname_str, const float *data, const size_t
 std::string GetParamPath(const std::string &default_dir, const std::string &extension, const std::string &custom_dir, const Param &params)  {
    std::string param_path;
 
-   std::string basedir(params.data_directory) ;
+   std::string basedir(params.data_directory);
    if (basedir.back() != '/')
       basedir += "/";
 
    if (custom_dir.empty()) {
-          if (params.save_to_datadir_root)
-             param_path = basedir + params.file_basename + extension;
-          else
+          if (params.save_to_datadir_root) {
+             //param_path = basedir + params.file_basename + extension;
+             // changed to GlottHMM default behavior
+             param_path = params.file_path + "/" + params.file_basename + extension;
+             std::cout << param_path << std::endl;
+          } else {
              param_path = basedir + default_dir + "/" + params.file_basename + extension;
+          }
        } else {
           param_path = custom_dir + "/" + params.file_basename + extension;
        }

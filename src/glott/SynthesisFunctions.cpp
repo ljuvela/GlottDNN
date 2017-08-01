@@ -87,7 +87,6 @@ void ParameterSmoothing(const Param &params, SynthesisData *data) {
       MovingAverageFilter(params.gain_smooth_len, &(data->frame_energy));
    }
 
-
    if(params.hnr_smooth_len > 2)
       MovingAverageFilter(params.hnr_smooth_len, &(data->hnr_glot));
 
@@ -677,19 +676,16 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data, gsl:
          //double hnr_ratio;
          //Erb2Linear(data.hnr_glot.get_col_vec(frame_index), params.fs, &hnr_interp);
          for(i=0;i<noise_vec_fft.getSize();i++) {
-             if(params.use_generic_envelope) {
+
+            if(params.use_generic_envelope) {
                mag = noise_vec_fft.getAbs(i) * vt_fft.getAbs(i);
-             } else {
+            } else if (!params.use_spectral_matching) {
+               mag = noise_vec_fft.getAbs(i) * GSL_MIN(1.0/(vt_fft.getAbs(i)),10000);
+            } else {
                mag = noise_vec_fft.getAbs(i) * GSL_MIN(1.0/(vt_fft.getAbs(i)),10000) * GSL_MIN(1.0/tilt_fft.getAbs(i),10000);
-             }
+            }
              
-          //   mag = noise_vec_fft.getAbs(i) * vt_fft.getAbs(i);
-             //mag = rand_gen.uniform() * GSL_MIN(1.0/(vt_fft.getAbs(i)),10000);
-            //hnr_ratio = powf(10.0,hnr_interp(i)/20.0);
-          // mag = GSL_MIN(1.0/(vt_fft.getAbs(i)),10000);
-            //mag = mag * (1.0 - (1.0-hnr_ratio)*2.0*(rand_gen.uniform()));
             ang = noise_vec_fft.getAng(i);
-             //ang = 2.0*M_PI*rand_gen.uniform() - vt_fft.getAng(i);
             
             noise_vec_fft.setReal(i,mag*cos(double(ang)));
             noise_vec_fft.setImag(i,mag*sin(double(ang)));
@@ -791,10 +787,7 @@ void FftFilterExcitation(const Param &params, const SynthesisData &data, gsl::ve
          
          Lsf2Poly(data.lsf_glot.get_col_vec(frame_index),&A_tilt);
          FFTRadix2(A_tilt, NFFT, &tilt_fft);
-         
 
-         
-        
          double mag_vt, mag_exc, ang_vt, ang_exc, mag_tilt, ang_tilt, mag_tilt_exc, ang_tilt_exc, mag, ang;
 
          for(i=0;i<frame_fft.getSize();i++) {
@@ -817,6 +810,7 @@ void FftFilterExcitation(const Param &params, const SynthesisData &data, gsl::ve
                   ang = ang_exc + ang_vt - ang_tilt + ang_tilt_exc; // Maximum phase filtering for glottal contribution
                } else {
                   mag = mag_exc*mag_vt;
+                  //mag = mag_exc*mag_vt / mag_tilt_exc; // whiten excitation
                   ang = ang_exc + ang_vt;
                }
             }

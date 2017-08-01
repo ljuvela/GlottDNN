@@ -104,9 +104,8 @@ def evaluate_dnn(learning_rate=0.1, n_epochs=150000,
     index = T.lscalar()  # index to a [mini]batch
 
     # start-snippet-1
-    x = T.matrix('x')   # the data is presented as rasterized images
-    y = T.matrix('y')  # the labels are presented as 1D vector of
-                        # [int] labels
+    x = T.matrix('x')  
+    y = T.matrix('y')  
 
     ######################
     # BUILD ACTUAL MODEL #
@@ -115,7 +114,7 @@ def evaluate_dnn(learning_rate=0.1, n_epochs=150000,
     print 'Number of hidden layers: %i, Hidden units per layer: i' %(num_hidden)
 
     layer0_input = x
-	
+
     layerList = []
     for i in xrange(0, num_hidden):
         if i > 0:
@@ -136,7 +135,7 @@ def evaluate_dnn(learning_rate=0.1, n_epochs=150000,
             #activation=relu
         )
         layerList.append(cLayer)
-    	
+    
     layer_out = LogisticRegression(input=layerList[-1].output, n_in=n_hidden[-1], n_out=n_out)
 
     # the cost we minimize during training is the NLL of the model
