@@ -149,6 +149,10 @@ gsl::vector GetExternalPulse(const size_t &pulse_len, const bool &use_interpolat
       }
    }
 
+   // Subtract mean (experimental ljuvela 2017-7-15)
+   pulse += -1.0*pulse.mean();
+
+
    gsl::vector pulse_win(pulse);
    ApplyWindowingFunction(psola_window_function, &pulse_win);
 
@@ -304,16 +308,14 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
          case PULSES_AS_FEATURES_EXCITATION:
             /* Waveform similarity PSOLA is available only when PAF waveforms haven't been windowed */
             if (use_wsola) {
-               pulse =  GetPulseWsola(data.excitation_pulses.get_col_vec(frame_index), T0, energy,
+               gsl::vector pulse_full(data.excitation_pulses.get_col_vec(frame_index));
+               pulse_full += pulse_full.mean();
+               pulse =  GetPulseWsola(pulse_full, T0, energy,
                      sample_index,  (pulse_prev.size() == 1),
                      params.use_wsola_pitch_shift, excitation_signal) ;
-
-               //GetPulseWsola(const gsl::vector &frame, const int &t0, const double &energy,
-               //      const int &sample_index,  const bool &previous_unvoiced, const bool &pitch_shift,
-               //      gsl::vector *signal)
             } else {
                pulse = GetExternalPulse(pulse_len, params.use_pulse_interpolation, energy,
-                                 frame_index, params.psola_windowing_function, data.excitation_pulses);
+                     frame_index, params.psola_windowing_function, data.excitation_pulses);
             }
             pulse_orig = pulse;
             ApplyWindowingFunction(params.psola_windowing_function, &pulse);
@@ -360,8 +362,6 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
             pulse *= params.noise_gain_unvoiced*energy/getEnergy(noise);
             pulse /= 0.5*(double)noise.size()/(double)params.frame_shift; // Compensate OLA gain
             ApplyWindowingFunction(HANN, &pulse);
-
-           
             break;
          case PULSES_AS_FEATURES_EXCITATION:
             if (params.use_paf_unvoiced_synthesis) {
