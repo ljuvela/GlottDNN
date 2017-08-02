@@ -64,7 +64,11 @@ int main(int argc, char *argv[]) {
       return EXIT_FAILURE;
    }
 
-   PostFilter(params.postfilter_coefficient, params.fs, &lsf);
+   // dummy F0 indicating all frames are voiced
+   gsl::vector fundf(lsf.get_cols());
+   fundf.set_all(1.0);
+
+   PostFilter(params.postfilter_coefficient, params.fs, fundf, &lsf);
 
    /* Check LSF stability and fix if needed */
    StabilizeLsf(&lsf);

@@ -131,14 +131,11 @@ int GetGci(const Param &params, const gsl::vector &signal, const gsl::vector &so
 
       gsl::vector mean_based_signal(signal.size(),true);
 
-      MeanBasedSignal(signal, params.fs, getMeanF0(fundf),&mean_based_signal);
+      MeanBasedSignal(signal, params.fs, getMeanF0(fundf), &mean_based_signal);
       //MovingAverageFilter(3,&mean_based_signal); // remove small fluctuation
 
       SedreamsGciDetection(source_signal_iaif,mean_based_signal,gci_inds);
 
-      //VPrint1(*gci_inds);
-      //VPrint2(signal);
-      //VPrint3(mean_based_signal);
 	}
 
 
@@ -495,8 +492,10 @@ int Find_nearest_pulse_index(const int &sample_index, const gsl::vector &gci_ind
    int next_index = pulse_index+1;
    int prev_gci, next_gci;
 
+   double max_relative_len_diff = params.max_pulse_len_diff;
+
    /* Choose next closest while pulse length deviates too much from f0 */
-   while ((fabs(pulselen-targetlen)/targetlen) > params.max_pulse_len_diff){
+   while ((fabs(pulselen-targetlen)/targetlen) > max_relative_len_diff){
 
       /* Prevent illegal reads*/
       if (prev_index < 0)
@@ -523,8 +522,21 @@ int Find_nearest_pulse_index(const int &sample_index, const gsl::vector &gci_ind
          pulse_index = new_pulse_index;
       }
 
+      /* if pulse center gets too far from sample index, relax constraint and start over */
+      if ( fabs(sample_index - gci_inds(pulse_index)) > 1.0*targetlen ) {
+         max_relative_len_diff += 0.02; // increase by 5 percent
+         if (max_relative_len_diff > 3.0) {
+            break;
+         }
+         pulse_index=j;
+         prev_index = pulse_index-1;
+         next_index = pulse_index+1;
+         //std::cout << "increasing pulse tolerance to " << max_relative_len_diff << std::endl;
+      }
+
       /* calculate new pulse length */
       pulselen = round(gci_inds(pulse_index+1)-gci_inds(pulse_index-1))+1;
+
    }
 
    return pulse_index;
@@ -717,70 +729,67 @@ void GetIaifResidual(const Param &params, const gsl::vector &signal, gsl::vector
    }
 }
 
-
-
 void HnrAnalysis(const Param &params, const gsl::vector &source_signal, const gsl::vector &fundf, gsl::matrix *hnr_glott) {
 
-   std::cout << "HNR Analysis ...";
+      std::cout << "HNR Analysis ...";
 
-	/* Variables */
-	int hnr_channels = params.hnr_order;
-	gsl::vector frame(params.frame_length_long);
-   ComplexVector frame_fft;
-	size_t NFFT = 4096; // Long FFT
-	double MIN_LOG_POWER = -60.0;
-	gsl::vector fft_mag(NFFT/2+1);
+      /* Variables */
+      int hnr_channels = params.hnr_order;
+      gsl::vector frame(params.frame_length_long);
+      ComplexVector frame_fft;
+      size_t NFFT = 4096; // Long FFT
+      double MIN_LOG_POWER = -60.0;
+      gsl::vector fft_mag(NFFT / 2 + 1);
 
-	gsl::vector_int harmonic_index;
-	gsl::vector hnr_values;
+      gsl::vector_int harmonic_index;
+      gsl::vector hnr_values;
 
-	gsl::vector harmonic_values; // experimental, ljuvela
-   gsl::vector upper_env_values;
-   gsl::vector lower_env_values;
-   gsl::vector fft_lower_env(NFFT/2+1,true);
-   gsl::vector fft_upper_env(NFFT/2+1);
+      gsl::vector harmonic_values; // experimental, ljuvela
+      gsl::vector upper_env_values;
+      gsl::vector lower_env_values;
+      gsl::vector fft_lower_env(NFFT / 2 + 1, true);
+      gsl::vector fft_upper_env(NFFT / 2 + 1);
 
-   double kbd_alpha = 2.3;
-   gsl::vector kbd_window = getKaiserBesselDerivedWindow(frame.size(), kbd_alpha);
+      double kbd_alpha = 2.3;
+      gsl::vector kbd_window = getKaiserBesselDerivedWindow(frame.size(), kbd_alpha);
 
-	/* Linearly spaced frequency axis */
-	gsl::vector_int x_interp = LinspaceInt(0, 1,fft_mag.size()-1);
+      /* Linearly spaced frequency axis */
+      gsl::vector_int x_interp = LinspaceInt(0, 1, fft_mag.size() - 1);
 
-	gsl::vector hnr_interp(fft_mag.size());
-	gsl::vector hnr_erb(hnr_channels);
+      gsl::vector hnr_interp(fft_mag.size());
+      gsl::vector hnr_erb(hnr_channels);
 
-	size_t frame_index, i;
-	double val;
-	for(frame_index=0;frame_index<(size_t)params.number_of_frames;frame_index++) {
+      size_t frame_index, i;
+      double val;
+      for (frame_index = 0; frame_index < (size_t)params.number_of_frames; frame_index++) {
 
-      GetFrame(source_signal, frame_index, params.frame_shift, &frame, NULL);
-      //ApplyWindowingFunction(params.default_windowing_function, &frame);
-      frame *= kbd_window;
-      FFTRadix2(frame, NFFT, &frame_fft);
-      fft_mag = frame_fft.getAbs();
-      for(i=0;i<fft_mag.size();i++) {
-         val = 20*log10(fft_mag(i)); // save to temp to prevent evaluation twice in max
-         fft_mag(i) = GSL_MAX(val,MIN_LOG_POWER); // Min log-power = -60dB
+            GetFrame(source_signal, frame_index, params.frame_shift, &frame, NULL);
+            //ApplyWindowingFunction(params.default_windowing_function, &frame);
+            frame *= kbd_window;
+            FFTRadix2(frame, NFFT, &frame_fft);
+            fft_mag = frame_fft.getAbs();
+            for (i = 0; i < fft_mag.size(); i++) {
+                  val = 20 * log10(fft_mag(i));             // save to temp to prevent evaluation twice in max
+                  fft_mag(i) = GSL_MAX(val, MIN_LOG_POWER); // Min log-power = -60dB
+            }
+
+            if (fundf(frame_index) > 0) {
+                  UpperLowerEnvelope(fft_mag, fundf(frame_index), params.fs, &fft_upper_env, &fft_lower_env);
+            } else {
+                  /* Define the upper envelope as the maxima around pseudo-period of 100Hz */
+                  UpperLowerEnvelope(fft_mag, 100.0, params.fs, &fft_upper_env, &fft_lower_env);
+            }
+
+            /* HNR as upper-lower envelope difference */
+            for (i = 0; i < hnr_interp.size(); i++)
+                  hnr_interp(i) = fft_lower_env(i) - fft_upper_env(i);
+
+            /* Convert to erb-bands */
+            Linear2Erb(hnr_interp, params.fs, &hnr_erb);
+            hnr_glott->set_col_vec(frame_index, hnr_erb);
       }
-
-      if(fundf(frame_index) > 0) {
-         UpperLowerEnvelope(fft_mag, fundf(frame_index), params.fs, &fft_upper_env, &fft_lower_env);
-      } else {
-         /* Define the upper envelope as the maxima around pseudo-period of 100Hz */
-         UpperLowerEnvelope(fft_mag, 100.0, params.fs, &fft_upper_env, &fft_lower_env);
-      }
-
-      /* HNR as upper-lower envelope difference */
-      for(i=0;i<hnr_interp.size();i++)
-         hnr_interp(i) = fft_lower_env(i) - fft_upper_env(i);
-
-      /* Convert to erb-bands */
-      Linear2Erb(hnr_interp, params.fs, &hnr_erb);
-      hnr_glott->set_col_vec(frame_index,hnr_erb);
-	}
-	std::cout << " done." << std::endl;
+      std::cout << " done." << std::endl;
 }
-
 
 int GetPitchSynchFrame(const Param &params, const gsl::vector &signal, const gsl::vector_int &gci_inds,
                         const int &frame_index, const int &frame_shift, const double &f0,

@@ -1238,7 +1238,7 @@ gsl::vector GetPulseWsola(const gsl::vector &frame, const int &t0, const double 
 
    // waveform similarity overlap add (WSOLA)
    int M = 0.5 * t0; //total range of  T0
-   //int M = 0.75 * t0; //total range of  T0
+   //int M = 1.0 * t0; //total range of  T0
    int  mid = round(frame_interp.size()/2.0); // PAF frame midpoint
    gsl::vector corr(2*M+1,true); // correlations, init to zero
    int m,m_ind;

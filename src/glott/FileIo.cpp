@@ -411,6 +411,8 @@ int ReadSynthesisData(const char *filename, Param *params, SynthesisData *data) 
    param_fname = GetParamPath("f0", params->extension_f0, params->dir_f0, *params);
    if (ReadGslVector(param_fname, params->data_type, &(data->fundf)) == EXIT_FAILURE)
       return EXIT_FAILURE;
+
+   data->fundf *= params->pitch_scale;
    params->number_of_frames = (int)(data->fundf.size());
 
    /* Pre-allocate and initialize everything for safety */
@@ -499,7 +501,8 @@ int ReadSynthesisData(const char *filename, Param *params, SynthesisData *data) 
    params->signal_length = rint(params->number_of_frames * params->frame_shift/params->speed_scale);
    data->signal = gsl::vector(params->signal_length,true);
    data->excitation_signal = gsl::vector(params->signal_length,true);
-
+   
+   
    return EXIT_SUCCESS;
 
 }
