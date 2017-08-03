@@ -243,6 +243,7 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
    }
 
    size_t pulse_len;
+   int count;
    while (sample_index < (size_t)params.signal_length) {
       frame_index = rint(params.speed_scale * sample_index / (params.signal_length-1) * (params.number_of_frames-1));
 
@@ -272,12 +273,14 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
          switch (params.excitation_method) {
          case SINGLE_PULSE_EXCITATION:
             pulse = GetSinglePulse(pulse_len, energy, single_pulse_base);
-            //pulse.set_all(0.0);
-            //pulse(pulse.size()/2) = 1.0;
-            //pulse(pulse.size()/2+1) = 0.96;
-            //pulse(pulse.size()/2+2) = 0.9216;
-            //pulse(pulse.size()/2+3) = 0.8847;
-            //pulse(pulse.size()/2+4) = 0.8493;
+           // pulse.set_all(0.0);
+           // pulse(pulse.size()/2) = 1.0;
+           // count = 1;
+           // for(i=pulse.size()/2+1;i<pulse.size()/2+10;i++) {
+           //     pulse(i) = pow(0.99,count);
+           //     count++;
+           // } // Hard-coded impulse train excitation with deficient pre-emphasis cancellation for anchor samples
+    
             ApplyWindowingFunction(HANN, &pulse);
             //p2 = gsl::vector(pulse.size());
             //p2.set_all(1.0);
@@ -443,7 +446,7 @@ void HarmonicModification(const Param &params, const SynthesisData &data, gsl::v
 
       GetFrame(excitation_orig, frame_index, rint(params.frame_shift/params.speed_scale), &frame, NULL);
       Filter(B,A_integrator,frame,&flow_vec);
-      flow_vec += -1.0*flow_vec.min();
+      flow_vec += -1.0*flow_vec.min() + 0.00001;
       flow_vec /= flow_vec.max();
       flow_vec *= kbd_window;
       /* FFT with analysis window function */
@@ -812,7 +815,7 @@ void FftFilterExcitation(const Param &params, const SynthesisData &data, gsl::ve
             } else {
                if (params.use_spectral_matching) {
                   mag = mag_exc*mag_vt*mag_tilt/mag_tilt_exc;
-                  ang = ang_exc + ang_vt - ang_tilt + ang_tilt_exc; // Maximum phase filtering for glottal contribution
+                  ang = ang_exc + ang_vt + ang_tilt - ang_tilt_exc; // Maximum phase filtering for glottal contribution
                } else {
                   mag = mag_exc*mag_vt;
                   //mag = mag_exc*mag_vt / mag_tilt_exc; // whiten excitation
