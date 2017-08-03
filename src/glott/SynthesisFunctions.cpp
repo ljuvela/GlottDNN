@@ -402,7 +402,6 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
 void HarmonicModification(const Param &params, const SynthesisData &data, gsl::vector *excitation_signal) {
    std::cout << "HNR modification ...";
 
-
    /* Variables */
    gsl::vector frame(params.frame_length_long);
    ComplexVector frame_fft;
@@ -437,24 +436,35 @@ void HarmonicModification(const Param &params, const SynthesisData &data, gsl::v
 
    /* Define analysis and synthesis window */
    double kbd_alpha = 2.3;
-   gsl::vector kbd_window = getKaiserBesselDerivedWindow(frame.size(), kbd_alpha);
+   const gsl::vector kbd_window = getKaiserBesselDerivedWindow(frame.size(), kbd_alpha);
 
    int frame_index,i;
    double val;
    double g_tar;
-   for(frame_index=0;frame_index<params.number_of_frames;frame_index++) {
+   for(frame_index=0; frame_index<params.number_of_frames; frame_index++) {
 
       GetFrame(excitation_orig, frame_index, rint(params.frame_shift/params.speed_scale), &frame, NULL);
 
       frame *= kbd_window;
+
+      //frame *= kbd_window;
+      //frame /= 0.5*(double)frame.size()/(double)params.frame_shift;
+      //OverlapAdd(frame, frame_index*rint(params.frame_shift/params.speed_scale), excitation_signal);
+      //continue;
+
       /* only modify voiced frames */
-      if(data.fundf(frame_index) > 0) {
+      if (true && data.fundf(frame_index) > 0) {
 
          /* Integrate excitation for modulating noise with glottal flow */
-         Filter(B,A_integrator,frame,&flow_vec);
-         flow_vec += -1.0*flow_vec.min() + 0.00001;
+         Filter(B, A_integrator, frame, &flow_vec);
+         flow_vec += -1.0*flow_vec.min() + 0.001;
          flow_vec /= flow_vec.max();
-         flow_vec *= kbd_window;
+         //flow_vec *= kbd_window; // no window needed, ljuvela
+
+         double flow_norm = 0.0;
+         for (i=0; i<flow_vec.size(); i++)
+            flow_norm += flow_vec(i);
+         flow_norm = sqrt(flow_norm/flow_vec.size());  
 
          /* FFT with analysis window function */
          FFTRadix2(frame, NFFT, &frame_fft);
@@ -487,11 +497,9 @@ void HarmonicModification(const Param &params, const SynthesisData &data, gsl::v
             // fft_noise(i) = pow(10,fft_lower_env_target(i)/10.0) - pow(10,fft_lower_env(i)/10.0); // power difference
          }
 
-
          /* Generate random Gaussian noise*/
          for(i=0;i<(int)noise_vec.size();i++)
             noise_vec(i) = random_gauss_gen.get();
-
 
          /* Noise FFT with analysis window */
          noise_vec *= kbd_window;
@@ -524,10 +532,11 @@ void HarmonicModification(const Param &params, const SynthesisData &data, gsl::v
             }
          }
 
-         IFFTRadix2(noise_vec_fft,&noise_vec);
+         IFFTRadix2(noise_vec_fft, &noise_vec);
          g_tar = getEnergy(noise_vec);
          noise_vec *= flow_vec;
-         noise_vec *= g_tar/getEnergy(noise_vec);
+         //noise_vec *= g_tar/GSL_MIN(getEnergy(noise_vec), 1e6);
+         noise_vec *= 1/flow_norm;
          /* Add noise and apply synthesis window */
          frame += noise_vec;
       }
@@ -540,8 +549,6 @@ void HarmonicModification(const Param &params, const SynthesisData &data, gsl::v
 
    std::cout << " done." << std::endl;
 }
-
-
 
 
 void SpectralMatchExcitation(const Param &params,const SynthesisData &data, gsl::vector *excitation_signal) {
@@ -763,7 +770,7 @@ void FftFilterExcitation(const Param &params, const SynthesisData &data, gsl::ve
    
    size_t frame_index;
    for(frame_index=0; frame_index<(size_t)params.number_of_frames; frame_index++) {
-      if(false || data.fundf(frame_index) != 0) {
+      if(data.fundf(frame_index) > 0) {
          /* Get spectrum of excitation */
          GetFrame(data.excitation_signal, frame_index, rint(params.frame_shift/params.speed_scale), &frame, NULL);
          frame_copy.copy(frame);
