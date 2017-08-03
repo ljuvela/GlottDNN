@@ -76,12 +76,12 @@ def make_directories():
     mkdir_p(conf.datadir + '/scp')
     mkdir_p(conf.datadir + '/exc')
     mkdir_p(conf.datadir + '/syn')
-    #mkdir_p(conf.datadir + '/f0')
-    #mkdir_p(conf.datadir + '/gain')
-    #mkdir_p(conf.datadir + '/lsf')
-    #mkdir_p(conf.datadir + '/slsf')
-    #mkdir_p(conf.datadir + '/hnr')
-    #mkdir_p(conf.datadir + '/pls')
+    mkdir_p(conf.datadir + '/f0')
+    mkdir_p(conf.datadir + '/gain')
+    mkdir_p(conf.datadir + '/lsf')
+    mkdir_p(conf.datadir + '/slsf')
+    mkdir_p(conf.datadir + '/hnr')
+    mkdir_p(conf.datadir + '/pls')
 
     for t in conf.inputs:
         mkdir_p(conf.datadir + '/' + t)
@@ -194,7 +194,7 @@ def glott_vocoder_analysis():
                 # create temporary analysis config for file 
                 config_user = 'config_user.cfg'
                 conf_file = open(config_user,'w');
-                if conf.do_sptk_pitch_analysis or conf.do_reaper_pitch_analysis:
+                if True or conf.do_sptk_pitch_analysis or conf.do_reaper_pitch_analysis:
                     conf_file.write('USE_EXTERNAL_F0 = true;\n')
                     conf_file.write('EXTERNAL_F0_FILENAME = \"' + f0file + '\";\n' )
                 else:
