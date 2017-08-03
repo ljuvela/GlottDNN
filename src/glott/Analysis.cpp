@@ -136,7 +136,7 @@ int main(int argc, char *argv[]) {
 //   if(GetGci(params, data.signal, data.source_signal, data.fundf, &(data.gci_inds)) == EXIT_FAILURE)
 //      return EXIT_FAILURE;
 
-      /* Extract pitch synchronous (excitation) waveforms at each frame */
+   /* Extract pitch synchronous (excitation) waveforms at each frame */
    if (params.use_waveforms_directly)
       GetPulses(params, data.signal, data.gci_inds, data.fundf, &(data.excitation_pulses));
    else
