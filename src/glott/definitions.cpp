@@ -83,7 +83,7 @@ Param::Param() {
    postfilter_coefficient_glot = 1.0;
    use_trajectory_smoothing = false;
    use_wsola = false;
-   use_wsola_pitch_shift = true;
+   use_wsola_pitch_shift = false;
    lsf_vt_smooth_len = 3;
    lsf_glot_smooth_len = 5;
    gain_smooth_len = 5;

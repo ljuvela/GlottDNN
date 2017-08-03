@@ -18,8 +18,9 @@
 #include "DnnClass.h"
 #include "SynthesisFunctions.h"
 
-void PostFilter(const double &postfilter_coefficient, const int &fs, gsl::matrix *lsf) {
-    if(postfilter_coefficient == 1.0)
+void PostFilter(const double &postfilter_coefficient, const int &fs, const gsl::vector &fundf, gsl::matrix *lsf) {
+
+   if(postfilter_coefficient == 1.0)
         return;
     
    size_t POWER_SPECTRUM_FRAME_LEN = 4096;
@@ -31,12 +32,17 @@ void PostFilter(const double &postfilter_coefficient, const int &fs, gsl::matrix
    gsl::vector fft_mag;
    gsl::vector_int peak_indices;
    gsl::vector peak_values;
-   int POWER_SPECTRUM_WIN = 20;//rint(20*16000/fs); // Originally hard-coded as 20 samples, should be fs adaptive?
+   // int POWER_SPECTRUM_WIN = 20;//rint(20*16000/fs); // Originally hard-coded as 20 samples, should be fs adaptive?
+   int POWER_SPECTRUM_WIN = rint(20*16000/fs);
 
    std::cout << "Using LPC postfiltering with a coefficient of " << postfilter_coefficient << std::endl;
 
 	/* Loop for every index of the LSF matrix */
 	for(frame_index=0; frame_index<lsf->get_cols(); frame_index++) {
+
+	   // skip post-filtering for unvoiced (ljuvela 2017-07-03)
+	   if (fundf(frame_index) == 0)
+	         continue;
 
 		/* Convert LSF to LPC */
 		Lsf2Poly(lsf->get_col_vec(frame_index), &poly_vec);
@@ -50,7 +56,6 @@ void PostFilter(const double &postfilter_coefficient, const int &fs, gsl::matrix
          log_mag(i) = 10*log10(fft_mag(i));
       }
 
-
 		/* Modification of the power spectrum */
 		//int peaks_found = FindPeaks(fft_mag, 0.1, &peak_indices, &peak_values);
       // Find peaks in log magnitudes, (small values are easily below threshold in linear scale)
@@ -58,7 +63,7 @@ void PostFilter(const double &postfilter_coefficient, const int &fs, gsl::matrix
       //std::cout << peaks_found << std::endl;
           
 		if (peaks_found > 0)
-                        SharpenPowerSpectrumPeaks(peak_indices, postfilter_coefficient, POWER_SPECTRUM_WIN, &fft_mag);
+		   SharpenPowerSpectrumPeaks(peak_indices, postfilter_coefficient, POWER_SPECTRUM_WIN, &fft_mag);
  
 		/* Construct autocorrelation r */
 		poly_fft.setReal(fft_mag);
@@ -143,6 +148,10 @@ gsl::vector GetExternalPulse(const size_t &pulse_len, const bool &use_interpolat
             pulse(i) = external_pulses(ind , frame_index);
       }
    }
+
+   // Subtract mean (experimental ljuvela 2017-7-15)
+   pulse += -1.0*pulse.mean();
+
 
    gsl::vector pulse_win(pulse);
    ApplyWindowingFunction(psola_window_function, &pulse_win);
@@ -302,16 +311,14 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
          case PULSES_AS_FEATURES_EXCITATION:
             /* Waveform similarity PSOLA is available only when PAF waveforms haven't been windowed */
             if (use_wsola) {
-               pulse =  GetPulseWsola(data.excitation_pulses.get_col_vec(frame_index), T0, energy,
+               gsl::vector pulse_full(data.excitation_pulses.get_col_vec(frame_index));
+               pulse_full += pulse_full.mean();
+               pulse =  GetPulseWsola(pulse_full, T0, energy,
                      sample_index,  (pulse_prev.size() == 1),
                      params.use_wsola_pitch_shift, excitation_signal) ;
-
-               //GetPulseWsola(const gsl::vector &frame, const int &t0, const double &energy,
-               //      const int &sample_index,  const bool &previous_unvoiced, const bool &pitch_shift,
-               //      gsl::vector *signal)
             } else {
                pulse = GetExternalPulse(pulse_len, params.use_pulse_interpolation, energy,
-                                 frame_index, params.psola_windowing_function, data.excitation_pulses);
+                     frame_index, params.psola_windowing_function, data.excitation_pulses);
             }
             pulse_orig = pulse;
             ApplyWindowingFunction(params.psola_windowing_function, &pulse);
@@ -358,8 +365,6 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
             pulse *= params.noise_gain_unvoiced*energy/getEnergy(noise);
             pulse /= 0.5*(double)noise.size()/(double)params.frame_shift; // Compensate OLA gain
             ApplyWindowingFunction(HANN, &pulse);
-
-           
             break;
          case PULSES_AS_FEATURES_EXCITATION:
             if (params.use_paf_unvoiced_synthesis) {
@@ -714,9 +719,12 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data, gsl:
 
 void NoiseGating(const Param &params, gsl::vector *frame_energy) {
     size_t i;
+    double max_gain = frame_energy->max(); // changed this to be relative to max gain (ljuvela 2017-07-03)
     for(i=0;i<frame_energy->size();i++) {
-        if((*frame_energy)(i) < -1.0*params.noise_gate_limit_db)
-            (*frame_energy)(i) -= params.noise_reduction_db;
+        if((*frame_energy)(i) < max_gain - 1.0*params.noise_gate_limit_db) {
+           (*frame_energy)(i) -= params.noise_reduction_db;
+           //std::cout << "noise gating gain in frame " << i << std::endl;
+        }
     }
 }
 
@@ -745,15 +753,13 @@ void FftFilterExcitation(const Param &params, const SynthesisData &data, gsl::ve
 
    size_t i;
    
-   
       /* Define analysis and synthesis window */
    double kbd_alpha = 2.3;
    gsl::vector kbd_window = getKaiserBesselDerivedWindow(frame.size(), kbd_alpha);
    
-   
    size_t frame_index;
-   for(frame_index=0;frame_index<params.number_of_frames;frame_index++) {
-      if(data.fundf(frame_index) != 0) {
+   for(frame_index=0; frame_index<(size_t)params.number_of_frames; frame_index++) {
+      if(false || data.fundf(frame_index) != 0) {
          /* Get spectrum of excitation */
          GetFrame(data.excitation_signal, frame_index, rint(params.frame_shift/params.speed_scale), &frame, NULL);
          frame_copy.copy(frame);
@@ -814,7 +820,12 @@ void FftFilterExcitation(const Param &params, const SynthesisData &data, gsl::ve
                } else {
                   mag = mag_exc*mag_vt;
                   //mag = mag_exc*mag_vt / mag_tilt_exc; // whiten excitation
-                  ang = ang_exc + ang_vt;
+                  if (data.fundf(frame_index) > 0) {
+                     ang = ang_exc + ang_vt;
+                  } else {
+                     ang = ang_exc; // all-pole filter starts to ring for unvoiced (ljuvela 2017-07-03)
+                  }
+
                }
             }
             frame_fft.setReal(i,mag*cos(double(ang)));
