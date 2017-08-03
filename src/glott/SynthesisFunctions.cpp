@@ -445,91 +445,96 @@ void HarmonicModification(const Param &params, const SynthesisData &data, gsl::v
    for(frame_index=0;frame_index<params.number_of_frames;frame_index++) {
 
       GetFrame(excitation_orig, frame_index, rint(params.frame_shift/params.speed_scale), &frame, NULL);
-      Filter(B,A_integrator,frame,&flow_vec);
-      flow_vec += -1.0*flow_vec.min() + 0.00001;
-      flow_vec /= flow_vec.max();
-      flow_vec *= kbd_window;
-      /* FFT with analysis window function */
+
       frame *= kbd_window;
+      /* only modify voiced frames */
       if(data.fundf(frame_index) > 0) {
-      FFTRadix2(frame, NFFT, &frame_fft);
-      fft_mag = frame_fft.getAbs();
 
-      /* Get log power spectrum */
-      for(i=0;i<(int)fft_mag.size();i++) {
-         val = 20*log10(fft_mag(i));
-         fft_mag(i) = GSL_MAX(val,MIN_LOG_POWER); // Min log-power = -60dB
-      }
+         /* Integrate excitation for modulating noise with glottal flow */
+         Filter(B,A_integrator,frame,&flow_vec);
+         flow_vec += -1.0*flow_vec.min() + 0.00001;
+         flow_vec /= flow_vec.max();
+         flow_vec *= kbd_window;
 
-      /* Upper and lower envelope estimates for synthetic signal */
-      if(data.fundf(frame_index) > 0) {
-         UpperLowerEnvelope(fft_mag, data.fundf(frame_index), params.fs, &fft_upper_env, &fft_lower_env);
-      } else {
-         // Unvoiced pseudo-pitch is the frame_shift
-         UpperLowerEnvelope(fft_mag, (double)params.fs/(double)params.frame_shift, params.fs, &fft_upper_env, &fft_lower_env);
-      }
+         /* FFT with analysis window function */
+         FFTRadix2(frame, NFFT, &frame_fft);
+         fft_mag = frame_fft.getAbs();
 
-      /* Convert HNR from ERB to linear frequency scale */
-      Erb2Linear(data.hnr_glot.get_col_vec(frame_index), params.fs, &hnr_interp);
+         /* Get log power spectrum */
+         for(i=0;i<(int)fft_mag.size();i++) {
+            val = 20*log10(fft_mag(i));
+            fft_mag(i) = GSL_MAX(val,MIN_LOG_POWER); // Min log-power = -60dB
+         }
 
-      /* Calculate target noise floor level based on upper envelope and HNR */
-      for(i=0;i<(int)fft_lower_env_target.size();i++)
-         fft_lower_env_target(i) = fft_upper_env(i) + hnr_interp(i); // Ptar
-
-      /* Calculate additive noise gain for each frequency bin */
-      for(i=0;i<(int)fft_lower_env_target.size();i++) {
-         fft_noise(i) = pow(10,fft_lower_env_target(i)/20.0) - pow(10,fft_lower_env(i)/20.0);
-        // fft_noise(i) = pow(10,fft_lower_env_target(i)/10.0) - pow(10,fft_lower_env(i)/10.0); // power difference
-      }
-
-
-      /* Generate random Gaussian noise*/
-      for(i=0;i<(int)noise_vec.size();i++)
-         noise_vec(i) = random_gauss_gen.get();
-
-      
-      /* Noise FFT with analysis window */
-      noise_vec *= kbd_window;
-      FFTRadix2(noise_vec, NFFT, &noise_vec_fft);
-
-      /* Normalize noise s.t. mean(abs(noise_fft)) == 1 */
-      noise_vec_fft /= sqrt(noise_vec.size());
-
-      /* Modify noise amplitude at each frequency bin */
-      int noise_low_freq_limit_ind = rint(NFFT*params.noise_low_freq_limit_voiced/params.fs);
-      for(i=0;i<(int)fft_mag.size();i++) {
-         if(i < noise_low_freq_limit_ind) {
-            /* Do not add noise below specified frequency */
-            noise_vec_fft.setReal(i,0.0);
-            noise_vec_fft.setImag(i,0.0);
+         /* Upper and lower envelope estimates for synthetic signal */
+         if(data.fundf(frame_index) > 0) {
+            UpperLowerEnvelope(fft_mag, data.fundf(frame_index), params.fs, &fft_upper_env, &fft_lower_env);
          } else {
-            if(fft_noise(i) > 0) {
-               /* Add noise if noise floor is below that indicated by the HNR */
-               //noise_vec_fft.setReal(i,noise_vec_fft.getReal(i)/noise_vec_fft.getAbs(i)*sqrt(fft_noise(i))*params.noise_gain_voiced);
-               //noise_vec_fft.setImag(i,noise_vec_fft.getImag(i)/noise_vec_fft.getAbs(i)*sqrt(fft_noise(i))*params.noise_gain_voiced);
+            // Unvoiced pseudo-pitch is the frame_shift
+            UpperLowerEnvelope(fft_mag, (double)params.fs/(double)params.frame_shift, params.fs, &fft_upper_env, &fft_lower_env);
+         }
 
-               /* Don't normalize the noise realization, Gaussian normal distributed noise has unit power at all frequencies (ljuvela) */
-               noise_vec_fft.setReal(i,noise_vec_fft.getReal(i)*sqrt(fft_noise(i))*params.noise_gain_voiced);
-               noise_vec_fft.setImag(i,noise_vec_fft.getImag(i)*sqrt(fft_noise(i))*params.noise_gain_voiced);
-            } else {
-               /* Do not add noise if noise floor is above that indicated by the HNR */
+         /* Convert HNR from ERB to linear frequency scale */
+         Erb2Linear(data.hnr_glot.get_col_vec(frame_index), params.fs, &hnr_interp);
+
+         /* Calculate target noise floor level based on upper envelope and HNR */
+         for(i=0;i<(int)fft_lower_env_target.size();i++)
+            fft_lower_env_target(i) = fft_upper_env(i) + hnr_interp(i); // Ptar
+
+         /* Calculate additive noise gain for each frequency bin */
+         for(i=0;i<(int)fft_lower_env_target.size();i++) {
+            fft_noise(i) = pow(10,fft_lower_env_target(i)/20.0) - pow(10,fft_lower_env(i)/20.0);
+            // fft_noise(i) = pow(10,fft_lower_env_target(i)/10.0) - pow(10,fft_lower_env(i)/10.0); // power difference
+         }
+
+
+         /* Generate random Gaussian noise*/
+         for(i=0;i<(int)noise_vec.size();i++)
+            noise_vec(i) = random_gauss_gen.get();
+
+
+         /* Noise FFT with analysis window */
+         noise_vec *= kbd_window;
+         FFTRadix2(noise_vec, NFFT, &noise_vec_fft);
+
+         /* Normalize noise s.t. mean(abs(noise_fft)) == 1 */
+         noise_vec_fft /= sqrt(noise_vec.size());
+
+         /* Modify noise amplitude at each frequency bin */
+         int noise_low_freq_limit_ind = rint(NFFT*params.noise_low_freq_limit_voiced/params.fs);
+         for(i=0;i<(int)fft_mag.size();i++) {
+            if(i < noise_low_freq_limit_ind) {
+               /* Do not add noise below specified frequency */
                noise_vec_fft.setReal(i,0.0);
                noise_vec_fft.setImag(i,0.0);
+            } else {
+               if(fft_noise(i) > 0) {
+                  /* Add noise if noise floor is below that indicated by the HNR */
+                  //noise_vec_fft.setReal(i,noise_vec_fft.getReal(i)/noise_vec_fft.getAbs(i)*sqrt(fft_noise(i))*params.noise_gain_voiced);
+                  //noise_vec_fft.setImag(i,noise_vec_fft.getImag(i)/noise_vec_fft.getAbs(i)*sqrt(fft_noise(i))*params.noise_gain_voiced);
+
+                  /* Don't normalize the noise realization, Gaussian normal distributed noise has unit power at all frequencies (ljuvela) */
+                  noise_vec_fft.setReal(i,noise_vec_fft.getReal(i)*sqrt(fft_noise(i))*params.noise_gain_voiced);
+                  noise_vec_fft.setImag(i,noise_vec_fft.getImag(i)*sqrt(fft_noise(i))*params.noise_gain_voiced);
+               } else {
+                  /* Do not add noise if noise floor is above that indicated by the HNR */
+                  noise_vec_fft.setReal(i,0.0);
+                  noise_vec_fft.setImag(i,0.0);
+               }
             }
          }
-      }
 
-      IFFTRadix2(noise_vec_fft,&noise_vec);
-      g_tar = getEnergy(noise_vec);
-      noise_vec *= flow_vec;
-      noise_vec *= g_tar/getEnergy(noise_vec);
-      /* Add noise and apply synthesis window */
-      frame += noise_vec;
+         IFFTRadix2(noise_vec_fft,&noise_vec);
+         g_tar = getEnergy(noise_vec);
+         noise_vec *= flow_vec;
+         noise_vec *= g_tar/getEnergy(noise_vec);
+         /* Add noise and apply synthesis window */
+         frame += noise_vec;
       }
       frame *= kbd_window;
       /* Normalize overlap-add window */
       frame /= 0.5*(double)frame.size()/(double)params.frame_shift;
-      OverlapAdd(frame,frame_index*rint(params.frame_shift/params.speed_scale),excitation_signal);
+      OverlapAdd(frame, frame_index*rint(params.frame_shift/params.speed_scale), excitation_signal);
 
    }
 
