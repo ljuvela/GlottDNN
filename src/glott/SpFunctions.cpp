@@ -1229,14 +1229,13 @@ gsl::vector GetPulseWsola(const gsl::vector &frame, const int &t0, const double 
             t0_estimate = t0_candidate;
          }
       }
-
-      // Pitch shift by interpolation (don't do extreme modifications)
+      /* Pitch shift by interpolation (don't do extreme modifications) */
       double error_ratio = (double)abs(t0 - t0_estimate)/(double)t0;
       if (error_ratio < 2.0)
          InterpolateSpline(frame, round(  (double)t0 / (double)(t0_estimate) * frame.size()), &frame_interp);
    }
 
-   // waveform similarity overlap add (WSOLA)
+   /* Waveform similarity overlap add (WSOLA) */
    int M = 0.5 * t0; //total range of  T0
    //int M = 1.0 * t0; //total range of  T0
    int  mid = round(frame_interp.size()/2.0); // PAF frame midpoint
@@ -1245,7 +1244,7 @@ gsl::vector GetPulseWsola(const gsl::vector &frame, const int &t0, const double 
 
    int m_opt = 0;
    if (previous_unvoiced == false) { // if previous frame was unvoiced, no modifications
-      // Find the maximum cross-correlation
+      /* Find the maximum cross-correlation */
       for(m=-1*M, m_ind=0; m<M; m++, m_ind++) {
 
          bool edge_clipped = false;
@@ -1264,11 +1263,13 @@ gsl::vector GetPulseWsola(const gsl::vector &frame, const int &t0, const double 
             corr(m_ind) = -1*DBL_MAX;
             continue;
          }
+         /* Force zero mean */
+         pulse += -1.0*pulse.mean();
 
-         // Window pulse before xcorr calculation
+         /* Window pulse before xcorr calculation */
          ApplyWindowingFunction(HANN, &pulse);
 
-         // determine index range where signals overlap
+         /* Determine index range where signals overlap */
          start_ind = sample_index - t0;
          stop_ind = start_ind + 2*t0 - 1;
          if(start_ind < 0)
@@ -1276,7 +1277,7 @@ gsl::vector GetPulseWsola(const gsl::vector &frame, const int &t0, const double 
          if(stop_ind > (int)signal->size())
             stop_ind = (int)signal->size();
 
-         // cross-correlation
+         /* cross-correlation */
          for(i=(size_t)start_ind; i<(size_t)stop_ind; i++) {
             corr(m_ind) += (*signal)(i) * pulse(i-start_ind);
          }
@@ -1296,7 +1297,7 @@ gsl::vector GetPulseWsola(const gsl::vector &frame, const int &t0, const double 
    gsl::vector pulse_win(pulse);
    ApplyWindowingFunction(HANN, &pulse_win);
 
-   // Scale with correct energy
+   /* Scale with correct energy */
    pulse *= energy/getEnergy(pulse_win);
 
    /* Window length normalization */
@@ -1307,11 +1308,7 @@ gsl::vector GetPulseWsola(const gsl::vector &frame, const int &t0, const double 
    for (i=0;i<win.size();i++) {
       sum += win(i);
    }
-   // TODO: find the right coefficient
-   pulse *= 0.375 * pulse.size() / sum; // sqrt(3/8) ? 
-
-   //pulse /= sqrt(2.0); // y tho?
-
+   pulse *= 0.375 * pulse.size() / sum; // sqrt(3/8)
 
    return pulse;
 }
