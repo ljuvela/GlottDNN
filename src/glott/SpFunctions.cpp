@@ -1263,6 +1263,7 @@ gsl::vector GetPulseWsola(const gsl::vector &frame, const int &t0, const double 
             corr(m_ind) = -1*DBL_MAX;
             continue;
          }
+
          /* Force zero mean */
          pulse += -1.0*pulse.mean();
 
@@ -1294,11 +1295,15 @@ gsl::vector GetPulseWsola(const gsl::vector &frame, const int &t0, const double 
          pulse(i) = frame_interp(ind);
    }
 
+   pulse += -1.0*pulse.mean();
+
    gsl::vector pulse_win(pulse);
    ApplyWindowingFunction(HANN, &pulse_win);
 
    /* Scale with correct energy */
    pulse *= energy/getEnergy(pulse_win);
+
+
 
    /* Window length normalization */
    gsl::vector win(pulse.size());
