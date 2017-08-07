@@ -123,7 +123,7 @@ public:
    std::string extension_paf;
    std::string extension_f0;
    std::string extension_exc;
-   std::string extension_src;
+   std::string extension_src = ".src.wav";
    std::string extension_syn;
 
 

@@ -151,12 +151,15 @@ def reaper_pitch_analysis():
                 gcifile = conf.datadir + '/gci/' + bname + '.GCI'
                 
                 # analysis commands
-                cmd =  conf.reaper + ' -a -i ' + wavfile + ' -f ' + f0tmp1 + ' -p ' + gcitmp + ' -u 0.05'
+                #cmd =  conf.reaper + ' -a -i ' + wavfile + ' -f ' + f0tmp1 + ' -p ' + gcitmp + ' -u 0.05'
+                cmd =  conf.reaper + ' -a -i ' + wavfile + ' -f ' + f0tmp1 + ' -p ' + gcitmp + ' -t -x 500 -m 50'
                 os.system(cmd)
                 cmd = 'tail +8 ' + f0tmp1 + '| awk \'{print $3}\' | x2x +af ' + \
                     '| sopr -magic -1.0 -MAGIC 0.0  > ' + f0tmp2
                 os.system(cmd)
-                cmd = 'tail +8 ' + gcitmp + '| awk \'{print $1}\' | x2x +af > ' + gcifile
+                #cmd = 'tail +8 ' + gcitmp + '| awk \'{print $1}\' | x2x +af > ' + gcifile
+                # only take voiced pitch marks
+                cmd = 'tail +8 ' + gcitmp + '| awk \'$2 == "1" {print $1}\' | x2x +af > ' + gcifile
                 os.system(cmd)
             
                 # read the file
