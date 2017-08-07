@@ -531,7 +531,13 @@ int Find_nearest_pulse_index(const int &sample_index, const gsl::vector &gci_ind
          pulse_index=j;
          prev_index = pulse_index-1;
          next_index = pulse_index+1;
-         //std::cout << "increasing pulse tolerance to " << max_relative_len_diff << std::endl;
+      }
+
+      /* break if out of range */
+      if (new_pulse_index-1 < 0 || new_pulse_index+1 > (int)gci_inds.size()-1) {
+         break;
+      } else {
+         pulse_index = new_pulse_index;
       }
 
       /* calculate new pulse length */
@@ -548,13 +554,15 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
    if (params.extract_pulses_as_features == false)
       return;
 
+   std::cout << "Extracting excitation pulses ... " ;
+
+
    //int THRESH = params.frame_length/2;
    int THRESH = 100*params.frame_length;
    size_t frame_index;
    for(frame_index=0;frame_index<(size_t)params.number_of_frames;frame_index++) {
       size_t sample_index = frame_index*params.frame_shift;
       size_t pulse_index = Find_nearest_pulse_index(sample_index, gci_inds, params, fundf(frame_index));
-
 
       size_t pulselen;
       if (fundf(frame_index) > 0.0)
@@ -653,6 +661,8 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
       /* Save to matrix */
       pulses_mat->set_col_vec(frame_index, paf_pulse);
    }
+   std::cout << "done." << std::endl;
+
 }
 
 void HighPassFiltering(const Param &params, gsl::vector *signal) {
