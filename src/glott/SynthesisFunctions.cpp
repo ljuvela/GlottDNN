@@ -626,6 +626,10 @@ void SpectralMatchExcitation(const Param &params,const SynthesisData &data, gsl:
 
 void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data, gsl::vector *signal) {
    
+   /* When using pulses-as-features for unvoiced, unvoiced part is filtered as voiced */
+   if(params.use_paf_unvoiced_synthesis)
+      return;
+
    gsl::vector uv_signal((*signal).size(),true);
    gsl::vector noise_vec(params.frame_length_unvoiced);
    gsl::random_generator rand_gen;
@@ -770,7 +774,7 @@ void FftFilterExcitation(const Param &params, const SynthesisData &data, gsl::ve
    
    size_t frame_index;
    for(frame_index=0; frame_index<(size_t)params.number_of_frames; frame_index++) {
-      if(data.fundf(frame_index) > 0) {
+      if(data.fundf(frame_index) > 0 || params.use_paf_unvoiced_synthesis) {
          /* Get spectrum of excitation */
          GetFrame(data.excitation_signal, frame_index, rint(params.frame_shift/params.speed_scale), &frame, NULL);
          frame_copy.copy(frame);
