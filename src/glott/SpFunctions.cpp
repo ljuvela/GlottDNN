@@ -1206,6 +1206,9 @@ gsl::vector GetPulseWsola(const gsl::vector &frame, const int &t0, const double 
 
    gsl::vector frame_interp(frame);
 
+   /* Force zero mean */
+   frame_interp += -1.0*frame_interp.mean();
+
    /* Autocorrelation based pitch shift */
    if (pitch_shift) {
       // Calculate autocorrelation
@@ -1264,8 +1267,7 @@ gsl::vector GetPulseWsola(const gsl::vector &frame, const int &t0, const double 
             continue;
          }
 
-         /* Force zero mean */
-         pulse += -1.0*pulse.mean();
+
 
          /* Window pulse before xcorr calculation */
          ApplyWindowingFunction(HANN, &pulse);
@@ -2071,6 +2073,7 @@ void RandomizePhase(gsl::vector *frame) {
    /* Set phase to random */
 
    for (i=0; i<frame_fft.getSize(); i++) {
+      // TODO: phase should be sampled from uniform distribution [0, 2pi] (not normal dist)
       phi = global_randn.get();
       frame_fft.setReal(i, fft_mag(i)*cos(phi));
       frame_fft.setImag(i, fft_mag(i)*sin(phi));
