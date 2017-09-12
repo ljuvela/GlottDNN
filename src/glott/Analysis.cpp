@@ -129,6 +129,12 @@ int main(int argc, char *argv[]) {
    else
       SpectralAnalysis(params, data, &(data.poly_vocal_tract));
 
+   // Experiment: smoothing of vocal tract lsfs
+   Poly2Lsf(data.poly_vocal_tract, &data.lsf_vocal_tract);
+   MedianFilter(5, &data.lsf_vocal_tract);
+   MovingAverageFilter(3, &data.lsf_vocal_tract);
+   Lsf2Poly(data.lsf_vocal_tract, &data.poly_vocal_tract);
+
    /* Perform glottal inverse filtering with the estimated VT AR polynomials */
    InverseFilter(params, data, &(data.poly_glot), &(data.source_signal));
 

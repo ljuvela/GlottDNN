@@ -155,8 +155,9 @@ gsl::vector GetExternalPulse(const size_t &pulse_len, const bool &use_interpolat
    gsl::vector pulse_win(pulse);
    ApplyWindowingFunction(psola_window_function, &pulse_win);
 
-   // Scale with correct energy
-   pulse *= energy/getEnergy(pulse_win);
+   // Scale with target energy
+   if (!isnan(energy))
+      pulse *= energy/getEnergy(pulse_win);
 
    /* Window length normalization */
    gsl::vector win(pulse_len);
@@ -310,18 +311,24 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
          case PULSES_AS_FEATURES_EXCITATION:
             /* Waveform similarity PSOLA is available only when PAF waveforms haven't been windowed */
             if (use_wsola) {
-	      gsl::vector pulse_full(data.excitation_pulses.get_col_vec(frame_index));
-	      pulse_full += pulse_full.mean();
-	      pulse =  GetPulseWsola(pulse_full, T0, energy,
-				     sample_index,  (pulse_prev.size() == 1),
-				     params.use_wsola_pitch_shift, excitation_signal) ;
+               gsl::vector pulse_full(data.excitation_pulses.get_col_vec(frame_index));
+               pulse_full += pulse_full.mean();
+               pulse =  GetPulseWsola(pulse_full, T0, energy,
+                     sample_index,  (pulse_prev.size() == 1),
+                     params.use_wsola_pitch_shift, excitation_signal) ;
             } else {
-	      pulse = GetExternalPulse(pulse_len, params.use_pulse_interpolation, energy,
-                                 frame_index, params.psola_windowing_function, data.excitation_pulses);
+               /* Scale by energy if energy normalization was used in pulse exctraction */
+               if (params.use_paf_energy_normalization) {
+                  pulse = GetExternalPulse(pulse_len, params.use_pulse_interpolation, energy,
+                        frame_index, params.psola_windowing_function, data.excitation_pulses);
+               } else {
+                  double nan_val = NAN;
+                  pulse = GetExternalPulse(pulse_len, params.use_pulse_interpolation, nan_val,
+                        frame_index, params.psola_windowing_function, data.excitation_pulses);
+               }
             }
             pulse_orig = pulse;
             ApplyWindowingFunction(params.psola_windowing_function, &pulse);
-
             break;
          }
 
