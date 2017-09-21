@@ -81,18 +81,32 @@ int main(int argc, char *argv[]) {
    const char *default_config_filename = argv[2];
    const char *user_config_filename = argv[3];
 
+   /* Declare configuration parameter struct */
+   Param params;
+
+   /*
+   if (ParseArguments(argc, argv, &params) == EXIT_FAILURE ) {
+      PrintUsageAnalysis();
+      return EXIT_FAILURE;
+   }
+   */
+
+
+
+
    if (argc < 3) {
       std::cout << "Usage: Analysis <wavfile.wav> <config_default.cfg> (<config_usr.cfg>)" << std::endl;
    }
 
    /* Read configuration file */
-   Param params;
    if (ReadConfig(default_config_filename, true, &params) == EXIT_FAILURE)
       return EXIT_FAILURE;
    if (argc > 3) {
       if (ReadConfig(user_config_filename, false, &params) == EXIT_FAILURE)
          return EXIT_FAILURE;
    }
+
+
 
    /* Read sound file and allocate data */
    AnalysisData data;
