@@ -10,7 +10,7 @@ enum DataType {ASCII, DOUBLE, FLOAT};
 enum SignalPolarity {POLARITY_DEFAULT, POLARITY_INVERT, POLARITY_DETECT};
 enum LpWeightingFunction {NONE, AME, STE};
 enum WindowingFunctionType {HANN, HAMMING, BLACKMAN, COSINE, HANNING, RECT, NUTTALL};
-enum ExcitationMethod {SINGLE_PULSE_EXCITATION, DNN_GENERATED_EXCITATION, PULSES_AS_FEATURES_EXCITATION};
+enum ExcitationMethod {SINGLE_PULSE_EXCITATION, DNN_GENERATED_EXCITATION, PULSES_AS_FEATURES_EXCITATION, EXTERNAL_EXCITATION};
 
 /* Structures */
 struct Param {
@@ -33,6 +33,8 @@ public:
 	std::string external_gci_filename;
 	bool use_external_lsf_vt; // inverse filtering with external vocal tract filter
 	std::string external_lsf_vt_filename;
+	bool use_external_excitation;
+	std::string external_excitation_filename;
 
 	std::string dnn_path_basename;
 	std::string data_directory;
@@ -81,7 +83,6 @@ public:
    double pitch_scale;
    bool use_postfiltering;
    bool use_spectral_matching;
-   bool use_original_excitation;
    bool use_wsola;
    bool use_wsola_pitch_shift;
    bool noise_gated_synthesis;

@@ -157,6 +157,10 @@ int ReadWavFile(const char *fname, gsl::vector *signal) {
    return EXIT_SUCCESS;
 }
 
+int ReadWavFile(const std::string &fname, gsl::vector *signal) {
+   return ReadWavFile(fname.c_str(), signal);
+}
+
 
 /**
  * Function EvalFileLength
@@ -705,7 +709,26 @@ void PrintUsageAnalysis() {
    std::cout << "    config_user.cfg     : Name of the user config file (OPTIONAL)"    << std::endl;
    std::cout << "wav_file:        : "  << std::endl;
    std::cout << "    Path of the audio file (.wav) to be analysed          "         << std::endl;
+}
 
+int ReadExternalExcitation(const std::string &filename, gsl::vector *source_signal) {
 
+   gsl::vector read_signal;
+   if(ReadWavFile(filename, &read_signal) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
+   /* Copy samples to source_signal, either zero pad or discard samples if lengths differ */
+   source_signal->set_all(0.0);
+   size_t i;
+   for (i=0; i<source_signal->size() && i<read_signal.size(); i++) {
+      (*source_signal)(i) = read_signal(i);
+   }
+   std::cout << "Reading excitation file from " << filename << " ... ";
+   if (i < read_signal.size())
+      std::cout << read_signal.size() - i << " samples were discarded " << std::endl;
+   if (i < source_signal->size())
+      std::cout << source_signal->size() - i << " samples were zero padded " << std::endl;
+
+   return EXIT_SUCCESS;
 }
 

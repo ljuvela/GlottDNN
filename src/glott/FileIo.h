@@ -6,8 +6,11 @@
 int ParseArguments(int argc, char **argv, Param *params);
 void PrintUsageAnalysis();
 
+int ReadExternalExcitation(const std::string &filename, gsl::vector *source_signal);
+
 int ReadWavFile(const char *fname, gsl::vector *signal, Param *params);
 int ReadWavFile(const char *fname, gsl::vector *signal);
+int ReadWavFile(const std::string &fname, gsl::vector *signal);
 int WriteWavFile(const std::string &filename, const gsl::vector &signal, const int &fs);
 int ReadGslVector(const std::string &filename, const DataType format, gsl::vector *vector_ptr);
 int ReadGslMatrix(const std::string &filename, const DataType format, const size_t n_rows,  gsl::matrix *matrix_ptr);

@@ -62,15 +62,6 @@ int main(int argc, char *argv[]) {
    if(ReadSynthesisData(filename, &params, &data) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-   //   read original excitation
-   if (false) {
-      std::string src_filename = GetParamPath("src", ".src.wav", params.dir_syn, params);
-      if(ReadWavFile(src_filename.c_str(), &(data.excitation_signal)) == EXIT_FAILURE)
-         return EXIT_FAILURE;
-   }
-   
-
-
    if(params.noise_gated_synthesis)
       NoiseGating(params, &(data.frame_energy));
    
