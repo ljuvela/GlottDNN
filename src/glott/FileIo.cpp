@@ -1,5 +1,6 @@
 #include "FileIo.h"
 
+#include <getopt.h>
 #include <sndfile.hh>
 #include <cstring>
 #include <string>
@@ -9,6 +10,7 @@
 #include <libgen.h>
 #include <gslwrap/vector_double.h>
 #include <gslwrap/matrix_double.h>
+
 #include "definitions.h"
 
 
@@ -601,5 +603,109 @@ std::string GetParamPath(const std::string &default_dir, const std::string &exte
        }
 
    return param_path;
+}
+
+int ParseArguments(int argc, char **argv, Param *params){
+
+
+   int c;
+
+     while (1)
+       {
+         static struct option long_options[] =
+           {
+
+             {"help",    no_argument,      0, 'h'},
+             {"config_user",  required_argument, 0, 'u'},
+             {"config_default",  required_argument, 0, 'd'},
+             //{"create",  required_argument, 0, 'c'},
+             //{"file",    required_argument, 0, 'f'},
+             {0, 0, 0, 0}
+           };
+         /* getopt_long stores the option index here. */
+         int option_index = 0;
+
+         c = getopt_long (argc, argv, "hu:d:",
+                          long_options, &option_index);
+
+         /* Detect the end of the options. */
+         if (c == -1)
+           break;
+
+         switch (c)
+           {
+           case 0:
+
+             printf ("option %s", long_options[option_index].name);
+             if (optarg)
+               printf (" with arg %s", optarg);
+             printf ("\n");
+             break;
+
+           case 'h':
+             return EXIT_FAILURE; // will print help message
+             break;
+
+           case 'u':
+             printf ("option -u with value `%s'\n", optarg);
+             params->user_config_filename = optarg;
+             break;
+
+           case 'd':
+             printf ("option -d with value `%s'\n", optarg);
+             params->default_config_filename = optarg;
+             break;
+
+           case '?':
+             /* getopt_long already printed an error message. */
+             break;
+
+           default:
+             abort ();
+           }
+       }
+
+
+
+     /* Print any remaining command line arguments (not options). */
+     if (optind < argc)
+       {
+         printf ("non-option ARGV-elements: ");
+         while (optind < argc)
+           printf ("%s ", argv[optind++]);
+         putchar ('\n');
+       }
+
+     /* Wave file is required argument */
+     if (params->wav_filename.empty() &&  optind >= argc) {
+        std::cerr << "Wave file required" << std::endl;
+        return EXIT_FAILURE;
+     }
+
+
+   return EXIT_SUCCESS;
+
+
+
+}
+
+void PrintUsageAnalysis() {
+
+
+   std::cout << "<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>"  << std::endl;
+   std::cout << "            GlottDNN - Speech Parameter Extractor "                << std::endl;
+   std::cout << "<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>"  << std::endl;
+   std::cout << "description:"                                                      << std::endl;
+   std::cout << "    Analysis of speech signal using glottal inverse filtering "    << std::endl;
+   std::cout << "    producing vocal tract filter and voice source parameters."     << std::endl;
+   std::cout << "usage:  "                                                          << std::endl;
+   std::cout << "    Analysis [options] [wav_file]                        "         << std::endl;
+   std::cout << "options:  "                                                        << std::endl;
+   std::cout << "    config_default.cfg  : Name of the default config file"            << std::endl;
+   std::cout << "    config_user.cfg     : Name of the user config file (OPTIONAL)"    << std::endl;
+   std::cout << "wav_file:        : "  << std::endl;
+   std::cout << "    Path of the audio file (.wav) to be analysed          "         << std::endl;
+
+
 }
 

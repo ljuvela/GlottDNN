@@ -3,6 +3,9 @@
 
 #include "definitions.h"
 
+int ParseArguments(int argc, char **argv, Param *params);
+void PrintUsageAnalysis();
+
 int ReadWavFile(const char *fname, gsl::vector *signal, Param *params);
 int ReadWavFile(const char *fname, gsl::vector *signal);
 int WriteWavFile(const std::string &filename, const gsl::vector &signal, const int &fs);

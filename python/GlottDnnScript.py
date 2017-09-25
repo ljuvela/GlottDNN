@@ -124,14 +124,29 @@ def sptk_pitch_analysis():
                 wavfile = f.rstrip()
                 if os.path.isfile(wavfile):
                     bname = os.path.splitext(os.path.basename(wavfile))[0]
+                    print("SPKT pitch estimation for %s") % (bname)
                     # convert to .raw
                     rawfile = conf.datadir + '/raw/' + bname + '.raw'
                     f0file = conf.datadir + '/f0/' + bname + '.f0'
                     cmd = conf.sox + ' ' + wavfile + ' ' + rawfile
                     os.system(cmd)
-                    # sptk pitch estimation 
+                    # sptk pitch estimation (first pass)
                     cmd = conf.x2x + ' +sf ' + rawfile + '|' \
-                        + conf.pitch + '>' + f0file
+                        + conf.pitch + ' -L 50 -H 800 ' + '>' + f0file
+                    os.system(cmd)
+                    # pitch range estimation for second pass
+                    f0 = np.fromfile(f0file, dtype=np.float32)
+                    lf0 = np.log10(f0[f0>0])
+                    m = lf0.mean()
+                    s = lf0.std()
+                    f0_max = np.round(10.0**(m+3.0*s))
+                    #f0_min = np.round(10.0**(m-3.0*s))
+                    f0_min = 50.0 # minimum f0 is low for creaky voice
+                    # sptk pitch estimation (second pass)
+                    print("   second pass with F0 range %d-%d Hz ") % (f0_min, f0_max)
+                    cmd = conf.x2x + ' +sf ' + rawfile + '|' \
+                        + conf.pitch + ' -L ' + str(f0_min) + ' -H ' + str(f0_max) \
+                        + ' > ' + f0file
                     os.system(cmd)
                     
     
@@ -152,12 +167,13 @@ def reaper_pitch_analysis():
                 
                 # analysis commands
                 #cmd =  conf.reaper + ' -a -i ' + wavfile + ' -f ' + f0tmp1 + ' -p ' + gcitmp + ' -u 0.05'
-                cmd =  conf.reaper + ' -a -i ' + wavfile + ' -f ' + f0tmp1 + ' -p ' + gcitmp + ' -t -x 500 -m 50'
+                #cmd =  conf.reaper + ' -a -i ' + wavfile + ' -f ' + f0tmp1 + ' -p ' + gcitmp + ' -t -x 500 -m 50' # -t for Hilbert transform
+                cmd =  conf.reaper + ' -a -i ' + wavfile + ' -f ' + f0tmp1 + ' -p ' + gcitmp + ' -x 500 -m 40'
                 os.system(cmd)
+                # todo: use conf.sopr and conf.x2x
                 cmd = 'tail +8 ' + f0tmp1 + '| awk \'{print $3}\' | x2x +af ' + \
                     '| sopr -magic -1.0 -MAGIC 0.0  > ' + f0tmp2
                 os.system(cmd)
-                #cmd = 'tail +8 ' + gcitmp + '| awk \'{print $1}\' | x2x +af > ' + gcifile
                 # only take voiced pitch marks
                 cmd = 'tail +8 ' + gcitmp + '| awk \'$2 == "1" {print $1}\' | x2x +af > ' + gcifile
                 os.system(cmd)
@@ -233,10 +249,11 @@ def glott_vocoder_synthesis():
                 conf_file.write('DATA_DIRECTORY = \"' + conf.datadir + '\";\n')
                 conf_file.write('DATA_TYPE = \"FLOAT\";\n')
                 conf_file.write('SAVE_TO_DATADIR_ROOT = false;\n')
-             #   if conf.use_dnn_generated_excitation:
-             #       conf_file.write('EXCITATION_METHOD = \"DNN_GENERATED\";\n')   
-             #
-             #   conf_file.write('DNN_WEIGHT_PATH = \"' + conf.weights_data_dir + '/' + conf.dnn_name + '\";\n')
+
+                if conf.use_dnn_generated_excitation:
+                    conf_file.write('EXCITATION_METHOD = \"DNN_GENERATED\";\n')   
+                conf_file.write('DNN_WEIGHT_PATH = \"' + conf.weights_data_dir + '/' + conf.dnn_name + '\";\n')
+                
                 conf_file.close()
                 cmd = conf.Synthesis + ' ' + wavfile + ' ' + conf.config_default + ' ' + config_user
                 #print cmd
@@ -291,7 +308,7 @@ def package_data():
     new_min = 0.1
     new_max = 0.9
     
-    n_val = (conf.validation_ratio * len(filelist))
+    n_val = round(conf.validation_ratio * len(filelist))
     n_test = round(conf.test_ratio * len(filelist))
     n_train = len(filelist) - n_val - n_test
     if n_train < 0:
@@ -318,6 +335,7 @@ def package_data():
             out_fid.close()            
             if set_sizes[set_index] == 0:
                 set_index += 1
+                continue
             else:
                 in_fid = open(conf.train_data_dir + '/' + conf.dnn_name + '.' + set_name[set_index] + '.idat' ,'w')
                 out_fid = open(conf.train_data_dir + '/' + conf.dnn_name + '.' + set_name[set_index] + '.odat' ,'w')

@@ -126,7 +126,9 @@ public:
    std::string extension_src = ".src.wav";
    std::string extension_syn;
 
-
+   std::string wav_filename;
+   std::string default_config_filename;
+   std::string user_config_filename;
 
 };
 
