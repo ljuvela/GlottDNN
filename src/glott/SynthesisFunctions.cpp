@@ -150,7 +150,7 @@ gsl::vector GetExternalPulse(const size_t &pulse_len, const bool &use_interpolat
    }
 
    // Subtract mean (experimental ljuvela 2017-7-15)
-   pulse += -1.0*pulse.mean();
+   //pulse += -1.0*pulse.mean();
 
    gsl::vector pulse_win(pulse);
    ApplyWindowingFunction(psola_window_function, &pulse_win);
@@ -158,6 +158,7 @@ gsl::vector GetExternalPulse(const size_t &pulse_len, const bool &use_interpolat
    // Scale with target energy
    if (!isnan(energy))
       pulse *= energy/getEnergy(pulse_win);
+
 
    /* Window length normalization */
    gsl::vector win(pulse_len);
@@ -169,7 +170,7 @@ gsl::vector GetExternalPulse(const size_t &pulse_len, const bool &use_interpolat
       sum += win(i);
    }
 
-   pulse *= 0.375*pulse_len/sum; // 0.375 = 3/8 (HANN window area/length when N->INF)
+   //pulse *= 0.375*pulse_len/sum; // 0.375 = 3/8 (HANN window area/length when N->INF)
 
    return pulse;
 }
@@ -393,7 +394,7 @@ int CreateExcitation(const Param &params, const SynthesisData &data, gsl::vector
                } else {
                   unvoiced_psola_flip = true;
                }
-               // RandomizePhase(&pulse);
+               //RandomizePhase(&pulse);
                ApplyWindowingFunction(params.psola_windowing_function, &pulse);
             } else {
                pulse = noise;
