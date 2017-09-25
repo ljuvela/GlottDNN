@@ -81,8 +81,9 @@ int main(int argc, char *argv[]) {
    if (params.use_spectral_matching)
       StabilizeLsf(&(data.lsf_glot));
 
-   /* Create excitation with overlap-add */
-   CreateExcitation(params, data, &(data.excitation_signal));
+   /* Create excitation with overlap-add or read external excitation file */
+   if (CreateExcitation(params, data, &(data.excitation_signal)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
 
    /* Add noise to excitation to satisfy Harmonic-to-noise ratio*/
    if(params.noise_gain_voiced > 0.0)

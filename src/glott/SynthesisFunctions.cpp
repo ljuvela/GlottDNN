@@ -221,6 +221,7 @@ int CreateExcitation(const Param &params, const SynthesisData &data, gsl::vector
    case EXTERNAL_EXCITATION:
       if (ReadExternalExcitation(params.external_excitation_filename,
             excitation_signal) == EXIT_FAILURE) {
+         std::cerr << "Error: failed to read excitation signal from " << params.external_excitation_filename << std::endl;
          return EXIT_FAILURE;
       }
       return EXIT_SUCCESS;
