@@ -120,6 +120,8 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool required, Param 
    if (ConfigLookupString("EXTERNAL_LSF_VT_FILENAME", cfg, required, params->external_lsf_vt_filename) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
+
+
 	if (ConfigLookupDouble("GIF_PRE_EMPHASIS_COEFFICIENT", cfg, required, &(params->gif_pre_emphasis_coefficient)) == EXIT_FAILURE)
 			return EXIT_FAILURE;
 
@@ -163,9 +165,6 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool required, Param 
       return EXIT_FAILURE;
 
    if (ConfigLookupBool("USE_PAF_UNVOICED", cfg, false, &(params->use_paf_unvoiced_synthesis)) == EXIT_FAILURE)
-      return EXIT_FAILURE;
-
-   if (ConfigLookupBool("USE_ORIGINAL_EXCITATION", cfg, false, &(params->use_original_excitation)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
    if (ConfigLookupBool("HP_FILTERING", cfg, required, &(params->use_highpass_filtering)) == EXIT_FAILURE)
@@ -390,11 +389,19 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool required, Param 
 	      params->excitation_method = DNN_GENERATED_EXCITATION;
 	   else if (str == "PULSES_AS_FEATURES")
 	      params->excitation_method = PULSES_AS_FEATURES_EXCITATION;
+      else if (str == "EXTERNAL")
+         params->excitation_method = EXTERNAL_EXCITATION;
 	   else {
 	      std::cerr << "Error: invalid excitation method flag" << std::endl;
 	      return EXIT_FAILURE;
 	   }
+	}
 
+	/* require external excitation filename if used */
+	// TODO: should not be required in config_default
+	if (params->excitation_method == EXTERNAL_EXCITATION) {
+	   if (ConfigLookupString("EXTERNAL_EXCITATION_FILENAME", cfg, required, params->external_excitation_filename) == EXIT_FAILURE)
+	      return EXIT_FAILURE;
 	}
 
 	/* PSOLA window for synthesis */

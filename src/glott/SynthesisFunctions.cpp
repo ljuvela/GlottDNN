@@ -197,7 +197,7 @@ gsl::vector GetDnnPulse(const size_t &pulse_len, const double &energy, const siz
 
 }
 
-void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vector *excitation_signal) {
+int CreateExcitation(const Param &params, const SynthesisData &data, gsl::vector *excitation_signal) {
 
    gsl::vector single_pulse_base;
    gsl::random_generator rand_gen;
@@ -218,6 +218,13 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
       break;
    case PULSES_AS_FEATURES_EXCITATION:
       // Use the original pulses as features (no-op here)
+      break;
+   case EXTERNAL_EXCITATION:
+      if (ReadExternalExcitation(params.external_excitation_filename,
+            excitation_signal) == EXIT_FAILURE) {
+         return EXIT_FAILURE;
+      }
+      return EXIT_SUCCESS;
       break;
    }
    /*  Experimental for accurate PSOLA */
@@ -313,7 +320,7 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
             /* Waveform similarity PSOLA is available only when PAF waveforms haven't been windowed */
             if (use_wsola) {
                gsl::vector pulse_full(data.excitation_pulses.get_col_vec(frame_index));
-               pulse_full += pulse_full.mean();
+               //pulse_full += pulse_full.mean(); // FIXME: What? ljuvela
                pulse =  GetPulseWsola(pulse_full, T0, energy,
                      sample_index,  (pulse_prev.size() == 1),
                      params.use_wsola_pitch_shift, excitation_signal) ;
@@ -404,6 +411,8 @@ void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vecto
       }
    }
    CheckNanInf(*excitation_signal);
+
+   return EXIT_SUCCESS;
 }
 
 
@@ -635,7 +644,7 @@ void SpectralMatchExcitation(const Param &params,const SynthesisData &data, gsl:
 void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data, gsl::vector *signal) {
    
    /* When using pulses-as-features for unvoiced, unvoiced part is filtered as voiced */
-   if(params.use_paf_unvoiced_synthesis)
+   if(params.use_paf_unvoiced_synthesis || params.use_external_excitation)
       return;
 
    gsl::vector uv_signal((*signal).size(),true);
@@ -782,7 +791,7 @@ void FftFilterExcitation(const Param &params, const SynthesisData &data, gsl::ve
    
    size_t frame_index;
    for(frame_index=0; frame_index<(size_t)params.number_of_frames; frame_index++) {
-      if(data.fundf(frame_index) > 0 || params.use_paf_unvoiced_synthesis) {
+      if(data.fundf(frame_index) > 0 || params.use_paf_unvoiced_synthesis || params.use_external_excitation) {
          /* Get spectrum of excitation */
          GetFrame(data.excitation_signal, frame_index, rint(params.frame_shift/params.speed_scale), &frame, NULL);
          frame_copy.copy(frame);

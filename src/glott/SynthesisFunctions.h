@@ -10,7 +10,7 @@
 
 void ParameterSmoothing(const Param &params, SynthesisData *data);
 void PostFilter(const double &postfilter_coefficient, const int &fs, const gsl::vector &fundf, gsl::matrix *lsf);
-void CreateExcitation(const Param &params, const SynthesisData &data, gsl::vector *excitation_signal);
+int CreateExcitation(const Param &params, const SynthesisData &data, gsl::vector *excitation_signal);
 void HarmonicModification(const Param &params, const SynthesisData &data, gsl::vector *excitation_signal);
 void SpectralMatchExcitation(const Param &params,const SynthesisData &data, gsl::vector *excitation_signal);
 void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data, gsl::vector *signal);
