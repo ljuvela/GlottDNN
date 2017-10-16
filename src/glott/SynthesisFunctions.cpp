@@ -705,8 +705,9 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data, gsl:
          
          /* Cancel pre-emphasis if needed */
          if (params.unvoiced_pre_emphasis_coefficient > 0.0) {
-            Filter(std::vector<double>{1.0}, std::vector<double>{1.0, -1.0 * params.unvoiced_pre_emphasis_coefficient},
-                  noise_vec, &noise_vec);
+	   gsl::vector noise_vec_copy(noise_vec); // FIXME: do memory allocation only once!
+	   Filter(std::vector<double>{1.0}, std::vector<double>{1.0, -1.0 * params.unvoiced_pre_emphasis_coefficient},
+                  noise_vec_copy, &noise_vec);
          }
 
          //GetFrame(data.excitation_signal, frame_index, rint(params.frame_shift/params.speed_scale), &noise_vec, NULL);
