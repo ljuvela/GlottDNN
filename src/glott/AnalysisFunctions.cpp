@@ -155,9 +155,9 @@ int GetGain(const Param &params, const gsl::vector &fundf, const gsl::vector &si
 	size_t NFFT = 4096; // Long FFT
 	double MIN_LOG_POWER = -100.0;
 	gsl::vector fft_mag(NFFT/2+1);
-	int min_uv_frequency = rint((double)NFFT/(double)(params.fs)*000.0);
+	//int min_uv_frequency = rint((double)NFFT/(double)(params.fs)*000.0);
         
-	int frame_index, i;
+	int frame_index;
 
 	frame.set_all(1.0);
 	ApplyWindowingFunction(params.default_windowing_function,&frame);
@@ -255,8 +255,12 @@ int SpectralAnalysis(const Param &params, const AnalysisData &data, gsl::matrix 
 	      /** Unvoiced analysis **/
 	      } else {
 	         GetFrame(data.signal, frame_index, params.frame_shift, &unvoiced_frame, &pre_frame);
+	         if (params.unvoiced_pre_emphasis_coefficient > 0.0) {
+	            Filter(std::vector<double>{1.0, -1.0 * params.unvoiced_pre_emphasis_coefficient}, std::vector<double>{1.0},
+	                  unvoiced_frame, &unvoiced_frame);
+	         }
 	         ApplyWindowingFunction(params.default_windowing_function, &unvoiced_frame);
-                 ArAnalysis(params.lpc_order_vt,params.warping_lambda_vt, NONE, lp_weight, unvoiced_frame, &A);
+	         ArAnalysis(params.lpc_order_vt,params.warping_lambda_vt, NONE, lp_weight, unvoiced_frame, &A);
 	      }
 	      poly_vocal_tract->set_col_vec(frame_index, A);
 	   }

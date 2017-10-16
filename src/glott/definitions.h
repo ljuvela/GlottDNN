@@ -45,6 +45,7 @@ public:
 	bool qmf_subband_analysis;
 	SignalPolarity signal_polarity;
 	double gif_pre_emphasis_coefficient;
+	double unvoiced_pre_emphasis_coefficient;
 	bool use_iterative_gif;
 	LpWeightingFunction lp_weighting_function;
 	int lpc_order_glot_iaif;

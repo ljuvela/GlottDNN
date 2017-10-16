@@ -120,10 +120,11 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool required, Param 
    if (ConfigLookupString("EXTERNAL_LSF_VT_FILENAME", cfg, required, params->external_lsf_vt_filename) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-
-
 	if (ConfigLookupDouble("GIF_PRE_EMPHASIS_COEFFICIENT", cfg, required, &(params->gif_pre_emphasis_coefficient)) == EXIT_FAILURE)
 			return EXIT_FAILURE;
+
+   if (ConfigLookupDouble("UNVOICED_PRE_EMPHASIS_COEFFICIENT", cfg, false, &(params->unvoiced_pre_emphasis_coefficient)) == EXIT_FAILURE)
+         return EXIT_FAILURE;
 
 	if (ConfigLookupBool("USE_ITERATIVE_GIF", cfg, required, &(params->use_iterative_gif)) == EXIT_FAILURE)
 		return EXIT_FAILURE;

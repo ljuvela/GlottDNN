@@ -32,7 +32,7 @@ Param::Param() {
 	frame_length_unvoiced = 160;
 	frame_length_long = 800;
 	frame_shift = 80;
-	number_of_frames = 0 ;
+	number_of_frames = 0;
 	signal_length = 0;
 	lpc_order_vt = 30;
 	lpc_order_glot = 10;
@@ -40,9 +40,11 @@ Param::Param() {
 	use_external_f0 = false;
 	use_external_gci = false;
 	use_external_lsf_vt = false;
+	use_external_excitation = false;
 	data_type = ASCII;
 	qmf_subband_analysis = false;
 	gif_pre_emphasis_coefficient = 0.97;
+	unvoiced_pre_emphasis_coefficient = 0.00;
 	use_iterative_gif = false;
 	lpc_order_glot_iaif = 8;
 	warping_lambda_vt = 0.0;

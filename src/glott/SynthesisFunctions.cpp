@@ -703,6 +703,12 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data, gsl:
          for(i=0;i<noise_vec.size();i++)
             noise_vec(i) = random_gauss_gen.get();
          
+         /* Cancel pre-emphasis if needed */
+         if (params.unvoiced_pre_emphasis_coefficient > 0.0) {
+            Filter(std::vector<double>{1.0}, std::vector<double>{1.0, -1.0 * params.unvoiced_pre_emphasis_coefficient},
+                  noise_vec, &noise_vec);
+         }
+
          //GetFrame(data.excitation_signal, frame_index, rint(params.frame_shift/params.speed_scale), &noise_vec, NULL);
          ApplyWindowingFunction(COSINE,&noise_vec);
          //noise_vec *= kbd_window;
