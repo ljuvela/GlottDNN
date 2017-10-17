@@ -121,6 +121,39 @@ gsl::vector GetSinglePulse(const size_t &pulse_len, const double &energy, const 
    return pulse;
 }
 
+gsl::vector GetImpulsePulse(const size_t &pulse_len, const double &energy, const double &coef) {
+
+
+   gsl::vector pulse(pulse_len, true); // init to zeros
+   pulse(pulse_len/2) = 1.0;
+
+   // TODO: anti-alias with all-pass magicks !! (ljuvela)
+
+   // Cancel pre-emphasis by leaky integration
+   double val;
+   size_t i;
+   for (i=1;i<pulse.size();i++){
+      val = coef*pulse(i-1);
+      pulse(i) += val;
+   }
+
+   gsl::vector pulse_win(pulse);
+   ApplyWindowingFunction(HANN, &pulse_win);
+   pulse *= energy/getEnergy(pulse_win);
+
+   /* Window length normalization */
+   gsl::vector win(pulse_len);
+   win.set_all(1.0);
+   ApplyWindowingFunction(HANN, &win);
+   double sum = 0.0;
+   for (i=0;i<win.size();i++) {
+      sum += win(i);
+   }
+   pulse *= 0.375*pulse_len/sum; // 0.375 = 3/8 (HANN window area/length when N->INF)
+
+   return pulse;
+}
+
 gsl::vector GetExternalPulse(const size_t &pulse_len, const bool &use_interpolation,
       const double &energy, const size_t &frame_index, const WindowingFunctionType &psola_window_function,
       const gsl::matrix &external_pulses) {
@@ -261,6 +294,8 @@ int CreateExcitation(const Param &params, const SynthesisData &data, gsl::vector
       if(data.fundf(frame_index) > 0) {
          T0 = params.fs/data.fundf(frame_index);
 
+
+         // FIXME: this is not a problem with pulse interpolation
          if(params.excitation_method != SINGLE_PULSE_EXCITATION && T0 > params.paf_pulse_length)
             T0 = params.paf_pulse_length;
 
@@ -283,18 +318,24 @@ int CreateExcitation(const Param &params, const SynthesisData &data, gsl::vector
          switch (params.excitation_method) {
          case SINGLE_PULSE_EXCITATION:
             pulse = GetSinglePulse(pulse_len, energy, single_pulse_base);
-           // pulse.set_all(0.0);
-           // pulse(pulse.size()/2) = 1.0;
-           // count = 1;
-           // for(i=pulse.size()/2+1;i<pulse.size()/2+10;i++) {
-           //     pulse(i) = pow(0.99,count);
-           //     count++;
-           // } // Hard-coded impulse train excitation with deficient pre-emphasis cancellation for anchor samples
-    
+            // pulse.set_all(0.0);
+            // pulse(pulse.size()/2) = 1.0;
+            // count = 1;
+            // for(i=pulse.size()/2+1;i<pulse.size()/2+10;i++) {
+            //     pulse(i) = pow(0.99,count);
+            //     count++;
+            // } // Hard-coded impulse train excitation with deficient pre-emphasis cancellation for anchor samples
+
             ApplyWindowingFunction(HANN, &pulse);
             //p2 = gsl::vector(pulse.size());
             //p2.set_all(1.0);
             //ApplyPsolaWindow(HANN, t0_pr, t0_nx, &p2);
+
+            break;
+         case IMPULSE_EXCITATION:
+            pulse = GetImpulsePulse(pulse_len, energy, params.gif_pre_emphasis_coefficient);
+
+            ApplyWindowingFunction(HANN, &pulse);
 
             break;
          case DNN_GENERATED_EXCITATION:
@@ -339,6 +380,9 @@ int CreateExcitation(const Param &params, const SynthesisData &data, gsl::vector
             pulse_orig = pulse;
             ApplyWindowingFunction(params.psola_windowing_function, &pulse);
             break;
+         case EXTERNAL_EXCITATION:
+            // this is never reached
+            break;
          }
 
          OverlapAdd(pulse, sample_index, excitation_signal);
@@ -375,6 +419,12 @@ int CreateExcitation(const Param &params, const SynthesisData &data, gsl::vector
             pulse /= 0.5*(double)noise.size()/(double)params.frame_shift; // Compensate OLA gain
             ApplyWindowingFunction(HANN, &pulse);
             break;
+         case IMPULSE_EXCITATION:
+            pulse = noise;
+            pulse *= params.noise_gain_unvoiced*energy/getEnergy(noise);
+            pulse /= 0.5*(double)noise.size()/(double)params.frame_shift; // Compensate OLA gain
+            ApplyWindowingFunction(HANN, &pulse);
+            break;
          case DNN_GENERATED_EXCITATION:
             pulse = noise;
             pulse *= params.noise_gain_unvoiced*energy/getEnergy(noise);
@@ -403,6 +453,9 @@ int CreateExcitation(const Param &params, const SynthesisData &data, gsl::vector
 
                ApplyWindowingFunction(HANN, &pulse);
             }
+            break;
+         case EXTERNAL_EXCITATION:
+            // this is never reached
             break;
          }
          OverlapAdd(pulse, sample_index, excitation_signal);
