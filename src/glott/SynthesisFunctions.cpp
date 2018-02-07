@@ -260,6 +260,9 @@ int CreateExcitation(const Param &params, const SynthesisData &data, gsl::vector
       }
       return EXIT_SUCCESS;
       break;
+   case IMPULSE_EXCITATION:
+      // nothing to read
+      break;
    }
    /*  Experimental for accurate PSOLA */
    //size_t frame_index_nx;
@@ -291,11 +294,19 @@ int CreateExcitation(const Param &params, const SynthesisData &data, gsl::vector
       frame_index = rint(params.speed_scale * sample_index / (params.signal_length-1) * (params.number_of_frames-1));
 
       /** Voiced excitation **/
-      if(data.fundf(frame_index) > 0) {
-         T0 = params.fs/data.fundf(frame_index);
+      if(data.fundf(frame_index) > 0 || params.use_paf_unvoiced_synthesis) {
 
+         double pulse_sign = 1.0;
+         if (data.fundf(frame_index) > 0) {
+            // Voiced
+            T0 = params.fs/data.fundf(frame_index);
+         } else {
+            // Unvoiced
+            int offset = round(0.1*((double)rand_gen.uniform_int(params.frame_shift) - (double)params.frame_shift/2));
+            pulse_sign = -1.0 + 2.0*rand_gen.uniform_int(2);
+            T0 = params.frame_shift + offset;
+         }
 
-         // FIXME: this is not a problem with pulse interpolation
          if(params.excitation_method != SINGLE_PULSE_EXCITATION && T0 > params.paf_pulse_length)
             T0 = params.paf_pulse_length;
 
@@ -339,7 +350,6 @@ int CreateExcitation(const Param &params, const SynthesisData &data, gsl::vector
 
             break;
          case DNN_GENERATED_EXCITATION:
-
 
             /* Waveform similarity PSOLA is available only when PAF waveforms haven't been windowed */
             //use_wsola = false;
@@ -385,6 +395,7 @@ int CreateExcitation(const Param &params, const SynthesisData &data, gsl::vector
             break;
          }
 
+         pulse *= pulse_sign;
          OverlapAdd(pulse, sample_index, excitation_signal);
 
          sample_index += rint(T0);
@@ -458,7 +469,21 @@ int CreateExcitation(const Param &params, const SynthesisData &data, gsl::vector
             // this is never reached
             break;
          }
-         OverlapAdd(pulse, sample_index, excitation_signal);
+         bool randomize_unvoiced_spacing = false;
+         if (!randomize_unvoiced_spacing) {
+            // Default behaviour
+            OverlapAdd(pulse, sample_index, excitation_signal);
+         } else {
+            /* Randomization inspired by velvet noise
+             * Thanks for the idea, Junichi!
+             */
+            // uniform random int from [0, params.frame_shift]
+            int offset = round(0.2*((double)rand_gen.uniform_int(params.frame_shift) - (double)params.frame_shift/2));
+            double sign = -1.0 + 2.0*rand_gen.uniform_int(2);
+            std::cout << "sign " << sign << ", offset "<< offset << std::endl;
+            pulse *= sign;
+            OverlapAdd(pulse, sample_index + offset, excitation_signal);
+         }
 
          sample_index += params.frame_shift;
          pulse_prev = gsl::vector(1,true); // sets the previous pulse to undefined for WS-Psola
