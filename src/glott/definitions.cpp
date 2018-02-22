@@ -107,7 +107,7 @@ Param::Param() {
    extension_exc = ".exc.wav";
    extension_exc = ".src.wav";
    extension_syn = ".syn.wav";
-   extension_wav = ".wav";
+   extension_wav = ".proc.wav";
 
 
 }
