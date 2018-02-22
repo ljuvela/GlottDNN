@@ -64,6 +64,7 @@ Param::Param() {
 	extract_infofile = false;
 	extract_glottal_excitation = false;
 	extract_gci_signal = false;
+	extract_original_signal = false;
 	extract_pulses_as_features = false;
 	use_paf_energy_normalization = true;
 	lpc_order_vt_qmf1 = 48;
@@ -106,6 +107,7 @@ Param::Param() {
    extension_exc = ".exc.wav";
    extension_exc = ".src.wav";
    extension_syn = ".syn.wav";
+   extension_wav = ".wav";
 
 
 }
@@ -185,6 +187,11 @@ int AnalysisData::SaveData(const Param &params) {
    if (params.extract_glottal_excitation) {
       filename = GetParamPath("exc", params.extension_src, params.dir_exc, params);
       if(WriteWavFile(filename, source_signal, params.fs) == EXIT_FAILURE)
+         return EXIT_FAILURE;
+   }
+   if (params.extract_original_signal) {
+      filename = GetParamPath("exc", params.extension_wav, params.dir_exc, params);
+      if(WriteWavFile(filename, signal, params.fs) == EXIT_FAILURE)
          return EXIT_FAILURE;
    }
 

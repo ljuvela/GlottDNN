@@ -378,10 +378,9 @@ int CreateExcitation(const Param &params, const SynthesisData &data, gsl::vector
             /* Waveform similarity PSOLA is available only when PAF waveforms haven't been windowed */
             if (use_wsola) {
                gsl::vector pulse_full(data.excitation_pulses.get_col_vec(frame_index));
-               //pulse_full += pulse_full.mean(); // FIXME: What? ljuvela
                pulse =  GetPulseWsola(pulse_full, T0, energy,
                      sample_index,  (pulse_prev.size() == 1),
-                     params.use_wsola_pitch_shift, excitation_signal) ;
+                     params.use_wsola_pitch_shift, excitation_signal);
             } else {
                /* Scale by energy if energy normalization was used in pulse exctraction */
                if (params.use_paf_energy_normalization) {
