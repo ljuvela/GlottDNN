@@ -71,6 +71,7 @@ public:
 	bool extract_hnr;
 	bool extract_infofile;
 	bool extract_glottal_excitation;
+	bool extract_original_signal;
 	bool extract_gci_signal;
 	bool extract_pulses_as_features;
 	bool use_paf_energy_normalization;
@@ -128,6 +129,7 @@ public:
    std::string extension_exc;
    std::string extension_src = ".src.wav";
    std::string extension_syn;
+   std::string extension_wav;
 
    std::string wav_filename;
    std::string default_config_filename;

@@ -195,6 +195,9 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool required, Param 
    if (ConfigLookupBool("EXTRACT_GLOTTAL_EXCITATION", cfg, required, &(params->extract_glottal_excitation)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
+   if (ConfigLookupBool("EXTRACT_ORIGINAL_SIGNAL", cfg, false, &(params->extract_original_signal)) == EXIT_FAILURE)
+      return EXIT_FAILURE;
+
    if (ConfigLookupBool("EXTRACT_GCI_SIGNAL", cfg, required, &(params->extract_gci_signal)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
