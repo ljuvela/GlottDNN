@@ -446,7 +446,7 @@ int InverseFilter(const Param &params, const AnalysisData &data, gsl::matrix *po
 
 
       double ola_gain = (double)params.frame_length/((double)params.frame_shift*2.0);
-      frame_residual *= LogEnergy2FrameEnergy(data.frame_energy(frame_index),frame_residual.size())/getEnergy(frame_residual)/ola_gain;
+      //frame_residual *= LogEnergy2FrameEnergy(data.frame_energy(frame_index),frame_residual.size())/getEnergy(frame_residual)/ola_gain;
       ApplyWindowingFunction(params.default_windowing_function, &frame_residual);
 
       LPC(frame_residual,params.lpc_order_glot,&a_glot);

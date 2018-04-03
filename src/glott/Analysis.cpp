@@ -144,6 +144,7 @@ int main(int argc, char *argv[]) {
       SpectralAnalysis(params, data, &(data.poly_vocal_tract));
 
    // Experiment: smoothing of vocal tract lsfs
+   // TODO: also smooth gain if it's used in inverse filtering!
    Poly2Lsf(data.poly_vocal_tract, &data.lsf_vocal_tract);
    MedianFilter(5, &data.lsf_vocal_tract);
    MovingAverageFilter(3, &data.lsf_vocal_tract);
