@@ -1,9 +1,9 @@
 site_name: GlottDNN
-repo_url: http://github.com/aalto-speech/GlottDNN
-site_url: http://aalto-speech.github.io/GlottDNN
+repo_url: https://github.com/aalto-speech/GlottDNN
+site_url: https://aalto-speech.github.io/GlottDNN
 site_description: 'Documentation GlottDNN vocoder.'
 pages:
   - Home: index.md
-  - Vocoder config: vocoder_config.md
+  - Vocoder configuration parameters: vocoder_config.md
 theme: readthedocs
 

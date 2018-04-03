@@ -1,5 +1,3 @@
-# Vocoder configuration 
-
 ## Analysis and Synthesis directories
 - `DATA_DIRECTORY` : Root directory for speech data for analysis. Place wave files in `wav` subdirectory
 - `SAVE_TO_DATADIR_ROOT` = If `true`, all parameters are written and read in the same directory as where the wave file is 
@@ -36,12 +34,11 @@
 
 ## Use of external F0 and GCI estimators	
 - `USE_EXTERNAL_F0`: Use external F0 estimate
-- `EXTERNAL_F0_FILENAME` =    "data/nancy/BC2011_nancy_ARC_002.F0_sptk"; # Same format as DATA_TYPE expected (ascii/double/float)
-- `USE_EXTERNAL_GCI` Use external estimator for glottal closure instants (GCIs). (REAPER is recommended)
-- `EXTERNAL_GCI_FILENAME` =   "wav/arctic_fe.GCIrea";  # Format: Each row has one GCI's timing (in seconds), saved as DATA_TYPE
-- `USE_EXTERNAL_LSF_VT` Uses external vocal tract LSF file for inverse filtering (order must match with the config).
+- `EXTERNAL_F0_FILENAME`: Filename for external F0. Expects the data type specified in `DATA_TYPE`
+- `USE_EXTERNAL_GCI`: Use external estimator for glottal closure instants (GCIs). (REAPER is recommended)
+- `EXTERNAL_GCI_FILENAME`: Filename for external GCI, where each line has one GCI's timing (in seconds). Expects the data type specified in `DATA_TYPE`
+- `USE_EXTERNAL_LSF_VT` Use external vocal tract LSF file for inverse filtering (order must match with the config)
 - `EXTERNAL_LSF_VT_FILENAME` Filename as string.
-
 
 ## Pulses as features (PAF): Parameters for extracting pulses and synthesis:
 - `MAX_PULSE_LEN_DIFF`:
@@ -64,7 +61,7 @@ Template settings for established GIF methods:
 - IAIF: `USE_ITERATIVE_GIF` = true; `LP_WEIGHTING` = "NONE"; `WARPING_VT` = 0.0;
 - QCP: `USE_ITERATIVE_GIF` = false; `LP_WEIGHTING` = "AME"; WARPING_VT = 0.0;
 
-- `USE_ITERATIVE_GIF`
+- `USE_ITERATIVE_GIF`: Uses the iteration loop from IAIF
 - `USE_PITCH_SYNCHRONOUS_ANALYSIS`
 - `LPC_ORDER_GLOT_IAIF`: Order of the LPC analysis for voice source in IAIF
 - `LP_WEIGHTING_FUNCTION`: Weighting function for weighted linear predictive analysis. Select between `"NONE"` / `"AME"` / `"STE"`. Attenuated main excitation (AME) corresponds to QCP analysis.
@@ -98,3 +95,43 @@ QMF sub-band analysis (for full-band speech)
 - `USE_ORIGINAL_EXCITATION` =	 false;
 - `USE_PAF_UNVOICED` =      	 false;
 - `USE_WSOLA` =		 true;
+
+## DNN pulse generation
+- `DNN_WEIGHT_PATH` = "/work/t405/T40521/shared/vocomp/jenny16/glottdnn/gdnn_jenny16/gdnn_jenny16"; # Path + basename
+- `DNN_NUMBER_OF_STACKED_FRAMES` = 1;
+
+## Synthesis: Set level and band of voiced noise:
+- `NOISE_GAIN_VOICED` = 	    0.0; # FOR HNR NOISE COMPONENT
+- `NOISE_LOW_FREQ_LIMIT_VOICED` =  200.0;	# Hz (FOR HNR ONLY)
+- `NOISE_GAIN_UNVOICED` =         1.0;
+
+## Synthesis: Moving-average smoothing of parameters for during synthesis (number of frames):
+- `USE_TRAJECTORY_SMOOTHING` =    true;
+- `LSF_VT_SMOOTH_LEN` =           3;
+- `LSF_GLOT_SMOOTH_LEN` =         3;
+- `GAIN_SMOOTH_LEN` =             3;
+- `HNR_SMOOTH_LEN` =              3;
+
+## Synthesis: Postfiltering:
+- `USE_POSTFILTERING`    =        false;
+- `POSTFILTER_COEFFICIENT` =      0.4;
+- `POSTFILTER_COEFFICIENT_GLOT` = 1.0;
+
+## Synthesis: Utils:
+- `FILTER_UPDATE_INTERVAL_VT` =           1.0; # in ms
+- `FILTER_UPDATE_INTERVAL_SPECMATCH` =    1.0; # in ms
+- `WRITE_EXCITATION_TO_WAV` =             true;
+
+## Synthesis: Voice transformation:
+- `PITCH_SCALE` =           1.0;
+- `SPEED_SCALE` =           1.0;
+
+## File extensions for parameters (optional)
+- `EXT_GAIN` = ".gain";  
+- `EXT_F0` = ".f0";
+- `EXT_LSF_VT` = ".lsf";		
+- `EXT_LSF_GLOT` = ".slsf"
+- `EXT_HNR` = ".hnr"
+- `EXT_PULSES_AS_FEATURES` = ".pls"
+- `EXT_EXCITATION` = ".exc.wav"
+- `EXT_EXCITATION_ORIG` = ".src.wav"
