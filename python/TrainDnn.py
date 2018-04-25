@@ -72,15 +72,6 @@ def evaluate_dnn(learning_rate=0.1, n_epochs=150000,
     num_hidden = len(n_hidden)
     
     nndata_basename = conf.train_data_dir + '/' + conf.dnn_name 
-
-    #valid_set_x = load_data(nndata_basename + '.' + str(conf.val_set[0]) + '.idat', n_in)
-    #valid_set_y = load_data(nndata_basename + '.' + str(conf.val_set[0]) + '.odat', n_out)
-    
-    #test_set_x = load_data(nndata_basename + '.' + str(conf.test_set[0]) + '.idat', n_in)
-    #test_set_y = load_data(nndata_basename + '.' + str(conf.test_set[0]) + '.odat', n_out)
-    
-    #train_set_x = load_data(nndata_basename + '.' + str(conf.train_set[0]) + '.idat', n_in)
-    #train_set_y = load_data(nndata_basename + '.' + str(conf.train_set[0]) + '.odat', n_out)
     
     valid_set_x = load_data(nndata_basename + '.val.idat', n_in)
     valid_set_y = load_data(nndata_basename + '.val.odat', n_out)

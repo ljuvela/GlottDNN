@@ -18,7 +18,6 @@ sampling_frequency = 48000
 warping_lambda = 0.54
 use_external_gci = False
 
-
 # programs
 reaper = 'reaper'
 sox = 'sox'

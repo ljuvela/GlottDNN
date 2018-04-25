@@ -1,0 +1,8 @@
+
+Our code is licenced under the Apache 2.0 licence
+
+C++ wrappers for the GSL library are included for convenience, but are separate from the program and follow GPL 3 licence.
+For details, see 
+src/gslwrap/LICENCE 
+
+When compiled, the program will be linked to the GSL library, which is GPL3 licenced. As result, the compiled binary will follow the GPL 3 licence. 
