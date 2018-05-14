@@ -14,8 +14,6 @@ do_glott_vocoder_synthesis = 0
 make_data_provider = 1
 
 
-
-
 # directories
 prjdir = '/Users/ljuvela/CODE/GlottDNN' # add your own local install dir here
 datadir = prjdir + '/data/nick'

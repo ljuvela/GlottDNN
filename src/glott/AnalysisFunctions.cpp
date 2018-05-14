@@ -460,10 +460,11 @@ int InverseFilter(const Param &params, const AnalysisData &data, gsl::matrix *po
 
 
       double ola_gain = (double)params.frame_length/((double)params.frame_shift*2.0);
-      //frame_residual *= LogEnergy2FrameEnergy(data.frame_energy(frame_index),frame_residual.size())/getEnergy(frame_residual)/ola_gain;
+      // Scale by frame energy, TODO: remove?
+      frame_residual *= LogEnergy2FrameEnergy(data.frame_energy(frame_index),frame_residual.size())/getEnergy(frame_residual)/ola_gain;
       ApplyWindowingFunction(params.default_windowing_function, &frame_residual);
 
-      LPC(frame_residual,params.lpc_order_glot,&a_glot);
+      LPC(frame_residual, params.lpc_order_glot, &a_glot);
       size_t i;
       for(i=0;i<a_glot.size();i++) {
          if(gsl_isnan((a_glot)(i)))
@@ -680,7 +681,6 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
       pulses_mat->set_col_vec(frame_index, paf_pulse);
    }
    std::cout << "done." << std::endl;
-
 }
 
 void HighPassFiltering(const Param &params, gsl::vector *signal) {

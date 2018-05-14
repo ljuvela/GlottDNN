@@ -183,6 +183,7 @@ int AnalysisData::SaveData(const Param &params) {
    }
    if (params.extract_pulses_as_features) {
       filename = GetParamPath("pls", params.extension_paf, params.dir_paf, params);
+      //std::cout << filename << std::endl; 
       WriteGslMatrix(filename, params.data_type, excitation_pulses);
    }
    if (params.extract_f0) {
