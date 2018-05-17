@@ -11,9 +11,6 @@ The GlottDNN package contains two main parts:
    - Dependencies: python, numpy, theano
 
 
-Check the documentation in https://aalto-speech.github.io/GlottDNN/   
-
-
 ## Installing
 
 The vocoder C++ code has the following library dependencies:

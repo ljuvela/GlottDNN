@@ -1,3 +1,17 @@
+// Copyright 2016-2018 Lauri Juvela and Manu Airaksinen
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include <gslwrap/vector_double.h>
 #include <gslwrap/vector_int.h>
 #include <cmath>
@@ -446,10 +460,11 @@ int InverseFilter(const Param &params, const AnalysisData &data, gsl::matrix *po
 
 
       double ola_gain = (double)params.frame_length/((double)params.frame_shift*2.0);
+      // Scale by frame energy, TODO: remove?
       frame_residual *= LogEnergy2FrameEnergy(data.frame_energy(frame_index),frame_residual.size())/getEnergy(frame_residual)/ola_gain;
       ApplyWindowingFunction(params.default_windowing_function, &frame_residual);
 
-      LPC(frame_residual,params.lpc_order_glot,&a_glot);
+      LPC(frame_residual, params.lpc_order_glot, &a_glot);
       size_t i;
       for(i=0;i<a_glot.size();i++) {
          if(gsl_isnan((a_glot)(i)))
@@ -666,7 +681,6 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
       pulses_mat->set_col_vec(frame_index, paf_pulse);
    }
    std::cout << "done." << std::endl;
-
 }
 
 void HighPassFiltering(const Param &params, gsl::vector *signal) {

@@ -11,9 +11,6 @@ import math
 import imp # for importing argv[1]
 import warnings
 
-
-
-
 # Config file 
 if len(sys.argv) < 2:
     sys.exit("Usage: python GlottDnnScript.py config.py")
@@ -132,7 +129,7 @@ def sptk_pitch_analysis():
                     os.system(cmd)
                     # sptk pitch estimation (first pass)
                     cmd = conf.x2x + ' +sf ' + rawfile + '|' \
-                        + conf.pitch + ' -L 50 -H 800 ' + '>' + f0file
+                        + conf.pitch + ' -L 50 -H 500 -o 1' + '>' + f0file
                     os.system(cmd)
                     # pitch range estimation for second pass
                     f0 = np.fromfile(f0file, dtype=np.float32)
@@ -208,12 +205,12 @@ def glott_vocoder_analysis():
             if os.path.isfile(wavfile):
                 # define file paths
                 bname = os.path.splitext(os.path.basename(wavfile))[0]
-                f0file = conf.datadir + '/f0/' + bname + '.f0'
+                f0file = os.path.join(conf.datadir, 'f0', bname + '.f0')
                 gcifile = conf.datadir + '/gci/' + bname + '.GCI'
                 # create temporary analysis config for file 
                 config_user = 'config_user.cfg'
                 conf_file = open(config_user,'w');
-                if True or conf.do_sptk_pitch_analysis or conf.do_reaper_pitch_analysis:
+                if conf.do_sptk_pitch_analysis or conf.do_reaper_pitch_analysis:
                     conf_file.write('USE_EXTERNAL_F0 = true;\n')
                     conf_file.write('EXTERNAL_F0_FILENAME = \"' + f0file + '\";\n' )
                 else:
@@ -296,7 +293,15 @@ def package_data():
                     # reshape
                     feat = np.reshape(feat, (-1,dim))
                     # set to input data matrix
-                    input_data[:,feat_start:feat_start+dim ] = feat
+                    print(feat_file)
+                    print(feat.shape)
+                    try:
+                        input_data[:,feat_start:feat_start+dim ] = feat
+                    except ValueError as e:
+                        print("Error reading " + feat_file)
+                        print("Check that the feature sizes match between vocoder and python configs")
+                        raise e
+
                     feat_start += dim
             # remove unvoiced frames if requested
             if conf.remove_unvoiced_frames:
@@ -503,7 +508,7 @@ def main(argv):
         TrainDnn.evaluate_dnn(n_in=dim_in, n_out=dim_out, n_hidden=conf.n_hidden, batch_size=conf.batch_size, 
                  learning_rate=conf.learning_rate, n_epochs = conf.max_epochs)
 
-    # Copy synthesis
+    # Copy-synthesis
     if conf.do_glott_vocoder_synthesis:
         glott_vocoder_synthesis()
     

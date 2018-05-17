@@ -1,15 +1,20 @@
-/*
- * definitions.cpp
- *
- *  Created on: 30 Sep 2016
- *      Author: ljuvela
- */
+// Copyright 2016-2018 Lauri Juvela and Manu Airaksinen
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include <iostream>
 #include "FileIo.h"
 #include "definitions.h"
-
-
-
 
 Param::Param() {
    /* String parameters */
@@ -179,6 +184,7 @@ int AnalysisData::SaveData(const Param &params) {
    }
    if (params.extract_pulses_as_features) {
       filename = GetParamPath("pls", params.extension_paf, params.dir_paf, params);
+      //std::cout << filename << std::endl; 
       WriteGslMatrix(filename, params.data_type, excitation_pulses);
    }
    if (params.extract_f0) {

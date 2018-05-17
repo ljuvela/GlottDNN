@@ -24,6 +24,7 @@ p*.dat
 *.LSFsource
 *.PLS
 data/*
+bin/*
 src/Analysis
 src/Synthesis
 src/LsfPostFilter
@@ -32,6 +33,7 @@ src/glott/.deps/
 src/gslwrap/.deps/
 aclocal.m4
 config.log
+config.status
 xsconfig.status
 *.pyc
 doc/GlottDNN_manual.aux

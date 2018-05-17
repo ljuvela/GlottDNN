@@ -1,26 +1,17 @@
-//   MIT License
+// Copyright 2016-2018 Lauri Juvela and Manu Airaksinen
 //
-//   Copyright (c) 2016 Lauri Juvela, Manu Airaksinen
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-//   Permission is hereby granted, free of charge, to any person obtaining a copy
-//   of this software and associated documentation files (the "Software"), to deal
-//   in the Software without restriction, including without limitation the rights
-//   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-//   copies of the Software, and to permit persons to whom the Software is
-//   furnished to do so, subject to the following conditions:
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-//   The above copyright notice and this permission notice shall be included in all
-//   copies or substantial portions of the Software.
-//
-//   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-//   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-//   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-//   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-//   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-//   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-//   SOFTWARE.
-//
-//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //  <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
 //               GlottDNN Speech Parameter Extractor
 //  <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
@@ -91,9 +82,6 @@ int main(int argc, char *argv[]) {
    }
    */
 
-
-
-
    if (argc < 3) {
       std::cout << "Usage: Analysis <wavfile.wav> <config_default.cfg> (<config_usr.cfg>)" << std::endl;
    }
@@ -105,8 +93,6 @@ int main(int argc, char *argv[]) {
       if (ReadConfig(user_config_filename, false, &params) == EXIT_FAILURE)
          return EXIT_FAILURE;
    }
-
-
 
    /* Read sound file and allocate data */
    AnalysisData data;
@@ -133,7 +119,6 @@ int main(int argc, char *argv[]) {
    if(GetGci(params, data.signal, data.source_signal_iaif, data.fundf, &(data.gci_inds)) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
-
    /* Estimate frame log-energy (Gain) */
    GetGain(params, data.fundf, data.signal, &(data.frame_energy));
 
@@ -144,6 +129,7 @@ int main(int argc, char *argv[]) {
       SpectralAnalysis(params, data, &(data.poly_vocal_tract));
 
    // Experiment: smoothing of vocal tract lsfs
+   // TODO: also smooth gain if it's used in inverse filtering!
    Poly2Lsf(data.poly_vocal_tract, &data.lsf_vocal_tract);
    MedianFilter(5, &data.lsf_vocal_tract);
    MovingAverageFilter(3, &data.lsf_vocal_tract);
