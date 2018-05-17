@@ -56,6 +56,7 @@ Param::Param() {
 	use_highpass_filtering = true;
 	use_waveforms_directly = false;
 	use_paf_unvoiced_synthesis = false;
+      use_velvet_unvoiced_paf = false;
 	extract_f0 = true;
 	extract_gain = true;
 	extract_lsf_vt = true;

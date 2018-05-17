@@ -478,19 +478,21 @@ int CreateExcitation(const Param &params, const SynthesisData &data, gsl::vector
             break;
          }
 
-         if (!params.use_paf_unvoiced_synthesis) {
-            // Default behaviour
-            OverlapAdd(pulse, sample_index, excitation_signal);
-         } else {
-            /* Randomization inspired by velvet noise
+         if (params.use_paf_unvoiced_synthesis && params.use_velvet_unvoiced_paf) {
+               /* Randomization inspired by velvet noise
              * Thanks for the idea, Junichi!
              */
-            // uniform random int from [0, params.frame_shift]
-            int offset = round(0.9*((double)rand_gen.uniform_int(params.frame_shift) - (double)params.frame_shift/2));
-            double sign = -1.0 + 2.0*rand_gen.uniform_int(2);
-            //std::cout << "sign " << sign << ", offset "<< offset << std::endl;
-            pulse *= sign;
-            OverlapAdd(pulse, sample_index + offset, excitation_signal);
+               // uniform random int from [0, params.frame_shift], shift randomly up to half frame hop size
+               // Extreme case: unvoiced frames are placed on top of each other
+               int offset;
+               offset = round(0.5 * ((double)rand_gen.uniform_int(params.frame_shift) - (double)params.frame_shift / 2)); // uniform
+               //offset = round(1.0*params.frame_shift * GSL_MAX(gauss_gen.get(), 1.0)); // Gaussian
+               double sign = -1.0 + 2.0 * rand_gen.uniform_int(2);
+               pulse *= sign;
+               OverlapAdd(pulse, sample_index + offset, excitation_signal);
+         } else {
+            // Default behaviour
+            OverlapAdd(pulse, sample_index, excitation_signal);
          }
 
          sample_index += params.frame_shift;
@@ -762,7 +764,7 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data, gsl:
    gsl::vector kbd_window = getKaiserBesselDerivedWindow(noise_vec.size(), kbd_alpha);
       
    size_t frame_index;
-   for(frame_index=0;frame_index<params.number_of_frames;frame_index++) {
+   for(frame_index=0; frame_index<params.number_of_frames; frame_index++) {
       if(data.fundf(frame_index) == 0) {
          if(params.use_generic_envelope) {
             for(i=0;i<vt_fft.getSize();i++) {
