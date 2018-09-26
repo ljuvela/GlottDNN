@@ -618,6 +618,7 @@ std::string GetParamPath(const std::string &default_dir, const std::string &exte
           }
        } else {
           param_path = custom_dir + "/" + params.file_basename + extension;
+          std::cout << "Using custom dir for " << param_path << std::endl;
        }
 
    return param_path;

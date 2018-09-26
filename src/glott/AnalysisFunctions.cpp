@@ -466,9 +466,10 @@ int InverseFilter(const Param &params, const AnalysisData &data, gsl::matrix *po
 
       LPC(frame_residual, params.lpc_order_glot, &a_glot);
       size_t i;
-      for(i=0;i<a_glot.size();i++) {
-         if(gsl_isnan((a_glot)(i)))
-            (a_glot)(i) = (0.0);
+      for (i = 0; i < a_glot.size(); i++) {
+        if (gsl_isnan((a_glot)(i))) {
+          (a_glot)(i) = (0.0);
+        }
       }
       poly_glot->set_col_vec(frame_index, a_glot);
 
@@ -573,68 +574,52 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
    if (params.extract_pulses_as_features == false)
       return;
 
-   std::cout << "Extracting excitation pulses ... " ;
+   std::cout << "Extracting excitation pulses " ;
 
-
-   //int THRESH = params.frame_length/2;
-   int THRESH = 100*params.frame_length;
    size_t frame_index;
    for(frame_index=0;frame_index<(size_t)params.number_of_frames;frame_index++) {
       size_t sample_index = frame_index*params.frame_shift;
       size_t pulse_index = Find_nearest_pulse_index(sample_index, gci_inds, params, fundf(frame_index));
 
-      size_t pulselen;
-      if (fundf(frame_index) > 0.0)
-         pulselen = round(gci_inds(pulse_index+1)-gci_inds(pulse_index-1))+1;
-      else
-         pulselen = params.paf_pulse_length;
-
-      size_t j;
-      gsl::vector paf_pulse(params.paf_pulse_length,true);
+      
+       
+      gsl::vector paf_pulse(params.paf_pulse_length, true);
       gsl::vector pulse;
 
-      /* Find pulse center index, (sample index for unvoiced frame )*/
+      /* Check that pulse center index is reasonably close to frame center index */
       int center_index = gci_inds(pulse_index);
+      int THRESH = 100*params.frame_length;
       if (fundf(frame_index) != 0.0 && abs(center_index-(int)sample_index) > THRESH) {
-         std::cout << "Warning: no suitable pulse in range" << std::endl;
-         std::cout << "frame: " << frame_index << ", distance: " << abs(center_index-(int)sample_index) << std::endl;
+         std::cerr << "Warning: no suitable pulse in range, treating frame as unvoiced" << std::endl;
+         std::cerr << "Frame: " << frame_index << ", distance: " << abs(center_index-(int)sample_index) << std::endl;
+         center_index = sample_index;
       }
-      if(fundf(frame_index) == 0.0 || abs(center_index-(int)sample_index) > THRESH) {
+      /* Use frame center directly for unvoiced */
+      if(fundf(frame_index) == 0.0) {
          center_index = sample_index;
       }
 
+      int i; size_t j;
+      if (params.use_pulse_interpolation == true) {
 
-      int i;
-      /* Refine center index by finding the local minimum of HANN-windowed pulse */
-      /* ljuvela 31-1-2017: this can cause jitter / harshness artefacts
-       *    --> just use the GCI's
-       */
-      /*
-      int minind;
-      if(fundf(frame_index) != 0.0) {
-         pulse = gsl::vector((int)rint(2.0*(double)params.fs/fundf(frame_index)),true);
-         for(j=0;j<pulse.size();j++) {
-            i = center_index - round(pulse.size()/2.0) + j;
-            if (i >= 0 && i < (int)source_signal.size())
-               pulse(j) = source_signal(i);
-         }
-         ApplyWindowingFunction(HANN, &pulse);
-         minind = pulse.min_index();
-         center_index += minind - round(pulse.size()/2.0);
-      }
-       */
+         size_t pulselen;
+         if (fundf(frame_index) > 0.0) {
+            /* Pulse length is two pitch periods, defined here by distance of previous and next GCI */
+            pulselen = round(gci_inds(pulse_index+1)-gci_inds(pulse_index-1))+1;      
+         } else {
+            pulselen = params.paf_pulse_length;   
+         } 
 
-      if (params.use_pulse_interpolation == true){
-         /* Interpolate pitch-synchronous pulse segment */
+         /* Stretch pulse segment to paf_pulse_length */
          gsl::vector pulse_orig(pulselen);
-         for(j=0;j<pulselen;j++) {
+         for(j=0; j<pulselen; j++) {
             i = center_index - round(pulselen/2.0) + j;
             if (i >= 0 && i < (int)source_signal.size())
                pulse_orig(j) = source_signal(i);
          }
          /* Interpolation on windowed signal prevents Gibbs at edges */
          ApplyWindowingFunction(params.paf_analysis_window, &pulse_orig);
-         InterpolateSpline(pulse_orig, params.paf_pulse_length, &paf_pulse); // NO-OP if lengths are the same
+         InterpolateSpline(pulse_orig, params.paf_pulse_length, &paf_pulse);
 
       } else {
          /* No interpolation, window with selected window */
@@ -643,10 +628,12 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
 
             size_t T;
             if(fundf(frame_index) != 0.0) {
+               /* Voiced: use two pitch periods () */      
                T = round(2.0*(double)params.fs/fundf(frame_index));
                if(T > paf_pulse.size())
                   T = paf_pulse.size();
             } else {
+               /* Unvoiced: use all available space */                     
                T = paf_pulse.size();
             }
 
@@ -659,12 +646,11 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
             ApplyWindowingFunction(params.paf_analysis_window, &pulse);
 
             for(j=0;j<pulse.size();j++) {
-              // if (i >= 0 && i < (int)source_signal.size())
                   paf_pulse((round(paf_pulse.size()/2.0)-round(pulse.size()/2.0))+j) = pulse(j);
-                  //paf_pulse(j) = source_signal(i);
             }
          } else {
-            // No windowing, fill the pulse with data
+            /* params.paf_analysis_window == RECT */   
+            /* No windowing, just copy to paf_pulse */
             for(j=0;j<paf_pulse.size();j++) {
                i = center_index - round(paf_pulse.size()/2.0) + j;
                if (i >= 0 && i < (int)source_signal.size())
@@ -674,8 +660,9 @@ void GetPulses(const Param &params, const gsl::vector &source_signal, const gsl:
       }
 
       /* Normalize energy */
-      if (params.use_paf_energy_normalization)
-         paf_pulse /= getEnergy(paf_pulse);
+      if (params.use_paf_energy_normalization) {
+        paf_pulse /= getEnergy(paf_pulse);
+      }
 
       /* Save to matrix */
       pulses_mat->set_col_vec(frame_index, paf_pulse);

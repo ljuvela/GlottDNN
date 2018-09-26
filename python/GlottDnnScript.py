@@ -67,6 +67,7 @@ def mkdir_p(dirpath):
 
 def make_directories():
     # Prepare environment 
+    """
     mkdir_p(conf.datadir + '/wav')
     mkdir_p(conf.datadir + '/raw')
     mkdir_p(conf.datadir + '/gci')
@@ -79,6 +80,23 @@ def make_directories():
     mkdir_p(conf.datadir + '/slsf')
     mkdir_p(conf.datadir + '/hnr')
     mkdir_p(conf.datadir + '/pls')
+    """
+
+    dirs = ['wav',
+            'raw',
+            'gci',
+            'scp',
+            'exc',
+            'syn',
+            'f0',
+            'gain',
+            'lsf',
+            'slsf',
+            'hnr',
+            'pls']
+
+    for d in dirs:
+        mkdir_p(os.path.join(conf.datadir, d))            
 
     for t in conf.inputs:
         mkdir_p(conf.datadir + '/' + t)
@@ -121,7 +139,7 @@ def sptk_pitch_analysis():
                 wavfile = f.rstrip()
                 if os.path.isfile(wavfile):
                     bname = os.path.splitext(os.path.basename(wavfile))[0]
-                    print("SPKT pitch estimation for %s") % (bname)
+                    print("SPKT pitch estimation for {}".format(bname))
                     # convert to .raw
                     rawfile = conf.datadir + '/raw/' + bname + '.raw'
                     f0file = conf.datadir + '/f0/' + bname + '.f0'
@@ -129,7 +147,7 @@ def sptk_pitch_analysis():
                     os.system(cmd)
                     # sptk pitch estimation (first pass)
                     cmd = conf.x2x + ' +sf ' + rawfile + '|' \
-                        + conf.pitch + ' -L 50 -H 500 -o 1' + '>' + f0file
+                        + conf.pitch + ' -L 50 -H 500 ' + '>' + f0file
                     os.system(cmd)
                     # pitch range estimation for second pass
                     f0 = np.fromfile(f0file, dtype=np.float32)
@@ -140,7 +158,7 @@ def sptk_pitch_analysis():
                     #f0_min = np.round(10.0**(m-3.0*s))
                     f0_min = 50.0 # minimum f0 is low for creaky voice
                     # sptk pitch estimation (second pass)
-                    print("   second pass with F0 range %d-%d Hz ") % (f0_min, f0_max)
+                    print("   second pass with F0 range {}-{} Hz".format(f0_min, f0_max)) 
                     cmd = conf.x2x + ' +sf ' + rawfile + '|' \
                         + conf.pitch + ' -L ' + str(f0_min) + ' -H ' + str(f0_max) \
                         + ' > ' + f0file
@@ -209,7 +227,7 @@ def glott_vocoder_analysis():
                 gcifile = conf.datadir + '/gci/' + bname + '.GCI'
                 # create temporary analysis config for file 
                 config_user = 'config_user.cfg'
-                conf_file = open(config_user,'w');
+                conf_file = open(config_user,'w')
                 if conf.do_sptk_pitch_analysis or conf.do_reaper_pitch_analysis:
                     conf_file.write('USE_EXTERNAL_F0 = true;\n')
                     conf_file.write('EXTERNAL_F0_FILENAME = \"' + f0file + '\";\n' )
@@ -275,7 +293,7 @@ def package_data():
     for file_idx, wavfile in enumerate(filelist):
         if os.path.isfile(wavfile):
             bname = os.path.splitext(os.path.basename(wavfile))[0]
-            print bname
+            print (bname)
                 # todo: save n_frames
             f0_file = conf.datadir + '/f0/' + bname + '.f0' 
             n_frames[file_idx] = (np.fromfile(f0_file, dtype=np.float32, count=-1, sep='')).shape[0]
@@ -317,10 +335,10 @@ def package_data():
     n_test = round(conf.test_ratio * len(filelist))
     n_train = len(filelist) - n_val - n_test
     if n_train < 0:
-        print "oops"
+        print ("oops")
     set_name = ['train', 'val', 'test']
     set_sizes = [n_train , n_val, n_test]
-    print set_sizes
+    print (set_sizes)
 
 #    batch_index = 1
 #    in_fid = open(conf.train_data_dir + '/' + conf.dnn_name + '.' + str(batch_index) + '.idat' ,'w')
@@ -447,7 +465,7 @@ def make_data_provider(conf):
     
     """
     
-    print dataset.getFileTag()
+    print (dataset.getFileTag())
     
     ktrain.train_model(dataset, batch_size=128,
                 input_keys=conf.inputs, output_keys=conf.outputs)
@@ -462,7 +480,7 @@ def make_data_provider(conf):
     
 def train_model_keras(conf):
     
-    print "not implemented yet"
+    print ("not implemented yet")
 
 def main(argv):
    
