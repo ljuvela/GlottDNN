@@ -461,7 +461,6 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool required,
         return EXIT_FAILURE;
     }
 
-    std::cout << "read config succesfully" << std::endl;
     return EXIT_SUCCESS;
 
   } catch (LookupException &e) {
@@ -469,7 +468,6 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool required,
     return EXIT_FAILURE;
   }
 
-  std::cout << "read config succesfully" << std::endl;
   return EXIT_SUCCESS;
 }
 

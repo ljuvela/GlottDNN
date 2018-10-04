@@ -166,6 +166,7 @@ def sptk_pitch_analysis():
                     
     
 def reaper_pitch_analysis():
+    import reaper_pitch_analysis
     wavscp = conf.datadir + '/scp/wav.scp'
     with open(wavscp,'r') as wavfiles:
         for f in wavfiles:
@@ -179,10 +180,17 @@ def reaper_pitch_analysis():
             
                 gcitmp = conf.datadir + '/gci/' + bname + '.GCItmp'                
                 gcifile = conf.datadir + '/gci/' + bname + '.GCI'
-                
+
+                reaper_pitch_analysis.estimate(wavfile=wavfile, gcifile=gcifile,
+                                               f0file=f0file, reaper_path=conf.reaper,
+                                               two_stage_estimation=False)
+
+                continue
+
                 # analysis commands
                 #cmd =  conf.reaper + ' -a -i ' + wavfile + ' -f ' + f0tmp1 + ' -p ' + gcitmp + ' -u 0.05'
                 #cmd =  conf.reaper + ' -a -i ' + wavfile + ' -f ' + f0tmp1 + ' -p ' + gcitmp + ' -t -x 500 -m 50' # -t for Hilbert transform
+                # -e specifies the output frame interval for F0, (default .005 s)
                 cmd =  conf.reaper + ' -a -i ' + wavfile + ' -f ' + f0tmp1 + ' -p ' + gcitmp + ' -x 500 -m 40'
                 os.system(cmd)
                 # todo: use conf.sopr and conf.x2x
