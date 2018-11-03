@@ -801,8 +801,12 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data,
                             gsl::vector *signal) {
   /* When using pulses-as-features for unvoiced, unvoiced part is filtered as
    * voiced */
-  if (params.use_paf_unvoiced_synthesis || params.use_external_excitation)
-    return;
+  if (params.use_paf_unvoiced_synthesis || params.use_external_excitation) {
+     return;
+  }
+
+  std::cout << "generating unvoiced" << std::endl;
+
 
   gsl::vector uv_signal((*signal).size(), true);
   gsl::vector noise_vec(params.frame_length_unvoiced);
@@ -829,13 +833,14 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data,
   b(0) = 1.0;
 
   /* Define analysis and synthesis window */
-  double kbd_alpha = 2.3;
-  gsl::vector kbd_window =
-      getKaiserBesselDerivedWindow(noise_vec.size(), kbd_alpha);
+  //double kbd_alpha = 2.3;
+  //gsl::vector kbd_window =
+  //    getKaiserBesselDerivedWindow(noise_vec.size(), kbd_alpha);
 
   size_t frame_index;
   for (frame_index = 0; frame_index < params.number_of_frames; frame_index++) {
     if (data.fundf(frame_index) == 0) {
+
       if (params.use_generic_envelope) {
         for (i = 0; i < vt_fft.getSize(); i++) {
           vt_fft.setReal(i, data.spectrum(i, frame_index));
@@ -847,33 +852,30 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data,
         if (params.warping_lambda_vt == 0.0) {
           FFTRadix2(A, NFFT, &vt_fft);
         } else {
-          // get warped filter linear frequency response via impulse response
+          /* get warped filter linear frequency response via impulse response */
           imp_response.set_zero();
           impulse.set_zero();
           impulse(0) = 1.0;
-          // get inverse filter impulse response
+          /* get inverse filter impulse response */
           WFilter(A, b, impulse, params.warping_lambda_vt, &imp_response);
           FFTRadix2(imp_response, NFFT, &vt_fft);
         }
       }
 
-      for (i = 0; i < noise_vec.size(); i++)
-        noise_vec(i) = random_gauss_gen.get();
+      for (i = 0; i < noise_vec.size(); i++) {
+         noise_vec(i) = random_gauss_gen.get();
+      }
 
       /* Cancel pre-emphasis if needed */
       if (params.unvoiced_pre_emphasis_coefficient > 0.0) {
-        gsl::vector noise_vec_copy(
-            noise_vec);  // FIXME: do memory allocation only once!
+        gsl::vector noise_vec_copy(noise_vec);
         Filter(std::vector<double>{1.0},
                std::vector<double>{
                    1.0, -1.0 * params.unvoiced_pre_emphasis_coefficient},
                noise_vec_copy, &noise_vec);
       }
 
-      // GetFrame(data.excitation_signal, frame_index,
-      // rint(params.frame_shift/params.speed_scale), &noise_vec, NULL);
       ApplyWindowingFunction(COSINE, &noise_vec);
-      // noise_vec *= kbd_window;
 
       FFTRadix2(noise_vec, NFFT, &noise_vec_fft);
       Lsf2Poly(data.lsf_glot.get_col_vec(frame_index), &A_tilt);
@@ -882,21 +884,19 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data,
       // Randomize phase
       double mag;
       double ang;
-      // double hnr_ratio;
-      // Erb2Linear(data.hnr_glot.get_col_vec(frame_index), params.fs,
-      // &hnr_interp);
       for (i = 0; i < noise_vec_fft.getSize(); i++) {
         if (params.use_generic_envelope) {
           mag = noise_vec_fft.getAbs(i) * vt_fft.getAbs(i);
         } else if (!params.use_spectral_matching) {
+          /* Only use vocal tract synthesis filter */
           mag = noise_vec_fft.getAbs(i) *
                 GSL_MIN(1.0 / (vt_fft.getAbs(i)), 10000);
         } else {
+          /* Use both vocal tract and excitation LP envelope synthesis filters */
           mag = noise_vec_fft.getAbs(i) *
                 GSL_MIN(1.0 / (vt_fft.getAbs(i)), 10000) *
                 GSL_MIN(1.0 / tilt_fft.getAbs(i), 10000);
         }
-
         ang = noise_vec_fft.getAng(i);
 
         noise_vec_fft.setReal(i, mag * cos(double(ang)));
@@ -908,11 +908,7 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data,
 
       IFFTRadix2(noise_vec_fft, &noise_vec);
 
-      // noise_vec *=
-      // params.noise_gain_unvoiced*e_target/getEnergy(noise_vec)*sqrt(8.0/3.0);
       ApplyWindowingFunction(COSINE, &noise_vec);
-      // noise_vec *= kbd_window;
-      // noise_vec *= kbd_window;
       noise_vec *= params.noise_gain_unvoiced * e_target /
                    getEnergy(noise_vec) / sqrt(2.0);
 
@@ -938,11 +934,18 @@ void NoiseGating(const Param &params, gsl::vector *frame_energy) {
 
 void FftFilterExcitation(const Param &params, const SynthesisData &data,
                          gsl::vector *signal) {
-                             
+
+  /*
   if (params.use_waveforms_directly) {
-    signal->copy(data.excitation_signal);
+    size_t i;
+     for (i=0; i<data.excitation_signal.size(); i++) {
+       (*signal)(i) += data.excitation_signal(i);
+     }
+    ///signal->copy(data.excitation_signal);
+    std::cout << "Using waveforms directly, no filtering" << std::endl;;
     return;
   }
+  */
 
   gsl::vector frame(params.frame_length);
   gsl::vector excitation_frame(params.frame_length);
@@ -966,27 +969,50 @@ void FftFilterExcitation(const Param &params, const SynthesisData &data,
   b(0) = 1.0;
 
   size_t i;
+  double e_target;
 
   /* Define analysis and synthesis window */
   double kbd_alpha = 2.3;
   gsl::vector kbd_window =
       getKaiserBesselDerivedWindow(frame.size(), kbd_alpha);
 
+  bool always_use_fft_filter = false; // over-ride flag for always using FFT filter
+  bool frame_is_voiced;
+  bool treat_frame_as_voiced;
   size_t frame_index;
   for (frame_index = 0; frame_index < (size_t)params.number_of_frames;
        frame_index++) {
-    if (data.fundf(frame_index) > 0 || params.use_paf_unvoiced_synthesis ||
-        params.use_external_excitation) {
+    frame_is_voiced = data.fundf(frame_index) > 0;
+    treat_frame_as_voiced = (frame_is_voiced
+          || params.use_paf_unvoiced_synthesis
+          || params.use_external_excitation);
+
+    if (treat_frame_as_voiced || always_use_fft_filter) {
       /* Get spectrum of excitation */
       GetFrame(data.excitation_signal, frame_index,
                rint(params.frame_shift / params.speed_scale), &frame, NULL);
+
+      if (treat_frame_as_voiced && params.use_waveforms_directly) {
+         /* Copy excitation to signal as it is */
+         ApplyWindowingFunction(HANN, &frame);
+         e_target = LogEnergy2FrameEnergy(data.frame_energy(frame_index), frame.size());
+         frame *= e_target / getEnergy(frame) / sqrt(2.0);
+         /* Normalize overlap-add window */
+         frame /= 0.5 * (double)frame.size() / (double)params.frame_shift;
+         OverlapAdd(frame,
+                    frame_index * rint(params.frame_shift / params.speed_scale),
+                    signal);
+         continue; // to next frame
+      }
+
       frame_copy.copy(frame);
+      /* Estimate excitation LP spectrum */
       ApplyWindowingFunction(HANN, &frame_copy);
       LPC(frame_copy, params.lpc_order_glot, &A_tilt_exc);
       FFTRadix2(A_tilt_exc, NFFT, &tilt_exc_fft);
 
+      /* Estimate excitation spectrum */
       ApplyWindowingFunction(COSINE, &frame);
-      // frame *= kbd_window;
       FFTRadix2(frame, NFFT, &frame_fft);
 
       if (params.use_generic_envelope) {
@@ -1034,7 +1060,7 @@ void FftFilterExcitation(const Param &params, const SynthesisData &data,
           ang = ang_exc + ang_vt;  // - ang_tilt + ang_tilt_exc; // Maximum
                                    // phase filtering for glottal contribution
         } else {
-          if (params.use_spectral_matching) {
+          if (params.use_spectral_matching && frame_is_voiced) {
             mag = mag_exc * mag_vt * mag_tilt / mag_tilt_exc;
             ang = ang_exc + ang_vt + ang_tilt -
                   ang_tilt_exc;  // Maximum phase filtering for glottal
@@ -1050,6 +1076,7 @@ void FftFilterExcitation(const Param &params, const SynthesisData &data,
             }
           }
         }
+        // Set filtered FFT values
         frame_fft.setReal(i, mag * cos(double(ang)));
         frame_fft.setImag(i, mag * sin(double(ang)));
       }
@@ -1057,7 +1084,7 @@ void FftFilterExcitation(const Param &params, const SynthesisData &data,
       IFFTRadix2(frame_fft, &frame);
       ApplyWindowingFunction(COSINE, &frame);
 
-      double e_target =
+      e_target =
           LogEnergy2FrameEnergy(data.frame_energy(frame_index), frame.size());
       frame *= e_target / getEnergy(frame) / sqrt(2.0);
 

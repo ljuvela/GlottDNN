@@ -27,6 +27,8 @@
 #include "Filters.h"
 #include "QmfFunctions.h"
 
+int PULSE_NOT_FOUND = -1;
+
 int PolarityDetection(const Param &params, gsl::vector *signal,
                       gsl::vector *source_signal_iaif) {
   switch (params.signal_polarity) {
@@ -177,8 +179,10 @@ int GetGain(const Param &params, const gsl::vector &fundf,
   ApplyWindowingFunction(params.default_windowing_function, &frame);
   double frame_energy_compensation = sqrt(frame.size() / getSquareSum(frame));
   double frame_energy;
+  bool frame_is_voiced;
   for (frame_index = 0; frame_index < params.number_of_frames; frame_index++) {
-    if (fundf(frame_index) != 0.0) {
+    frame_is_voiced = fundf(frame_index) > 0.0;
+    if (frame_is_voiced) {
       GetFrame(signal, frame_index, params.frame_shift, &frame, NULL);
       ApplyWindowingFunction(params.default_windowing_function, &frame);
       frame_energy = getEnergy(frame);
@@ -539,9 +543,10 @@ int Find_nearest_pulse_index(const int &sample_index,
   int prev_gci, next_gci;
 
   double max_relative_len_diff = params.max_pulse_len_diff;
+  double relative_len_diff = (fabs(pulselen - targetlen) / targetlen);
 
   /* Choose next closest while pulse length deviates too much from f0 */
-  while ((fabs(pulselen - targetlen) / targetlen) > max_relative_len_diff) {
+  while (relative_len_diff > max_relative_len_diff) {
     /* Prevent illegal reads*/
     if (prev_index < 0) prev_index = 0;
     if (next_index > (int)gci_inds.size() - 1) next_index = gci_inds.size() - 1;
@@ -570,6 +575,7 @@ int Find_nearest_pulse_index(const int &sample_index,
      * start over */
     if (fabs(sample_index - gci_inds(pulse_index)) > 1.0 * targetlen) {
       max_relative_len_diff += 0.02;  // increase by 5 percent
+      //std::cout << "could not find pulse in F0 range, relaxing constraint" << std::endl;
       if (max_relative_len_diff > 3.0) {
         break;
       }
@@ -588,9 +594,16 @@ int Find_nearest_pulse_index(const int &sample_index,
 
     /* calculate new pulse length */
     pulselen = round(gci_inds(pulse_index + 1) - gci_inds(pulse_index - 1)) + 1;
+
+    relative_len_diff = (fabs(pulselen - targetlen) / targetlen);
   }
 
-  return pulse_index;
+  if (relative_len_diff > 3.0 || pulselen < 3) {
+     return PULSE_NOT_FOUND;
+  } else {
+     return pulse_index;
+  }
+
 }
 
 void GetPulses(const Param &params, const gsl::vector &source_signal,
@@ -604,36 +617,41 @@ void GetPulses(const Param &params, const gsl::vector &source_signal,
   for (frame_index = 0; frame_index < (size_t)params.number_of_frames;
        frame_index++) {
     size_t sample_index = frame_index * params.frame_shift;
-    size_t pulse_index = Find_nearest_pulse_index(sample_index, gci_inds,
+    int pulse_index = Find_nearest_pulse_index(sample_index, gci_inds,
                                                   params, fundf(frame_index));
 
     gsl::vector paf_pulse(params.paf_pulse_length, true);
     gsl::vector pulse;
 
-    /* Check that pulse center index is reasonably close to frame center index
-     */
-    int center_index = gci_inds(pulse_index);
-    int THRESH = 100 * params.frame_length;
-    if (fundf(frame_index) != 0.0 &&
-        abs(center_index - (int)sample_index) > THRESH) {
-      std::cerr
-          << "Warning: no suitable pulse in range, treating frame as unvoiced"
-          << std::endl;
-      std::cerr << "Frame: " << frame_index
-                << ", distance: " << abs(center_index - (int)sample_index)
-                << std::endl;
-      center_index = sample_index;
-    }
+    int center_index;
     /* Use frame center directly for unvoiced */
-    if (fundf(frame_index) == 0.0) {
+    if (fundf(frame_index) == 0.0 || pulse_index == PULSE_NOT_FOUND) {
       center_index = sample_index;
+    } else {
+      center_index = gci_inds(pulse_index);
+
+      /* Check that pulse center index is reasonably
+       * close to frame center index
+       */
+      int THRESH = 100 * params.frame_length;
+      if (abs(center_index - (int)sample_index) > THRESH) {
+        std::cerr
+        << "Warning: no suitable pulse in range,"
+        << "treating frame as unvoiced"
+        << std::endl;
+        std::cerr
+        << "Frame: " << frame_index
+        << ", distance: " << abs(center_index - (int)sample_index)
+        << std::endl;
+        center_index = sample_index;
+      }
     }
 
     int i;
     size_t j;
     if (params.use_pulse_interpolation == true) {
       size_t pulselen;
-      if (fundf(frame_index) > 0.0) {
+      if (fundf(frame_index) > 0.0 && pulse_index != PULSE_NOT_FOUND) {
         /* Pulse length is two pitch periods, defined here by distance of
          * previous and next GCI */
         pulselen =
