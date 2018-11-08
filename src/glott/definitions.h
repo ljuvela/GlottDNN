@@ -28,10 +28,12 @@ enum ExcitationMethod {SINGLE_PULSE_EXCITATION, DNN_GENERATED_EXCITATION,
    PULSES_AS_FEATURES_EXCITATION, EXTERNAL_EXCITATION, IMPULSE_EXCITATION};
 
 /* Structures */
-struct Param {
+struct Param
+{
 	Param();
 	~Param();
-public:
+
+  public:
 	int fs;
 	int frame_length;
 	int frame_length_long;
@@ -71,15 +73,15 @@ public:
 	WindowingFunctionType psola_windowing_function;
 	WindowingFunctionType paf_analysis_window;
 
-
 	double max_pulse_len_diff;
 	int paf_pulse_length;
 	bool use_pulse_interpolation;
 	bool use_highpass_filtering;
 	bool use_waveforms_directly;
 	bool use_paf_unvoiced_synthesis;
-	bool extract_f0 ;
-	bool extract_gain ;
+	bool use_velvet_unvoiced_paf;
+	bool extract_f0;
+	bool extract_gain;
 	bool extract_lsf_vt;
 	bool extract_lsf_glot;
 	bool extract_hnr;
@@ -94,63 +96,61 @@ public:
 	double f0_max;
 	double f0_min;
 	double voicing_threshold;
-   double zcr_threshold;
-   double relative_f0_threshold;
-   double speed_scale;
-   double pitch_scale;
-   bool use_postfiltering;
-   bool use_spectral_matching;
-   bool use_wsola;
-   bool use_wsola_pitch_shift;
-   bool noise_gated_synthesis;
-   double noise_reduction_db;
-   double noise_gate_limit_db;
-   double postfilter_coefficient;
-   double postfilter_coefficient_glot;
-   bool use_trajectory_smoothing;
-   int lsf_vt_smooth_len;
-   int lsf_glot_smooth_len;
-   int gain_smooth_len;
-   int hnr_smooth_len;
-   int filter_update_interval_vt;
-   int filter_update_interval_specmatch;
-   double noise_gain_unvoiced;
-   double noise_gain_voiced;
-   double noise_low_freq_limit_voiced;
-   //double f0_check_range;
-   ExcitationMethod excitation_method;
-   bool use_pitch_synchronous_analysis;
-   bool use_generic_envelope;
+	double zcr_threshold;
+	double relative_f0_threshold;
+	double speed_scale;
+	double pitch_scale;
+	bool use_postfiltering;
+	bool use_spectral_matching;
+	bool use_wsola;
+	bool use_wsola_pitch_shift;
+	bool noise_gated_synthesis;
+	double noise_reduction_db;
+	double noise_gate_limit_db;
+	double postfilter_coefficient;
+	double postfilter_coefficient_glot;
+	bool use_trajectory_smoothing;
+	int lsf_vt_smooth_len;
+	int lsf_glot_smooth_len;
+	int gain_smooth_len;
+	int hnr_smooth_len;
+	int filter_update_interval_vt;
+	int filter_update_interval_specmatch;
+	double noise_gain_unvoiced;
+	double noise_gain_voiced;
+	double noise_low_freq_limit_voiced;
+	//double f0_check_range;
+	ExcitationMethod excitation_method;
+	bool use_pitch_synchronous_analysis;
+	bool use_generic_envelope;
 
-   /* directory paths for storing parameters */
-   std::string dir_gain;
-   std::string dir_lsf;
-   std::string dir_lsfg;
-   std::string dir_hnr;
-   std::string dir_paf;
-   std::string dir_f0;
-   std::string dir_exc;
-   std::string dir_syn;
-   std::string dir_sp;
+	/* directory paths for storing parameters */
+	std::string dir_gain;
+	std::string dir_lsf;
+	std::string dir_lsfg;
+	std::string dir_hnr;
+	std::string dir_paf;
+	std::string dir_f0;
+	std::string dir_exc;
+	std::string dir_syn;
+	std::string dir_sp;
 
-   /* extensions for parameter types */
-   std::string extension_gain;
-   std::string extension_lsf;
-   std::string extension_lsfg;
-   std::string extension_hnr;
-   std::string extension_paf;
-   std::string extension_f0;
-   std::string extension_exc;
-   std::string extension_src = ".src.wav";
-   std::string extension_syn;
-   std::string extension_wav;
+	/* extensions for parameter types */
+	std::string extension_gain;
+	std::string extension_lsf;
+	std::string extension_lsfg;
+	std::string extension_hnr;
+	std::string extension_paf;
+	std::string extension_f0;
+	std::string extension_exc;
+	std::string extension_src = ".src.wav";
+	std::string extension_syn;
+	std::string extension_wav;
 
-   std::string wav_filename;
-   std::string default_config_filename;
-   std::string user_config_filename;
-
+	std::string wav_filename;
+	std::string default_config_filename;
+	std::string user_config_filename;
 };
-
 
 /* Define analysis data variable struct*/
 struct AnalysisData {

@@ -128,8 +128,7 @@ int main(int argc, char *argv[]) {
    else
       SpectralAnalysis(params, data, &(data.poly_vocal_tract));
 
-   // Experiment: smoothing of vocal tract lsfs
-   // TODO: also smooth gain if it's used in inverse filtering!
+   /* Smooth vocal tract estimates in LSF domain */
    Poly2Lsf(data.poly_vocal_tract, &data.lsf_vocal_tract);
    MedianFilter(5, &data.lsf_vocal_tract);
    MovingAverageFilter(3, &data.lsf_vocal_tract);
@@ -139,8 +138,8 @@ int main(int argc, char *argv[]) {
    InverseFilter(params, data, &(data.poly_glot), &(data.source_signal));
 
    /* Re-estimate GCIs on the residual*/
-//   if(GetGci(params, data.signal, data.source_signal, data.fundf, &(data.gci_inds)) == EXIT_FAILURE)
-//      return EXIT_FAILURE;
+   //if(GetGci(params, data.signal, data.source_signal, data.fundf, &(data.gci_inds)) == EXIT_FAILURE)
+   //   return EXIT_FAILURE;
 
    /* Extract pitch synchronous (excitation) waveforms at each frame */
    if (params.use_waveforms_directly)
