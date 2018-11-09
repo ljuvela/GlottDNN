@@ -30,19 +30,19 @@ The vocoder C++ code has the following library dependencies:
 Usually the best way to install the dependencies is with the system package manager. For example, in Ubuntu use `apt-get` install the packages `libgsl0-dev`, `libsndfile1-dev`, `libconfig++-dev`
 
 The C++ part uses a standard GNU autotools build system. To compile the vocoder, run the following commands in the project root directory
-``` shell
+``` bash
    ./configure
    make
 ```
 
 Since the build targets are rather generically named `Analysis` and `Synthesis`, you might not want them in your default system PATH. Use the `--prefix` flag to choose another install path
-``` shell
+``` bash
    ./configure --prefix=/your/install/path/bin
    make install
 ```
 
 Usually `configure` and `make` should be enough, but if the process complains about missing files try running 
-```
+``` bash
 automake --add-missing
 ```
 
@@ -53,12 +53,16 @@ These examples assume 16kHz sampling rate audio. Other sampling rates are feasib
 
 Let's first get a wave file from the Arctic database
 ``` bash 
+#!/bin/bash
+
 URL='http://festvox.org/cmu_arctic/cmu_arctic/cmu_us_slt_arctic/wav/arctic_a0001.wav'
 DATADIR='./data/tmp'
 BASENAME='slt_arctic_a0001'
 mkdir -p $DATADIR
-wget -O "$DATADIR/$WAVEFILE" $URL
+wget -O "$DATADIR/$BASENAME.wav" $URL
 ```
+
+### Acoustic feature analysis
 
 Now run GlottDNN Analysis program with default configuration
 ``` bash
@@ -79,6 +83,8 @@ ls ./data/tmp/
     ./data/tmp/slt_arctic_a0001.src.wav
 ```
 
+### Synthesis with single pulse excitation 
+
 First let's run copy synthesis with `SINGLE_PULSE` excitation. This method uses a single fixed glottal pulse, which is modified according to F0 and HNR (similarly to the original GlottHMM vocoder).
 
 ``` bash
@@ -86,16 +92,18 @@ First let's run copy synthesis with `SINGLE_PULSE` excitation. This method uses 
 ./src/Synthesis "$DATADIR/$BASENAME" ./config/config_default_16k.cfg
 
 # Move generated file
-cp "$DATADIR/$BASENAME.syn.wav" "$DATADIR/$BASENAME.syn.sp.wav"    
+mv "$DATADIR/$BASENAME.syn.wav" "$DATADIR/$BASENAME.syn.sp.wav"    
 ```
 
-A copy-synthesis wave file should now be at `./data/tmp/slt_arctic_a0001.syn.wav`.
+A copy-synthesis wave file should now be at `./data/tmp/slt_arctic_a0001.syn.sp.wav`.
 The single pulse excitation will sound somewhat buzzy, so let's try if we can do better.
 
- We already extracted glottal pulses from the signal and stored them in `./data/tmp/slt_arctic_a0001.pls`. 
- Much better quality can be achieved by re-assembling the original pulses using pitch synchronous overlap-add. 
+### Synthesis with original pulses
 
-To over-ride some of the default config values, we can create a "user config" file and re-run Synthesis with the values in the second config file over-riding the values from the first
+ We already extracted glottal pulses from the signal and stored them in `./data/tmp/slt_arctic_a0001.pls`. 
+ Better quality can be achieved by re-assembling the original pulses using pitch synchronous overlap-add. 
+
+To override some of the default config values, we can create a "user config" file and run Synthesis with two config files
 
 ``` bash
 # Create user config
@@ -103,9 +111,11 @@ CONF_USR="$DATADIR/config_usr.cfg"
 echo '# Comment: User config for GlottDNN' > $CONF_USR  
 echo 'EXCITATION_METHOD = "PULSES_AS_FEATURES";' >> $CONF_USR
 echo 'USE_WSOLA = true;' >> $CONF_USR
+echo 'USE_SPECTRAL_MATCHING = false;' >> $CONF_USR
+echo 'NOISE_GAIN_VOICED = 0.0;' >> $CONF_USR
 
 # Run synthesis with two config files
-./src/Synthesis "$DATADIR/$WAVEFILE" ./config/config_default_16k.cfg $CONF_USR
+./src/Synthesis "$DATADIR/$BASENAME" ./config/config_default_16k.cfg $CONF_USR
 
 # Move generated file
 mv "$DATADIR/$BASENAME.syn.wav" "$DATADIR/$BASENAME.syn.paf.wav"       
