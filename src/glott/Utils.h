@@ -22,6 +22,7 @@ gsl::matrix ElementDivision(const gsl::matrix &A, const gsl::matrix &B);
 
 
 int CheckCommandLineAnalysis(int argc);
+int CheckCommandLineSynthesis(int argc);
 
 void CheckNanInf(gsl::vector &vec);
 

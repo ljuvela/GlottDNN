@@ -89,10 +89,10 @@ def evaluate_dnn(learning_rate=0.1, n_epochs=150000,
     n_valid_batches = valid_set_x.get_value(borrow=True).shape[0]
     #n_test_batches = test_set_x.get_value(borrow=True).shape[0]
 
-    print ('valid batches %d') % (n_valid_batches)
+    print ('valid batches %d' % (n_valid_batches) ) 
     
-    n_train_batches /= batch_size
-    n_valid_batches /= batch_size
+    n_train_batches //= batch_size
+    n_valid_batches //= batch_size
     #n_test_batches /= batch_size
 
     # allocate symbolic variables for the data
@@ -105,13 +105,13 @@ def evaluate_dnn(learning_rate=0.1, n_epochs=150000,
     ######################
     # BUILD ACTUAL MODEL #
     ######################
-    print '... building the model'
-    print 'Number of hidden layers: %i, Hidden units per layer: i' %(num_hidden)
+    print ('... building the model')
+    print ('Number of hidden layers: %i, Hidden units per layer: i' % (num_hidden))
 
     layer0_input = x
 
     layerList = []
-    for i in xrange(0, num_hidden):
+    for i in range(0, num_hidden):
         if i > 0:
             cInput = layerList[i-1].output
             cn_in = n_hidden[i-1]
@@ -120,7 +120,7 @@ def evaluate_dnn(learning_rate=0.1, n_epochs=150000,
             cInput = layer0_input
             cn_in = n_in
             cn_out = n_hidden[0]
-        print 'in: %d, out: %d' %(cn_in, cn_out)    
+        print ('in: %d, out: %d' % (cn_in, cn_out))    
         cLayer = HiddenLayer(
             rng=rng,
             input=cInput,
@@ -195,7 +195,7 @@ def evaluate_dnn(learning_rate=0.1, n_epochs=150000,
     ###############
     # TRAIN MODEL #
     ###############
-    print '... training'
+    print ('... training')
     # early-stopping parameters
     #patience = 10000  # look as this many examples regardless
     patience = conf.patience
@@ -216,25 +216,25 @@ def evaluate_dnn(learning_rate=0.1, n_epochs=150000,
         epoch = epoch + 1
                     
         # loop over minibatches
-        for minibatch_index in xrange(n_train_batches):
+        for minibatch_index in range(n_train_batches):
             
             iter = (epoch - 1) * n_train_batches + minibatch_index            		
             cost_ij = train_model(minibatch_index)
 
             if iter % 100 == 0:
-                print('     epoch %d, minibatch %d / %d') % (epoch, minibatch_index + 1, n_train_batches)
+                print('     epoch %d, minibatch %d / %d' % (epoch, minibatch_index + 1, n_train_batches))
 
  
 
         # compute loss on validation set
-        validation_losses = [validate_model(i) for i in xrange(n_valid_batches)]
+        validation_losses = [validate_model(i) for i in range(n_valid_batches)]
         this_validation_loss = numpy.mean(validation_losses)
 
         training_losses = [train_model(i) for i
-                                   in xrange(n_train_batches)]
+                                   in range(n_train_batches)]
         this_training_loss = numpy.log(numpy.mean(training_losses))
 		
-        print('epoch %i, minibatch %i/%i, training error %f, validation error %f') % (epoch, minibatch_index + 1, n_train_batches, this_training_loss, this_validation_loss)
+        print('epoch %i, minibatch %i/%i, training error %f, validation error %f' % (epoch, minibatch_index + 1, n_train_batches, this_training_loss, this_validation_loss)) 
                 
         # if we got the best validation score until now
         if this_validation_loss < best_validation_loss:
@@ -267,9 +267,10 @@ def evaluate_dnn(learning_rate=0.1, n_epochs=150000,
     #print('Best validation score of %f obtained at iteration %i, '
     #      'with test performance %f' %
     #      (best_validation_loss., best_iter + 1, test_score.))
-    print >> sys.stderr, ('The code for file ' +
-                          os.path.split(__file__)[1] +
-                          ' ran for %.2fm' % ((end_time - start_time) / 60.))
+    print(('The code for file ' +
+           os.path.split(__file__)[1] +
+           ' ran for %.2fm' % ((end_time - start_time) / 60.))
+          )
 
 # EOF evaluate_dnn
 

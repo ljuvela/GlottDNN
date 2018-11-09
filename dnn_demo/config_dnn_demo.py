@@ -15,13 +15,9 @@ do_glott_vocoder_synthesis = 1
 prjdir = './' # change to your own local dir
 datadir = os.path.join(prjdir, 'dnn_demo', 'data') 
 
-# general parameters
-sampling_frequency = 16000
-warping_lambda = 0.00
-use_external_gci = False
-
-# program calls, binaries assumed to be in $PATH, change to your own 
-reaper = 'reaper' # optional, required if reaper is used for F0 or GCIs
+# path to REAPER binary (optional)
+reaper = 'reaper' 
+# paths to SPTK binaries (optional)
 sox = 'sox' 
 pitch = 'pitch -a 0 -s 16.0 -p 80 '
 x2x = 'x2x'
@@ -29,7 +25,12 @@ x2x = 'x2x'
 # GlottDNN binaries and default config
 Analysis = prjdir + '/src/Analysis'
 Synthesis = prjdir + '/src/Synthesis'
-config_default = prjdir + '/config/config_default_16k.cfg'
+config_default = prjdir + '/dnn_demo/config_dnn_demo.cfg'
+
+# general parameters
+sampling_frequency = 16000
+warping_lambda = 0.00
+use_external_gci = False
 
 # Neural net input params
 inputs = ['f0', 'gain', 'hnr', 'slsf', 'lsf']
@@ -40,7 +41,7 @@ output_exts = ['.pls']
 output_dims = [400]
 
 # dnn data conf
-dnn_name = 'dnn_slt'
+dnn_name = 'dnn_demo_slt'
 train_data_dir = os.path.join(prjdir, 'nndata/traindata', dnn_name) 
 weights_data_dir = os.path.join(prjdir, 'nndata/weights', dnn_name)
 remove_unvoiced_frames = True

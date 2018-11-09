@@ -75,17 +75,6 @@ int main(int argc, char *argv[]) {
    /* Declare configuration parameter struct */
    Param params;
 
-   /*
-   if (ParseArguments(argc, argv, &params) == EXIT_FAILURE ) {
-      PrintUsageAnalysis();
-      return EXIT_FAILURE;
-   }
-   */
-
-   if (argc < 3) {
-      std::cout << "Usage: Analysis <wavfile.wav> <config_default.cfg> (<config_usr.cfg>)" << std::endl;
-   }
-
    /* Read configuration file */
    if (ReadConfig(default_config_filename, true, &params) == EXIT_FAILURE)
       return EXIT_FAILURE;
@@ -123,10 +112,11 @@ int main(int argc, char *argv[]) {
    GetGain(params, data.fundf, data.signal, &(data.frame_energy));
 
    /* Spectral analysis for vocal tract transfer function*/
-   if(params.qmf_subband_analysis)
+   if(params.qmf_subband_analysis) {
       SpectralAnalysisQmf(params, data, &(data.poly_vocal_tract));
-   else
+   } else {
       SpectralAnalysis(params, data, &(data.poly_vocal_tract));
+   }
 
    /* Smooth vocal tract estimates in LSF domain */
    Poly2Lsf(data.poly_vocal_tract, &data.lsf_vocal_tract);
@@ -137,15 +127,16 @@ int main(int argc, char *argv[]) {
    /* Perform glottal inverse filtering with the estimated VT AR polynomials */
    InverseFilter(params, data, &(data.poly_glot), &(data.source_signal));
 
-   /* Re-estimate GCIs on the residual*/
+   /* Re-estimate GCIs on the residual */
    //if(GetGci(params, data.signal, data.source_signal, data.fundf, &(data.gci_inds)) == EXIT_FAILURE)
    //   return EXIT_FAILURE;
 
    /* Extract pitch synchronous (excitation) waveforms at each frame */
-   if (params.use_waveforms_directly)
+   if (params.use_waveforms_directly) {
       GetPulses(params, data.signal, data.gci_inds, data.fundf, &(data.excitation_pulses));
-   else
+   } else {
       GetPulses(params, data.source_signal, data.gci_inds, data.fundf, &(data.excitation_pulses));
+   }
 
    HnrAnalysis(params, data.source_signal, data.fundf, &(data.hnr_glot));
 

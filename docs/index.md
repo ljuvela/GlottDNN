@@ -18,7 +18,7 @@ The vocoder C++ code has the following library dependencies:
 - `libsndfile` for reading and writing audio files
 - `libconfig++` for reading structured configuration files
 
-Usually the best way to install the dependencies is with the system package manager. For example, in Ubuntu 14.04, use `apt-get` install the packages `libgsl0-dev`, `libsndfile1-dev`, `libconfig++-dev`
+Usually the best way to install the dependencies is with the system package manager. For example, in Ubuntu use `apt-get` install the packages `libgsl0-dev`, `libsndfile1-dev`, `libconfig++-dev`
 
 The C++ part uses a standard GNU autotools build system. To compile the vocoder, run the following commands in this directory:
 ``` shell
@@ -32,24 +32,17 @@ Since the build targets are rather generically named `Analysis` and `Synthes
    make install
 ```
 
+## Support
+
+When in trouble, open an issue at GitHub
+https://github.com/ljuvela/GlottDNN/issues
+
+For more examples and explanation, check the documentation in https://aalto-speech.github.io/GlottDNN/ 
 
 
-Some typical use cases: 
 
-## Train excitation model 16kHz sample rate
-    
-- modify config/config_default_16k.cfg
-- modify python/config_default_16k.py
-- run feature extraction and training script
-```
-python python/GlottDnnScript.py \
-     python/config_default_16k.py
-```
+## Licence
 
-Please contact the authors for any questions, or open an issue at github:
+Copyright 2016-2018 Lauri Juvela and Manu Airaksinen
 
-Lauri Juvela: lauri.juvela@aalto.fi
-Manu Airaksinen: manu.airaksinen@aalto.fi
-
-
-This code is licenced under the MIT licence, see LICENCE for more information
+See LICENCE and NOTICE for more information

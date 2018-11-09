@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 from __future__ import division
 
 import sys
@@ -23,14 +21,6 @@ else:
 if conf.do_dnn_training:
     import TrainDnn
     
-# Import dynamic numpy data provider and Keras training    
-try:
-    if conf.make_data_provider:
-            import data_utils as dutil
-            import TrainDnnKeras as ktrain  
-except AttributeError:
-        warnings.warn("Config file does not have attribute 'make_data_provider'" )    
-
 def write_dnn_infofile():
     f = open(conf.weights_data_dir + '/' + conf.dnn_name + '.dnnInfo', 'w')
     # write layer sizes
@@ -67,21 +57,6 @@ def mkdir_p(dirpath):
 
 def make_directories():
     # Prepare environment 
-    """
-    mkdir_p(conf.datadir + '/wav')
-    mkdir_p(conf.datadir + '/raw')
-    mkdir_p(conf.datadir + '/gci')
-    mkdir_p(conf.datadir + '/scp')
-    mkdir_p(conf.datadir + '/exc')
-    mkdir_p(conf.datadir + '/syn')
-    mkdir_p(conf.datadir + '/f0')
-    mkdir_p(conf.datadir + '/gain')
-    mkdir_p(conf.datadir + '/lsf')
-    mkdir_p(conf.datadir + '/slsf')
-    mkdir_p(conf.datadir + '/hnr')
-    mkdir_p(conf.datadir + '/pls')
-    """
-
     dirs = ['wav',
             'raw',
             'gci',
@@ -124,14 +99,6 @@ def make_file_lists():
                 scpfile.write(os.path.abspath(conf.datadir + '/' + t + '/' + f + '\n'))
         scpfile.close()
         
-    """
-    scpfile = open(conf.datadir + '/scp/wav.scp','w') 
-    for f in sorted(set(os.listdir(conf.datadir + '/wav'))):
-        if f.endswith(".wav"):
-            scpfile.write(os.path.abspath(conf.datadir + '/wav/' + f + '\n'))
-    scpfile.close()
-    """
-
 def sptk_pitch_analysis():
         wavscp = conf.datadir + '/scp/wav.scp'
         with open(wavscp,'r') as wavfiles:
@@ -141,8 +108,8 @@ def sptk_pitch_analysis():
                     bname = os.path.splitext(os.path.basename(wavfile))[0]
                     print("SPKT pitch estimation for {}".format(bname))
                     # convert to .raw
-                    rawfile = conf.datadir + '/raw/' + bname + '.raw'
-                    f0file = conf.datadir + '/f0/' + bname + '.f0'
+                    rawfile = os.path.join(conf.datadir, 'raw', bname + '.raw')
+                    f0file = os.path.join(conf.datadir, 'f0', bname + '.f0')
                     cmd = conf.sox + ' ' + wavfile + ' ' + rawfile
                     os.system(cmd)
                     # sptk pitch estimation (first pass)
@@ -156,14 +123,13 @@ def sptk_pitch_analysis():
                     s = lf0.std()
                     f0_max = np.round(10.0**(m+3.0*s))
                     #f0_min = np.round(10.0**(m-3.0*s))
-                    f0_min = 50.0 # minimum f0 is low for creaky voice
+                    f0_min = 50.0 
                     # sptk pitch estimation (second pass)
                     print("   second pass with F0 range {}-{} Hz".format(f0_min, f0_max)) 
                     cmd = conf.x2x + ' +sf ' + rawfile + '|' \
                         + conf.pitch + ' -L ' + str(f0_min) + ' -H ' + str(f0_max) \
                         + ' > ' + f0file
                     os.system(cmd)
-                    
     
 def reaper_pitch_analysis():
     import reaper_pitch_analysis
@@ -172,57 +138,24 @@ def reaper_pitch_analysis():
         for f in wavfiles:
             wavfile = f.rstrip()
             if os.path.isfile(wavfile):
+                
+            
                 # define paths
                 bname = os.path.splitext(os.path.basename(wavfile))[0]
-                f0tmp1 = conf.datadir + '/f0/' + bname + '.f0tmp1'
-                f0tmp2 = conf.datadir + '/f0/' + bname + '.f0tmp2'                
+                #f0tmp1 = conf.datadir + '/f0/' + bname + '.f0tmp1'
+                #f0tmp2 = conf.datadir + '/f0/' + bname + '.f0tmp2'                
                 f0file = conf.datadir + '/f0/' + bname + '.f0'
             
-                gcitmp = conf.datadir + '/gci/' + bname + '.GCItmp'                
+                #gcitmp = conf.datadir + '/gci/' + bname + '.GCItmp'                
                 gcifile = conf.datadir + '/gci/' + bname + '.GCI'
+                
 
                 reaper_pitch_analysis.estimate(wavfile=wavfile, gcifile=gcifile,
                                                f0file=f0file, reaper_path=conf.reaper,
                                                two_stage_estimation=False)
 
-                continue
-
-                # analysis commands
-                #cmd =  conf.reaper + ' -a -i ' + wavfile + ' -f ' + f0tmp1 + ' -p ' + gcitmp + ' -u 0.05'
-                #cmd =  conf.reaper + ' -a -i ' + wavfile + ' -f ' + f0tmp1 + ' -p ' + gcitmp + ' -t -x 500 -m 50' # -t for Hilbert transform
-                # -e specifies the output frame interval for F0, (default .005 s)
-                cmd =  conf.reaper + ' -a -i ' + wavfile + ' -f ' + f0tmp1 + ' -p ' + gcitmp + ' -x 500 -m 40'
-                os.system(cmd)
-                # todo: use conf.sopr and conf.x2x
-                cmd = 'tail +8 ' + f0tmp1 + '| awk \'{print $3}\' | x2x +af ' + \
-                    '| sopr -magic -1.0 -MAGIC 0.0  > ' + f0tmp2
-                os.system(cmd)
-                # only take voiced pitch marks
-                cmd = 'tail +8 ' + gcitmp + '| awk \'$2 == "1" {print $1}\' | x2x +af > ' + gcifile
-                os.system(cmd)
-            
-                # read the file
-                f0 = np.fromfile(f0tmp2, dtype=np.float32, count=-1, sep='')
-                n_frames = len(f0)
-
-                # calculate the sptk compatible number of frames 
-                wave_read = wave.open(wavfile,'r')
-                n_samples = wave_read.getnframes()
-                sample_rate = wave_read.getframerate()
-                n_frames_target =  int(math.ceil(n_samples/(0.005*sample_rate)))
-                wave_read.close
- 
-                # zero pad and save f0
-                f0_true = np.zeros(n_frames_target, dtype= np.float32)
-                npad_start = 2
-                f0_true[npad_start:npad_start+n_frames] = f0
-                f0_true.astype(np.float32).tofile(f0file, sep='',format="%f")
-
-                # remove tmp
-                os.remove(f0tmp1)
-                os.remove(f0tmp2)
-                os.remove(gcitmp)
-
+              
+               
 def glott_vocoder_analysis():
     wavscp = conf.datadir + '/scp/wav.scp'
     with open(wavscp,'r') as wavfiles:
@@ -430,66 +363,6 @@ def package_data():
     in_max.astype(np.float32).tofile(fid, sep='', format="%f")
     fid.close()
     
-def make_data_provider(conf):
-
-    dataset = dutil.Dataset()
-
-    # add inputs to dataset
-    for key, ext, dim in zip(conf.inputs, conf.input_exts, conf.input_dims):
-        scp = conf.datadir + '/scp/' + key + '.scp'
-        dobj = dutil.DataObj(key, dim, scp, ext)   
-        dataset.addDataObj(dobj, scaler='minmax')
-        
-    # add outputs to dataset    
-    for key, ext, dim in zip(conf.outputs, conf.output_exts, conf.output_dims):
-        scp = conf.datadir + '/scp/' + key + '.scp'
-        dobj = dutil.DataObj(key, dim, scp, ext)
-        dataset.addDataObj(dobj, scaler=None)
-     
-    # compute and save dataset scaler statistics
-    dataset.compute_stats()
-    
-    # save dataset provider (no data is copied)
-    dataset.saveDataProvider('./data_provider.dat')
-    
-    
-    #x, y = dataset.getDataInputOutput(0, ['lsf','f0'], ['pls'])
-    #print x.shape
-    #print x
-    #print y.shape
-  
-    """
-      
-    for data in Dataset_iter(dataset, shuffle=False, io_keys=[conf.inputs, conf.outputs]):
-        print data.tag
-        print data.inputs.shape
-        print data.outputs.shape
-        
-    
-        
-    for data_batch in DatasetBatchBuffer_iter(dataset, shuffle=False, batch_size=128, io_keys=[conf.inputs, conf.outputs]):
-        print data_batch[0].shape
-        print data_batch[1].shape
-    
-    """
-    
-    print (dataset.getFileTag())
-    
-    ktrain.train_model(dataset, batch_size=128,
-                input_keys=conf.inputs, output_keys=conf.outputs)
-    
-    ktrain.generate(dataset,
-                input_keys=conf.inputs, output_keys=conf.outputs,
-                out_dir=conf.gen_out_dir)
-    
-    # test for training 
-    #for data in Dataset_iter(dataset, shuffle=True):
-    #    print data['pls'].shape
-    
-def train_model_keras(conf):
-    
-    print ("not implemented yet")
-
 def main(argv):
    
     # Make directories
@@ -516,13 +389,6 @@ def main(argv):
     if conf.make_dnn_train_data:
         package_data()
         
-    # Make data provider for generic excitation model training
-    try:
-        if conf.make_data_provider:
-            make_data_provider(conf)
-    except AttributeError:
-        warnings.warn("Config file does not have attribute 'make_data_provider'" )
-
     # Write Dnn infofile
     if conf.make_dnn_infofile:
         write_dnn_infofile()

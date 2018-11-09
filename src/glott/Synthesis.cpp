@@ -46,13 +46,18 @@
 
 int main(int argc, char *argv[]) {
 
+
+    if (CheckCommandLineSynthesis(argc) == EXIT_FAILURE) {
+      return EXIT_FAILURE;
+    }
+
+   if (argc < 3 || argc > 4) {
+      std::cout << "Usage: Synthesis <basename.wav> <config_default.cfg> (<config_usr.cfg>)" << std::endl;
+   }
+
    const char *filename = argv[1];
    const char *default_config_filename = argv[2];
    const char *user_config_filename = argv[3];
-
-   if (argc < 3) {
-      std::cout << "Usage: Synthesis <basename.wav> <config_default.cfg> (<config_usr.cfg>)" << std::endl;
-   }
 
    std::cout << "Synthesis of " << filename << std::endl;
 
@@ -101,7 +106,9 @@ int main(int argc, char *argv[]) {
    //   SpectralMatchExcitation(params, data, &(data.excitation_signal)); // Use only with direct form filtering
    
    //FilterExcitation(params, data, &(data.signal));
-   FftFilterExcitation(params, data, &(data.signal)); // Inbuilt spectral matching
+
+   /* FFT based filtering includes spectral matching */ 
+   FftFilterExcitation(params, data, &(data.signal)); 
    GenerateUnvoicedSignal(params, data, &(data.signal));
    
    std::string out_fname;

@@ -21,7 +21,7 @@ Param::Param() {
 	external_f0_filename = "";
 	external_gci_filename = "";
 	external_lsf_vt_filename = "";
-	dnn_path_basename = "";
+	dnn_path_basename = "ERROR: DNN_WEIGHT_PATH is unspecified";
 	file_basename = "";
 	data_directory = "";
 	/* Enum parameters */

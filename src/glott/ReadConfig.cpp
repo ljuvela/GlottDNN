@@ -292,7 +292,7 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool required,
     ConfigLookupDouble("NOISE_GAIN_UNVOICED", cfg, required,
                        &(params->noise_gain_unvoiced));
 
-    ConfigLookupString("DNN_WEIGHT_PATH", cfg, required,
+    ConfigLookupString("DNN_WEIGHT_PATH", cfg, false,
                        params->dnn_path_basename);
 
     ConfigLookupBool("USE_PAF_ENERGY_NORM", cfg, required,
