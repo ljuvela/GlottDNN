@@ -29,19 +29,19 @@ The vocoder C++ code has the following library dependencies:
 
 Usually the best way to install the dependencies is with the system package manager. For example, in Ubuntu use `apt-get` install the packages `libgsl0-dev`, `libsndfile1-dev`, `libconfig++-dev`
 
-The C++ part uses a standard GNU autotools build system. To compile the vocoder, run the following commands in this directory:
+The C++ part uses a standard GNU autotools build system. To compile the vocoder, run the following commands in the project root directory
 ``` shell
    ./configure
    make
 ```
 
-Since the build targets are rather generically named `Analysis` and `Synthesis`, you might not want them in your default system PATH. Use the `--prefix` flag to choose another install path
+Since the build targets are rather generically named `Analysis` and `Synthesis`, you might not want them in your default system PATH. Use the `--prefix` flag to choose another install path
 ``` shell
    ./configure --prefix=/your/install/path/bin
    make install
 ```
 
-Usually `configure` and `make` should suffice, but if the process complains about missing files try running 
+Usually `configure` and `make` should be enough, but if the process complains about missing files try running 
 ```
 automake --add-missing
 ```
@@ -105,8 +105,7 @@ echo 'EXCITATION_METHOD = "PULSES_AS_FEATURES";' >> $CONF_USR
 echo 'USE_WSOLA = true;' >> $CONF_USR
 
 # Run synthesis with two config files
-./src/Synthesis "$DATADIR/$WAVEFILE" \
-    ./config/config_default_16k.cfg $CONF_USR
+./src/Synthesis "$DATADIR/$WAVEFILE" ./config/config_default_16k.cfg $CONF_USR
 
 # Move generated file
 mv "$DATADIR/$BASENAME.syn.wav" "$DATADIR/$BASENAME.syn.paf.wav"       
@@ -116,7 +115,9 @@ Of course the original pulses are not available in many applications (such as te
 
 ## Built-in excitation model 
 
- Note that the following is a toy example since we now use only 10 audio files. The example is intended as a  Let's first download some data
+ Note that the following is a toy example since we now use only 10 audio files. This example is intended as a quick sanity check and can be easily run on a CPU. For more data and more complex models, a GPU is recommended.
+
+Let's first download some data
 ```
 sh ./dnn_demo/get_data.sh
 ```
@@ -128,8 +129,7 @@ Before we run anything, have a look into
 
 Then run the example script by saying
 ``` bash
-python3 ./python/GlottDnnScript.py \
-     ./dnn_demo/config_dnn_demo.py
+python3 ./python/GlottDnnScript.py ./dnn_demo/config_dnn_demo.py
 ```
 
 ### Python config contents
