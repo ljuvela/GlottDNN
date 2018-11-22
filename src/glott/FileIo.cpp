@@ -433,6 +433,18 @@ int ReadSynthesisData(const char *filename, Param *params, SynthesisData *data) 
       return EXIT_FAILURE;
 
    data->fundf *= params->pitch_scale;
+
+   if (data->fundf.max() >= params->fs) {
+     std::cerr << "Error: Input fundamental frequency contains values higher than sampling frequency" << std::endl;
+     return EXIT_FAILURE;
+   }
+
+   if (data->fundf.min() < 0.0) {
+     std::cerr << "Error: Input fundamental frequency contains values smaller than zero." << std::endl
+         << " Zero encodes unvoiced, anything lower is invalid." << std::endl;
+     return EXIT_FAILURE;
+   }
+
    params->number_of_frames = (int)(data->fundf.size());
 
    /* Pre-allocate and initialize everything for safety */
