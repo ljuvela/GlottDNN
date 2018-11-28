@@ -39,7 +39,6 @@
 
 #include "Utils.h"
 
-
 /*******************************************************************/
 /*                          MAIN                                   */
 /*******************************************************************/
@@ -50,10 +49,6 @@ int main(int argc, char *argv[]) {
     if (CheckCommandLineSynthesis(argc) == EXIT_FAILURE) {
       return EXIT_FAILURE;
     }
-
-   if (argc < 3 || argc > 4) {
-      std::cout << "Usage: Synthesis <basename.wav> <config_default.cfg> (<config_usr.cfg>)" << std::endl;
-   }
 
    const char *filename = argv[1];
    const char *default_config_filename = argv[2];

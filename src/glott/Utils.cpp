@@ -93,16 +93,14 @@ int CheckCommandLineAnalysis(int argc) {
       std::cout << "<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>"  << std::endl;
       std::cout << "            GlottDNN - Speech Parameter Extractor "                << std::endl;
       std::cout << "<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>"  << std::endl;
-      std::cout << "Description:\n"                                                    << std::endl;
+      std::cout << "Description:  "                                                    << std::endl;
       std::cout << "    Extraction of speech signal into vocal tract filter and voice" << std::endl;
       std::cout << "    source parameters using glottal inverse filtering.\n"          << std::endl;
-      std::cout << "Usage:\n"                                                          << std::endl;
-      std::cout << "    Analysis wav_file.wav config_default.cfg (config_user.cfg)\n"  << std::endl;
+      std::cout << "Usage:  "                                                          << std::endl;
+      std::cout << "    Analysis wav_file.wav config_default.cfg (config_user.cfg)  "  << std::endl;
       std::cout << " wav_file.wav        - Name of the audio file to be analysed"      << std::endl;
       std::cout << " config_default.cfg  - Name of the default config file"            << std::endl;
       std::cout << " config_user.cfg     - Name of the user config file (OPTIONAL)"    << std::endl;
-      //std::cout << "Version:\n"  << std::endl;
-      //std::cout << "    %s (%s)\n\n",VERSION,DATE);
       return EXIT_FAILURE;
    } else {
 
@@ -122,15 +120,13 @@ int CheckCommandLineSynthesis(int argc) {
       std::cout << "<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>"  << std::endl;
       std::cout << "            GlottDNN - Speech Waveform Synthesis                "  << std::endl;
       std::cout << "<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>"  << std::endl;
-      std::cout << "Description:\n"                                                    << std::endl;
-      std::cout << "    Synthesis of speech signal from glottal vocoder parameters \n" << std::endl;
-      std::cout << "Usage:\n"                                                          << std::endl;
-      std::cout << "    Synthesis wav_file.wav config_default.cfg (config_user.cfg)\n" << std::endl;
+      std::cout << "Description:                                                    "  << std::endl;
+      std::cout << "    Synthesis of speech signal from glottal vocoder parameters  "  << std::endl;
+      std::cout << "Usage:                                                          "  << std::endl;
+      std::cout << "    Synthesis basename config_default.cfg (config_user.cfg)     "  << std::endl;
       std::cout << " basename            - Basename for synthesized audio           "  << std::endl;
       std::cout << " config_default.cfg  - Name of the default config file          "  << std::endl;
-      std::cout << " config_user.cfg     - Name of the user config file (OPTIONAL)"    << std::endl;
-      //std::cout << "Version:\n"  << std::endl;
-      //std::cout << "    %s (%s)\n\n",VERSION,DATE);
+      std::cout << " config_user.cfg     - Name of the user config file (OPTIONAL)  "  << std::endl;
       return EXIT_FAILURE;
    } else {
 
