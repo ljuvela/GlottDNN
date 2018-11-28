@@ -376,7 +376,8 @@ void FundamentalFrequency(const Param &params, const gsl::vector &glottal_frame,
    // glottal_frame: is long iaif frame
    // signal_frame: short speech frame
 
-   size_t i,n;
+   size_t i;
+   //size_t n;
    //double r_max;
    gsl::vector_int max_inds(NUMBER_OF_F0_CANDIDATES);
    gsl::vector_int max_inds_interp(NUMBER_OF_F0_CANDIDATES);

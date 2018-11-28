@@ -499,6 +499,7 @@ void ApplyPsolaWindow(const WindowingFunctionType &window_function, const double
 	         (*frame)(i) *= val;
 	      }
 	   }
+	   break;
 
 //      for(i=0;i<frame->size();i++)
 //         (*frame)(i) *= 0.5*(1.0-cos(2.0*M_PI*((double)i)/((n_dbl)-1.0)));
