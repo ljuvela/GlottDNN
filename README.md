@@ -13,12 +13,14 @@ Check the documentation in https://aalto-speech.github.io/GlottDNN/
 
 ## Citing
 
-For a technical description of the GlottDNN vocoder see
+If you publish work using this code, please cite
 
     M. Airaksinen, L. Juvela, B. Bollepalli, J. Yamagishi and P. Alku,
     "A comparison between STRAIGHT, glottal, and sinusoidal vocoding in statistical parametric speech synthesis,"
     in IEEE/ACM Transactions on Audio, Speech, and Language Processing.
     doi: 10.1109/TASLP.2018.2835720. 
+    
+The paper also contains a technical details of the vocoder 
 
 ## Installation
 
@@ -199,4 +201,22 @@ https://aalto-speech.github.io/GlottDNN/
 
 Copyright 2016-2018 Lauri Juvela and Manu Airaksinen
 
-See LICENCE and NOTICE for more information
+This product includes software developed at Aalto University (http://www.aalto.fi/).
+
+Licensed under the Apache License, Version 2.0
+See LICENCE and NOTICE for full licence details. 
+
+If you publish work based on GlottDNN, please cite
+```
+    M. Airaksinen, L. Juvela, B. Bollepalli, J. Yamagishi and P. Alku,
+    "A comparison between STRAIGHT, glottal, and sinusoidal vocoding in statistical parametric speech synthesis,"
+    in IEEE/ACM Transactions on Audio, Speech, and Language Processing.
+    doi: 10.1109/TASLP.2018.2835720. 
+```    
+
+If the software is to be deployed in commercial products, permission must be asked from Aalto University 
+    (please contact: lauri.juvela@aalto.fi , manu.airaksinen@aalto.fi or paavo.alku@aalto.fi). 
+
+This software distribution also includes third-party C++ wrappers for the GSL library, which are licenced separately under the GPL 3 licence. 
+For details, see
+    `src/gslwrap/LICENCE`
