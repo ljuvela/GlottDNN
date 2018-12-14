@@ -406,17 +406,18 @@ int AssignConfigParams(const libconfig::Config &cfg, const bool required,
     str.clear();
     ConfigLookupString("EXCITATION_METHOD", cfg, required, str);
     if (required || str != "") {
-      if (str == "SINGLE_PULSE")
+      if (str == "SINGLE_PULSE") {
         params->excitation_method = SINGLE_PULSE_EXCITATION;
-      else if (str == "DNN_GENERATED")
+      } else if (str == "DNN_GENERATED") {
         params->excitation_method = DNN_GENERATED_EXCITATION;
-      else if (str == "PULSES_AS_FEATURES")
+      } else if (str == "PULSES_AS_FEATURES") {
         params->excitation_method = PULSES_AS_FEATURES_EXCITATION;
-      else if (str == "EXTERNAL")
+      } else if (str == "EXTERNAL") {
         params->excitation_method = EXTERNAL_EXCITATION;
-      else if (str == "IMPULSE")
+        params->use_external_excitation = true;
+      } else if (str == "IMPULSE") {
         params->excitation_method = IMPULSE_EXCITATION;
-      else {
+      } else {
         std::cerr << "Error: invalid excitation method flag \"" << str << "\""
                   << std::endl;
         std::cerr << "Valid options are SINGLE_PULSE / DNN_GENERATED / "
