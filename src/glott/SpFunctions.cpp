@@ -53,7 +53,6 @@ void Filter(const gsl::vector &b, const gsl::vector &a, const gsl::vector &x, gs
       y->set_all(0.0);
 	}
 
-
 	gsl::vector result(x.size(),true);
 	/* Filter */
 	for (i=0;i<(int)x.size();i++){
@@ -216,44 +215,39 @@ void InterpolateSpline(const gsl::vector &vector, const size_t interpolated_size
  *
  */
 void InterpolateLinear(const gsl::vector &x_orig, const gsl::vector &y_orig, const gsl::vector &x_interp, gsl::vector *y_interp) {
-   size_t len = x_orig.size();
-	size_t interpolated_size = x_interp.size();
-	*y_interp = gsl::vector(interpolated_size);
+  size_t len = x_orig.size();
+  size_t interpolated_size = x_interp.size();
+  *y_interp = gsl::vector(interpolated_size);
 
+  /* Read values to array */
+  double *x = new double[len];
+  double *y = new double[len];
+  size_t i;
+  for(i=0; i<len; i++) {
+    x[i] = x_orig(i);
+    y[i] = y_orig(i);
+  }
+  gsl_interp_accel *acc = gsl_interp_accel_alloc();
+  gsl_spline *spline = gsl_spline_alloc(gsl_interp_linear, len);
+  gsl_spline_init(spline, x, y, len);
+  double xi;
+  i = 0;
 
+  for(i=0; i<interpolated_size; i++) {
+    xi = x_interp(i);
+    if (xi > x_orig(x_orig.size()-1))
+      (*y_interp)(i) = y_orig(y_orig.size()-1);
+    else if  (xi < x_orig(0))
+      (*y_interp)(i) = y_orig(0);
+    else
+      (*y_interp)(i) = gsl_spline_eval(spline, xi, acc);
+  }
 
-	/* Read values to array */
-	//double x[len];
-	//double y[len];
-	double *x = new double[len];
-	double *y = new double[len];
-	size_t i;
-	for(i=0; i<len; i++) {
-		x[i] = x_orig(i);
-		y[i] = y_orig(i);
-	}
-	gsl_interp_accel *acc = gsl_interp_accel_alloc();
-	gsl_spline *spline = gsl_spline_alloc(gsl_interp_linear, len);
-	gsl_spline_init(spline, x, y, len);
-	double xi;
-    i = 0;
-
-
-   for(i=0; i<interpolated_size; i++) {
-      xi = x_interp(i);
-      if (xi > x_orig(x_orig.size()-1))
-         (*y_interp)(i) = y_orig(y_orig.size()-1);
-      else if  (xi < x_orig(0))
-         (*y_interp)(i) = y_orig(0);
-      else
-         (*y_interp)(i) = gsl_spline_eval(spline, xi, acc);
-   }
-
-    /* Free memory */
-   gsl_spline_free(spline);
-	gsl_interp_accel_free(acc);
-	delete[] x;
-	delete[] y;
+  /* Free memory */
+  gsl_spline_free(spline);
+  gsl_interp_accel_free(acc);
+  delete[] x;
+  delete[] y;
 }
 
 
@@ -324,41 +318,41 @@ void InterpolateNearest(const gsl::vector &vector, const size_t interpolated_siz
 }
 
 void ApplyWindowingFunction(const WindowingFunctionType &window_function, gsl::vector *frame) {
-	size_t i;
-	double n = (double)frame->size();
-	switch(window_function) {
-	case HANN :
-		for(i=0;i<frame->size();i++)
-			(*frame)(i) *= 0.5*(1.0-cos(2.0*M_PI*((double)i)/((n)-1.0)));
-		break;
-	case HAMMING :
-		for(i=0;i<frame->size();i++)
-			(*frame)(i) *= 0.53836 - 0.46164*(cos(2.0*M_PI*((double)i)/((n)-1.0)));
-		break;
-	case BLACKMAN :
-		for(i=0;i<frame->size();i++)
-			(*frame)(i) *= 0.42-0.5*cos(2.0*M_PI*((double)i)/((n)-1))+0.08*cos(4.0*M_PI*((double)i)/((n)-1.0));
-		break;
-	case COSINE :
-		for(i=0;i<frame->size();i++)
-			(*frame)(i) *= sqrt(0.5*(1.0-cos(2.0*M_PI*((double)i)/((n)-1.0))));
-		break;
-	case HANNING : // Hann window with non-zero edges
-        for(i=0;i<frame->size();i++)
-			(*frame)(i) *= 0.5*(1.0-cos(2.0*M_PI*((double)i+1.0)/((n+2.0)-1.0)));
-		break;
-    case RECT :
-        break;
-    case NUTTALL :
-        double a0 = 0.3635819;
-        double a1 = 0.4891775;
-        double a2 = 0.1365995;
-        double a3 = 0.0106411;
-        for(i=0;i<frame->size();i++)
-            (*frame)(i) *= a0-a1*cos(2.0*M_PI*(i/((double)(n-1)))) + a2*cos(4.0*M_PI*(i/((double)(n-1)))) - a3*cos(6.0*M_PI*(i/((double)(n-1))));
-        break;
+  size_t i;
+  double n = (double)frame->size();
+  switch(window_function) {
+  case HANN :
+    for(i=0;i<frame->size();i++)
+      (*frame)(i) *= 0.5*(1.0-cos(2.0*M_PI*((double)i)/((n)-1.0)));
+    break;
+  case HAMMING :
+    for(i=0;i<frame->size();i++)
+      (*frame)(i) *= 0.53836 - 0.46164*(cos(2.0*M_PI*((double)i)/((n)-1.0)));
+    break;
+  case BLACKMAN :
+    for(i=0;i<frame->size();i++)
+      (*frame)(i) *= 0.42-0.5*cos(2.0*M_PI*((double)i)/((n)-1))+0.08*cos(4.0*M_PI*((double)i)/((n)-1.0));
+    break;
+  case COSINE :
+    for(i=0;i<frame->size();i++)
+      (*frame)(i) *= sqrt(0.5*(1.0-cos(2.0*M_PI*((double)i)/((n)-1.0))));
+    break;
+  case HANNING : // Hann window with non-zero edges
+    for(i=0;i<frame->size();i++)
+      (*frame)(i) *= 0.5*(1.0-cos(2.0*M_PI*((double)i+1.0)/((n+2.0)-1.0)));
+    break;
+  case RECT :
+    break;
+  case NUTTALL :
+    double a0 = 0.3635819;
+    double a1 = 0.4891775;
+    double a2 = 0.1365995;
+    double a3 = 0.0106411;
+    for(i=0;i<frame->size();i++)
+      (*frame)(i) *= a0-a1*cos(2.0*M_PI*(i/((double)(n-1)))) + a2*cos(4.0*M_PI*(i/((double)(n-1)))) - a3*cos(6.0*M_PI*(i/((double)(n-1))));
+    break;
 
-	}
+  }
 }
 
 

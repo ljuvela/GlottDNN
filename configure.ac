@@ -30,6 +30,6 @@ AC_FUNC_MALLOC
 AC_CHECK_FUNCS([floor pow rint sqrt strerror])
 
 AC_CONFIG_FILES([Makefile
-		 src/Makefile
-                 src/glott/Makefile])
+		        src/Makefile
+                src/glott/Makefile])
 AC_OUTPUT
