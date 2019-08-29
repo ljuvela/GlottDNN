@@ -801,12 +801,20 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data,
                             gsl::vector *signal) {
   /* When using pulses-as-features for unvoiced, unvoiced part is filtered as
    * voiced */
-  if (params.use_paf_unvoiced_synthesis || params.use_external_excitation) {
-     return;
+  /*
+  if ((params.use_paf_unvoiced_synthesis &&
+       params.excitation_method == PULSES_AS_FEATURES_EXCITATION) ||
+      params.use_external_excitation)
+  { return; }
+  */
+
+  if (params.use_paf_unvoiced_synthesis &&
+      params.excitation_method == PULSES_AS_FEATURES_EXCITATION) {
+    //std::cout << "skipping unvoiced excitation generation" << std::endl;
+    return;
   }
 
-  std::cout << "generating unvoiced" << std::endl;
-
+  //std::cout << "generating unvoiced" << std::endl;
 
   gsl::vector uv_signal((*signal).size(), true);
   gsl::vector noise_vec(params.frame_length_unvoiced);
@@ -862,9 +870,15 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data,
         }
       }
 
-      for (i = 0; i < noise_vec.size(); i++) {
-         noise_vec(i) = random_gauss_gen.get();
+      if (params.use_external_excitation) {
+        GetFrame(data.excitation_signal, frame_index,
+                    rint(params.frame_shift / params.speed_scale), &noise_vec, NULL);
+      } else {
+        for (i = 0; i < noise_vec.size(); i++) {
+            noise_vec(i) = random_gauss_gen.get();
+        }
       }
+
 
       /* Cancel pre-emphasis if needed */
       if (params.unvoiced_pre_emphasis_coefficient > 0.0) {
@@ -976,18 +990,22 @@ void FftFilterExcitation(const Param &params, const SynthesisData &data,
   gsl::vector kbd_window =
       getKaiserBesselDerivedWindow(frame.size(), kbd_alpha);
 
-  bool always_use_fft_filter = false; // over-ride flag for always using FFT filter
   bool frame_is_voiced;
   bool treat_frame_as_voiced;
   size_t frame_index;
   for (frame_index = 0; frame_index < (size_t)params.number_of_frames;
        frame_index++) {
     frame_is_voiced = data.fundf(frame_index) > 0;
-    treat_frame_as_voiced = (frame_is_voiced
-          || params.use_paf_unvoiced_synthesis
-          || params.use_external_excitation);
+    //treat_frame_as_voiced = (frame_is_voiced
+    //      || params.use_paf_unvoiced_synthesis
+    //      || params.use_external_excitation);
 
-    if (treat_frame_as_voiced || always_use_fft_filter) {
+    treat_frame_as_voiced =
+        (frame_is_voiced ||
+         (params.use_paf_unvoiced_synthesis &&
+          params.excitation_method == PULSES_AS_FEATURES_EXCITATION));
+
+    if (treat_frame_as_voiced) {
       /* Get spectrum of excitation */
       GetFrame(data.excitation_signal, frame_index,
                rint(params.frame_shift / params.speed_scale), &frame, NULL);
