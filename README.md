@@ -3,24 +3,11 @@
 The GlottDNN package contains two main parts:
 
 1) The glottal vocoder written in C++
-   - Dependencies: libsndfile, libgsl, libconfig
+   - Dependencies: `libsndfile`, `libgsl`, `libconfig`
 
 2) Python scripts for vocoder analysis, synthesis and training a DNN excitation model:
-   - Dependencies: python, numpy, pytorch
+   - Dependencies: `python3`, `numpy`, `pytorch>=1.1.0`
 
-
-Check the documentation in https://aalto-speech.github.io/GlottDNN/   
-
-## Citing
-
-If you publish work using this code, please cite
-
-    M. Airaksinen, L. Juvela, B. Bollepalli, J. Yamagishi and P. Alku,
-    "A comparison between STRAIGHT, glottal, and sinusoidal vocoding in statistical parametric speech synthesis,"
-    in IEEE/ACM Transactions on Audio, Speech, and Language Processing.
-    doi: 10.1109/TASLP.2018.2835720. 
-    
-The paper also contains a technical details of the vocoder 
 
 ## Installation
 
@@ -49,6 +36,8 @@ automake --add-missing
 ```
 
 ## Analysis-synthesis example
+
+
 
 These examples assume 16kHz sampling rate audio. Other sampling rates are feasible, but you should change the config accordingly.  
 
@@ -125,9 +114,12 @@ mv "$DATADIR/$BASENAME.syn.wav" "$DATADIR/$BASENAME.syn.paf.wav"
 
 Of course the original pulses are not available in many applications (such as text-to-speech). For this, we can use a trainable excitation model (neural net), which generates the pulses from acoustic features.
 
-## Built-in excitation model 
+## Built-in neural net excitation model 
 
- Note that the following is a toy example since we now use only 10 audio files. This example is intended as a quick sanity check and can be easily run on a CPU. For more data and more complex models, a GPU is recommended.
+The present version requires `pytorch>=1.1.0` and all `theano` dependencies have been removed.
+
+Note that the following is a toy example, since we now use only 10 audio files. This example is intended as a quick sanity check and can be easily run on a CPU. For more data and more complex models, a GPU is recommended.
+
 
 Let's first download some data
 ```
@@ -143,6 +135,9 @@ Then run the example script by saying
 ``` bash
 python3 ./python/GlottDnnScript.py ./dnn_demo/config_dnn_demo.py
 ```
+
+The demo script runs vocoder analysis, trains a DNN excitation model, and finally applies copy-synthesis to the samples.
+After running, the copy-synthesis results are stored in `./dnn_demo/data/syn` and the original wave files are in `./dnn_demo/data/wav`.
 
 ### Python config contents
 Prepare a directory structure under and make file lists based on contents of the `wav` sub-directory
@@ -213,6 +208,8 @@ If you publish work based on GlottDNN, please cite
     in IEEE/ACM Transactions on Audio, Speech, and Language Processing.
     doi: 10.1109/TASLP.2018.2835720. 
 ```    
+
+The paper also contains a technical details of the vocoder 
 
 If the software is to be deployed in commercial products, permission must be asked from Aalto University 
     (please contact: lauri.juvela@aalto.fi , manu.airaksinen@aalto.fi or paavo.alku@aalto.fi). 
