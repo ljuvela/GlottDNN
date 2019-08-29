@@ -1,23 +1,18 @@
-from __future__ import division
-
 import sys
 import os
 import numpy as np
 import random
-import wave
-import math
-import imp # for importing argv[1]
-import warnings
+from importlib.machinery import SourceFileLoader
 
 # Config file 
 if len(sys.argv) < 2:
     sys.exit("Usage: python GlottDnnScript.py config.py")
 if os.path.isfile(sys.argv[1]):
-    conf = imp.load_source('', sys.argv[1])
+    conf = SourceFileLoader('', sys.argv[1]).load_module()
 else:
     sys.exit("Config file " + sys.argv[1] + " does not exist")
 
-# Import Theano-based DNN training if used 
+# Import DNN training if used 
 if conf.do_dnn_training:
     import TrainDnn
     
@@ -138,18 +133,11 @@ def reaper_pitch_analysis():
         for f in wavfiles:
             wavfile = f.rstrip()
             if os.path.isfile(wavfile):
-                
-            
                 # define paths
-                bname = os.path.splitext(os.path.basename(wavfile))[0]
-                #f0tmp1 = conf.datadir + '/f0/' + bname + '.f0tmp1'
-                #f0tmp2 = conf.datadir + '/f0/' + bname + '.f0tmp2'                
-                f0file = conf.datadir + '/f0/' + bname + '.f0'
-            
-                #gcitmp = conf.datadir + '/gci/' + bname + '.GCItmp'                
+                bname = os.path.splitext(os.path.basename(wavfile))[0]             
+                f0file = conf.datadir + '/f0/' + bname + '.f0'                         
                 gcifile = conf.datadir + '/gci/' + bname + '.GCI'
-                
-
+                # run reaper
                 reaper_pitch_analysis.estimate(wavfile=wavfile, gcifile=gcifile,
                                                f0file=f0file, reaper_path=conf.reaper,
                                                two_stage_estimation=False)
@@ -235,7 +223,6 @@ def package_data():
         if os.path.isfile(wavfile):
             bname = os.path.splitext(os.path.basename(wavfile))[0]
             print (bname)
-                # todo: save n_frames
             f0_file = conf.datadir + '/f0/' + bname + '.f0' 
             n_frames[file_idx] = (np.fromfile(f0_file, dtype=np.float32, count=-1, sep='')).shape[0]
             # allocate file data
@@ -281,10 +268,6 @@ def package_data():
     set_sizes = [n_train , n_val, n_test]
     print (set_sizes)
 
-#    batch_index = 1
-#    in_fid = open(conf.train_data_dir + '/' + conf.dnn_name + '.' + str(batch_index) + '.idat' ,'w')
-#    out_fid = open(conf.train_data_dir + '/' + conf.dnn_name + '.' + str(batch_index) + '.odat' ,'w')
-
     set_file_counter = 1
     set_index = 0
     in_fid = open(conf.train_data_dir + '/' + conf.dnn_name + '.' + set_name[set_index] + '.idat' ,'w')
@@ -304,15 +287,6 @@ def package_data():
                 in_fid = open(conf.train_data_dir + '/' + conf.dnn_name + '.' + set_name[set_index] + '.idat' ,'w')
                 out_fid = open(conf.train_data_dir + '/' + conf.dnn_name + '.' + set_name[set_index] + '.odat' ,'w')
             
-
-        #if file_idx > 0 and file_idx % conf.data_buffer_size == 0:
-        #    in_fid.close()
-        #    out_fid.close()
-        #    batch_index += 1
-        #    in_fid = open(conf.train_data_dir + '/' + conf.dnn_name + '.' + str(batch_index) + '.idat' ,'w')
-        #    out_fid = open(conf.train_data_dir + '/' + conf.dnn_name + '.' + str(batch_index) + '.odat' ,'w')
-            
-   
         if os.path.isfile(wavfile):
             bname = os.path.splitext(os.path.basename(wavfile))[0]                
             # allocate input and output data
@@ -385,7 +359,7 @@ def main(argv):
     if conf.do_glott_vocoder_analysis:
         glott_vocoder_analysis()
 
-    # Package data for Theano
+    # Package data for DNN training
     if conf.make_dnn_train_data:
         package_data()
         
@@ -393,7 +367,7 @@ def main(argv):
     if conf.make_dnn_infofile:
         write_dnn_infofile()
 
-    # Train Dnn with Theano
+    # Train Dnn with torch
     if conf.do_dnn_training:
         dim_in = sum(conf.input_dims)
         dim_out = sum(conf.output_dims)

@@ -2,43 +2,44 @@ import os
 import sys
 import timeit
 
-import numpy
-import scipy.io as sio
+from importlib.machinery import SourceFileLoader
 
-import theano
-import theano.tensor as T
-#from theano.tensor.signal import downsample
-#from theano.tensor.nnet import conv 
+import numpy as np
+import torch
+
+from dnnClasses import HiddenLayer
 
 # Config file 
-import imp # for importing argv[1]
 if len(sys.argv) < 2:
     sys.exit("Usage: python GlottDnnScript.py config.py")
 if os.path.isfile(sys.argv[1]):
-    conf = imp.load_source('', sys.argv[1])
+    conf = SourceFileLoader('', sys.argv[1]).load_module()
 else:
-    sys.exit("Config file " + sys.argv[1] + " does not exist")
+    sys.exit("Config file " + sys.argv[1] + " does not exist")    
 
+# Set torch device
+if torch.cuda.is_available():
+    device = torch.device('cuda')
+else:
+    device = torch.device('cpu')    
 
-from dnnClasses import HiddenLayer, LogisticRegression
 
 def load_data(filename, size2):
-    var = numpy.fromfile(filename, dtype=numpy.float32, count=-1, sep='')
-    var = numpy.reshape(var,(-1,size2))
+    var = np.fromfile(filename, dtype=np.float32, count=-1, sep='')
+    var = np.reshape(var, (-1, size2))
+    return torch.tensor(var).to(device)
 
-    shared_var = theano.shared(numpy.asarray(var, dtype=theano.config.floatX), borrow=True)
-    return shared_var
-# EOF load_data_mat()
 
 def save_network(layerList, layer_out):
-    fid = open( conf.weights_data_dir + '/' + conf.dnn_name + '.dnnData','w')
-    for layer in layerList:
-        layer.W.get_value().astype(numpy.float32).tofile(fid, sep='',format="%f")
-        layer.b.get_value().astype(numpy.float32).tofile(fid, sep='',format="%f")
-
-    layer_out.W.get_value().astype(numpy.float32).tofile(fid, sep='',format="%f")
-    layer_out.b.get_value().astype(numpy.float32).tofile(fid, sep='',format="%f")
-# EOF : save_network
+    fid = open( conf.weights_data_dir + '/' + conf.dnn_name + '.dnnData','w')   
+    # hidden layers
+    for layer in layerList[:-1]:
+        layer.linear.weight.detach().numpy().astype(np.float32).T.tofile(fid)
+        layer.linear.bias.detach().numpy().astype(np.float32).tofile(fid)
+    # output layers
+    layer_out = layerList[-1]
+    layer_out.weight.detach().numpy().astype(np.float32).T.tofile(fid)
+    layer_out.bias.detach().numpy().astype(np.float32).tofile(fid)
 
 
 def list_dir_fullpath(dirname,start,extension):
@@ -49,162 +50,88 @@ def list_dir_fullpath(dirname,start,extension):
     return output
 
 
-def evaluate_dnn(learning_rate=0.1, n_epochs=150000,
-                    n_in=42, n_out=500,  n_hidden=[100, 250, 500], batch_size=32):
-    """ 
-
-    :type learning_rate: float
-    :param learning_rate: learning rate used (factor for the stochastic
-                          gradient)
-
-    :type n_epochs: int
-    :param n_epochs: maximal number of epochs to run the optimizer
-
-    :type dataset: string
-    :param dataset: path to the dataset used for training /testing (MNIST here)
-
-    :type nkerns: list of ints
-    :param nkerns: number of kernels on each layer
-    """
-
-    rng = numpy.random.RandomState(23455)
+def evaluate_dnn(learning_rate=0.1, n_epochs=150,
+                    n_in=42, n_out=500, n_hidden=[100, 250, 500], batch_size=32):
 
     num_hidden = len(n_hidden)
-    
     nndata_basename = conf.train_data_dir + '/' + conf.dnn_name 
     
+    # load data as torch.tensor
     valid_set_x = load_data(nndata_basename + '.val.idat', n_in)
     valid_set_y = load_data(nndata_basename + '.val.odat', n_out)
-    
-    """
-    test_set_x = load_data(nndata_basename + '.test.idat', n_in)
-    test_set_y = load_data(nndata_basename + '.test.odat', n_out)
-    """
-
     train_set_x = load_data(nndata_basename + '.train.idat', n_in)
     train_set_y = load_data(nndata_basename + '.train.odat', n_out)
 
-    # compute number of minibatches for training, validation and testing
-    n_train_batches = train_set_x.get_value(borrow=True).shape[0]
-    n_valid_batches = valid_set_x.get_value(borrow=True).shape[0]
-    #n_test_batches = test_set_x.get_value(borrow=True).shape[0]
-
-    print ('valid batches %d' % (n_valid_batches) ) 
-    
+    # compute number of minibatches for training and validation
+    n_train_batches = train_set_x.shape[0]
+    n_valid_batches = valid_set_x.shape[0]
     n_train_batches //= batch_size
     n_valid_batches //= batch_size
-    #n_test_batches /= batch_size
-
-    # allocate symbolic variables for the data
-    index = T.lscalar()  # index to a [mini]batch
-
-    # start-snippet-1
-    x = T.matrix('x')  
-    y = T.matrix('y')  
+    print ('train batches %d' % (n_train_batches) ) 
+    print ('valid batches %d' % (n_valid_batches) ) 
 
     ######################
     # BUILD ACTUAL MODEL #
     ######################
     print ('... building the model')
-    print ('Number of hidden layers: %i, Hidden units per layer: i' % (num_hidden))
+    print ('Number of hidden layers: %i' % (num_hidden))
 
-    layer0_input = x
-
+    # pytorch
     layerList = []
     for i in range(0, num_hidden):
         if i > 0:
-            cInput = layerList[i-1].output
             cn_in = n_hidden[i-1]
             cn_out = n_hidden[i]
         else:
-            cInput = layer0_input
             cn_in = n_in
             cn_out = n_hidden[0]
         print ('in: %d, out: %d' % (cn_in, cn_out))    
-        cLayer = HiddenLayer(
-            rng=rng,
-            input=cInput,
-            n_in=cn_in,
-            n_out=cn_out,
-            activation = T.nnet.sigmoid
-            #activation=relu
-        )
+        cLayer = HiddenLayer(n_in=cn_in, n_out=cn_out)
         layerList.append(cLayer)
-    
-    layer_out = LogisticRegression(input=layerList[-1].output, n_in=n_hidden[-1], n_out=n_out)
 
-    # the cost we minimize during training is the NLL of the model
-    cost = layer_out.mse(y,n_out)
+    # output layer
+    layer_out = torch.nn.Linear(n_hidden[-1], n_out, bias=True)
+    layerList.append(layer_out)       
 
-    # create a function to compute the mistakes that are made by the model
-    """
-    test_model = theano.function(
-        [index],
-        layer_out.errors(y),
-        givens={
-            x: test_set_x[index * batch_size: (index + 1) * batch_size],
-            y: test_set_y[index * batch_size: (index + 1) * batch_size]
-        }
-    )
-    """
+    # model 
+    model = torch.nn.Sequential(*layerList)
+    model = model.to(device)
 
-    validate_model = theano.function(
-        [index],
-        layer_out.errors(y),
-        givens={
-            x: valid_set_x[index * batch_size: (index + 1) * batch_size],
-            y: valid_set_y[index * batch_size: (index + 1) * batch_size]
-        }
-    )
+    # loss
+    criterion = torch.nn.MSELoss()
+  
+    params = model.parameters()
+    # Original papers used SGD optimizer
+    #optim = torch.optim.SGD(params, lr=learning_rate)
+    # Adam is notably faster
+    optim = torch.optim.Adam(params, lr=learning_rate)
 
+    def train_model(index):
+        x = train_set_x[index * batch_size: (index + 1) * batch_size]
+        y = train_set_y[index * batch_size: (index + 1) * batch_size]
+        optim.zero_grad()
+        y_hat = model(x)
+        loss = criterion(y, y_hat)
+        loss.backward()
+        optim.step()
+        return loss
 
+    def validate_model(index):
+        x = valid_set_x[index * batch_size: (index + 1) * batch_size]
+        y = valid_set_y[index * batch_size: (index + 1) * batch_size]
+        y_hat = model(x)
+        loss = criterion(y, y_hat)
+        return loss
 
-    # create a list of all model parameters to be fit by gradient descent
-    # params = layer2.params + layer1.params + layer0.params
-    params = []
-    for layer in layerList:
-        params = params + layer.params
-    params = params + layer_out.params    
-
-    # create a list of gradients for all model parameters
-    grads = T.grad(cost, params)
-
-    # train_model is a function that updates the model parameters by
-    # SGD Since this model has many parameters, it would be tedious to
-    # manually create an update rule for each model parameter. We thus
-    # create the updates list by automatically looping over all
-    # (params[i], grads[i]) pairs.
-    updates = [
-        (param_i, param_i - learning_rate * grad_i)
-        for param_i, grad_i in zip(params, grads)
-    ]
-
-    train_model = theano.function(
-	[index],
-	cost,
-	updates=updates,
-	givens={
-	    x: train_set_x[index * batch_size: (index + 1) * batch_size],
-	    y: train_set_y[index * batch_size: (index + 1) * batch_size]
-	}
-    )
-    
-
-    # end-snippet-1
 
     ###############
     # TRAIN MODEL #
     ###############
     print ('... training')
     # early-stopping parameters
-    #patience = 10000  # look as this many examples regardless
     patience = conf.patience
-    patience_increase = 2  # wait this much longer when a new best is
-                           # found
-    improvement_threshold = 0.995  # a relative improvement of this much is
-                                   # considered significant
 
-    best_validation_loss = numpy.inf
+    best_validation_loss = np.inf
     best_iter = 0
     test_score = 0.
     start_time = timeit.default_timer()
@@ -214,47 +141,36 @@ def evaluate_dnn(learning_rate=0.1, n_epochs=150000,
     
     while (epoch < n_epochs) and (not done_looping):
         epoch = epoch + 1
-                    
+
+        permutation = np.random.permutation(n_train_batches)
+        training_losses = []            
         # loop over minibatches
         for minibatch_index in range(n_train_batches):
             
-            iter = (epoch - 1) * n_train_batches + minibatch_index            		
-            cost_ij = train_model(minibatch_index)
+            iter_ind = (epoch - 1) * n_train_batches + minibatch_index  
+            index = permutation[minibatch_index]
+            loss = train_model(index)
+            training_losses.append(loss.detach().numpy())
 
-            if iter % 100 == 0:
+            if iter_ind % 100 == 0:
                 print('     epoch %d, minibatch %d / %d' % (epoch, minibatch_index + 1, n_train_batches))
 
- 
+        this_training_loss = np.mean(training_losses)
 
         # compute loss on validation set
-        validation_losses = [validate_model(i) for i in range(n_valid_batches)]
-        this_validation_loss = numpy.mean(validation_losses)
-
-        training_losses = [train_model(i) for i
-                                   in range(n_train_batches)]
-        this_training_loss = numpy.log(numpy.mean(training_losses))
+        validation_losses = [validate_model(i).detach().numpy() for i in range(n_valid_batches)]
+        this_validation_loss = np.mean(validation_losses)
 		
         print('epoch %i, minibatch %i/%i, training error %f, validation error %f' % (epoch, minibatch_index + 1, n_train_batches, this_training_loss, this_validation_loss)) 
                 
         # if we got the best validation score until now
         if this_validation_loss < best_validation_loss:
-                    
             # reset patience
-            patience = conf.patience
-                        
+            patience = conf.patience 
             # save best validation score and iteration number
             best_validation_loss = this_validation_loss
-                        
-            # test it on the test set
-            """
-            test_losses = [
-                test_model(i)
-                for i in xrange(n_test_batches)
-            ]
-            test_score = numpy.mean(test_losses)
-            """            
+            # test it on the test set      
             save_network(layerList, layer_out)
-
         else:
             patience -= 1    
             
@@ -264,21 +180,7 @@ def evaluate_dnn(learning_rate=0.1, n_epochs=150000,
 
     end_time = timeit.default_timer()
     print('Optimization complete.')
-    #print('Best validation score of %f obtained at iteration %i, '
-    #      'with test performance %f' %
-    #      (best_validation_loss., best_iter + 1, test_score.))
-    print(('The code for file ' +
-           os.path.split(__file__)[1] +
-           ' ran for %.2fm' % ((end_time - start_time) / 60.))
-          )
-
-# EOF evaluate_dnn
+ 
+    print(('The code ran for %.2fm' % ((end_time - start_time) / 60.)))
 
 
-if __name__ == '__main__':
-   
-    dim_in = sum(conf.input_dims)
-    dim_out = sum(conf.output_dims)
-
-    evaluate_dnn(n_in=dim_in, n_out=dim_out, n_hidden=conf.n_hidden, batch_size=conf.batch_size, 
-                 learning_rate=conf.learning_rate, n_epochs = conf.max_epochs)

@@ -6,7 +6,7 @@ The GlottDNN package contains two main parts:
    - Dependencies: libsndfile, libgsl, libconfig
 
 2) Python scripts for vocoder analysis, synthesis and training a DNN excitation model:
-   - Dependencies: python, numpy, theano
+   - Dependencies: python, numpy, pytorch
 
 
 Check the documentation in https://aalto-speech.github.io/GlottDNN/   

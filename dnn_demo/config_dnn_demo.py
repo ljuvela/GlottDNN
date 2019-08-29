@@ -51,10 +51,11 @@ max_number_of_files = 1000
 
 # dnn train conf
 n_hidden = [150, 250, 300]
-learning_rate = 0.01
+learning_rate = 1e-4
 batch_size = 100
-max_epochs = 50
+max_epochs = 100
 patience = 5  # early stopping criterion
+optimizer = 'adam'
 
 # synthesis configs
 use_dnn_generated_excitation = True
