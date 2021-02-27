@@ -173,7 +173,8 @@ def glott_vocoder_analysis():
                 conf_file.write('DATA_TYPE = \"FLOAT\";\n')
                 conf_file.close()
                 # run analysis program
-                cmd = conf.Analysis + ' ' + wavfile + ' ' + conf.config_default + ' ' + config_user
+                cmd = f"export LD_LIBRARY_PATH={os.environ['LD_LIBRARY_PATH']};"
+                cmd += conf.Analysis + ' ' + wavfile + ' ' + conf.config_default + ' ' + config_user
                 os.system(cmd)
                 # remove temporary config
                 os.remove(config_user)
@@ -199,7 +200,8 @@ def glott_vocoder_synthesis():
                 conf_file.write('DNN_WEIGHT_PATH = \"' + conf.weights_data_dir + '/' + conf.dnn_name + '\";\n')
                 
                 conf_file.close()
-                cmd = conf.Synthesis + ' ' + wavfile + ' ' + conf.config_default + ' ' + config_user
+                cmd = f"export LD_LIBRARY_PATH={os.environ['LD_LIBRARY_PATH']};"
+                cmd += conf.Synthesis + ' ' + wavfile + ' ' + conf.config_default + ' ' + config_user
                 #print cmd
                 os.system(cmd)
 
