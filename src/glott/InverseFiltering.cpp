@@ -66,6 +66,11 @@ gsl::vector_int GetFrameGcis(const Param &params, const int frame_index, const g
 void LpWeightAme(const Param &params, const gsl::vector_int &gci_inds,
 		 const size_t frame_index, gsl::vector *weight) {
 
+	if (!gci_inds.is_set()) {
+		weight->set_all(1.0);
+		return;
+	}
+
 	gsl::vector_int inds = GetFrameGcis(params, frame_index, gci_inds);
 
 	if(!weight->is_set()) {
@@ -349,6 +354,7 @@ void SedreamsGciDetection(const gsl::vector &residual, const gsl::vector &mean_b
    }
    /* If no GCIs found, set gci_inds as empty and return */
 	if (ii == 0){
+		std::cerr << "No GCIs found" << std::endl; 
       (*gci_inds) = gsl::vector_int();
 		return ;
 	}

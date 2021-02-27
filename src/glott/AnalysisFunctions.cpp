@@ -517,6 +517,9 @@ int Find_nearest_pulse_index(const int &sample_index,
   // int i,k;
   int pulse_index = -1;  // Return value initialization
 
+  if (!gci_inds.is_set())
+    return PULSE_NOT_FOUND;
+
   int dist, min_dist, ppos;
   min_dist = INT_MAX;
   /* Find the shortest distance between sample index and gcis */
