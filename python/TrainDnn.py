@@ -1,21 +1,10 @@
 import os
-import sys
 import timeit
-
-from importlib.machinery import SourceFileLoader
 
 import numpy as np
 import torch
 
 from dnnClasses import HiddenLayer
-
-# Config file 
-if len(sys.argv) < 2:
-    sys.exit("Usage: python GlottDnnScript.py config.py")
-if os.path.isfile(sys.argv[1]):
-    conf = SourceFileLoader('', sys.argv[1]).load_module()
-else:
-    sys.exit("Config file " + sys.argv[1] + " does not exist")    
 
 # Set torch device
 if torch.cuda.is_available():
@@ -50,7 +39,7 @@ def list_dir_fullpath(dirname,start,extension):
     return output
 
 
-def evaluate_dnn(learning_rate=0.1, n_epochs=150,
+def evaluate_dnn(conf, learning_rate=0.1, n_epochs=150,
                     n_in=42, n_out=500, n_hidden=[100, 250, 500], batch_size=32):
 
     num_hidden = len(n_hidden)
@@ -182,5 +171,4 @@ def evaluate_dnn(learning_rate=0.1, n_epochs=150,
     print('Optimization complete.')
  
     print(('The code ran for %.2fm' % ((end_time - start_time) / 60.)))
-
 

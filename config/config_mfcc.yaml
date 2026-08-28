@@ -1,0 +1,44 @@
+make_dirs: true
+make_scp: true
+do_reaper_pitch_analysis: false
+do_sptk_pitch_analysis: false
+do_glott_vocoder_analysis: false
+make_dnn_train_data: false
+make_dnn_infofile: false
+do_dnn_training: false
+do_glott_vocoder_synthesis: false
+make_data_provider: true
+prjdir: .
+datadir: data/nick
+sampling_frequency: 16000
+warping_lambda: 0.0
+use_external_gci: false
+reaper: /usr/local/bin/reaper
+sox: /usr/local/bin/sox
+pitch: /usr/local/bin/pitch -a 0 -s 16.0 -o 1 -p 80 -T 0.2 -L 50 -H 800
+x2x: /usr/local/bin/x2x
+Analysis: src/Analysis
+Synthesis: src/Synthesis
+config_default: config/config_default_16k.cfg
+inputs: [f0, mfcc]
+input_exts: [.f0, .mfcc]
+input_dims: [1, 20]
+outputs: [pls_mfcc]
+output_exts: [.pls]
+output_dims: [400]
+gen_out_dir: data/nick/pls_gen
+data_type: float32
+scalers: {f0: minmax, gain: minmax, mfcc: minmax, hnr: minmax, slsf: minmax, lsf: minmax, pls_mfcc: null, pls: null}
+dnn_name: nick
+train_data_dir: nndata/traindata/nick
+weights_data_dir: nndata/weights/nick
+remove_unvoiced_frames: true
+validation_ratio: 0.2
+test_ratio: 0.1
+max_number_of_files: 30
+n_hidden: [150, 250, 300]
+learning_rate: 0.01
+batch_size: 128
+max_epochs: 50
+patience: 10
+use_dnn_generated_excitation: false

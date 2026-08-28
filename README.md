@@ -74,20 +74,18 @@ These examples assume 16kHz sampling rate audio. Other sampling rates are feasib
 
 Let's first get a wave file from the Arctic database
 ``` bash 
-#!/bin/bash
-
 URL='http://festvox.org/cmu_arctic/cmu_arctic/cmu_us_slt_arctic/wav/arctic_a0001.wav'
 DATADIR='./data/tmp'
 BASENAME='slt_arctic_a0001'
 mkdir -p $DATADIR
-wget -O "$DATADIR/$BASENAME.wav" $URL
+curl -L -o "$DATADIR/$BASENAME.wav" $URL
 ```
 
 ### Acoustic feature analysis
 
 Now run GlottDNN Analysis program with default configuration
 ``` bash
-./src/Analysis "$DATADIR/$BASENAME.wav" ./config/config_default_16k.cfg
+build-cmake/Analysis "$DATADIR/$BASENAME.wav" ./config/config_default_16k.cfg
 ```
 
 We should now have the following files 
@@ -110,7 +108,7 @@ First let's run copy synthesis with `SINGLE_PULSE` excitation. This method uses 
 
 ``` bash
 # Run synthesis with default config
-./src/Synthesis "$DATADIR/$BASENAME" ./config/config_default_16k.cfg
+build-cmake/Synthesis "$DATADIR/$BASENAME" ./config/config_default_16k.cfg
 
 # Move generated file
 mv "$DATADIR/$BASENAME.syn.wav" "$DATADIR/$BASENAME.syn.sp.wav"    
@@ -136,7 +134,7 @@ echo 'USE_SPECTRAL_MATCHING = false;' >> $CONF_USR
 echo 'NOISE_GAIN_VOICED = 0.0;' >> $CONF_USR
 
 # Run synthesis with two config files
-./src/Synthesis "$DATADIR/$BASENAME" ./config/config_default_16k.cfg $CONF_USR
+build-cmake/Synthesis "$DATADIR/$BASENAME" ./config/config_default_16k.cfg $CONF_USR
 
 # Move generated file
 mv "$DATADIR/$BASENAME.syn.wav" "$DATADIR/$BASENAME.syn.paf.wav"       
@@ -158,47 +156,47 @@ sh ./dnn_demo/get_data.sh
 
 Before we run anything, have a look into
 ```
-./dnn_demo/config_dnn_demo.py
+./dnn_demo/config_dnn_demo.yaml
 ```
 
 Then run the example script by saying
 ``` bash
-python3 ./python/GlottDnnScript.py ./dnn_demo/config_dnn_demo.py
+glottdnn ./dnn_demo/config_dnn_demo.yaml
 ```
 
 The demo script runs vocoder analysis, trains a DNN excitation model, and finally applies copy-synthesis to the samples.
 After running, the copy-synthesis results are stored in `./dnn_demo/data/syn` and the original wave files are in `./dnn_demo/data/wav`.
 
-### Python config contents
+### YAML configuration
 Prepare a directory structure under and make file lists based on contents of the `wav` sub-directory
-``` python
-make_dirs = 1
-make_scp = 1
+``` yaml
+make_dirs: true
+make_scp: true
 ```
 
 Optionally, use REAPER for pitch (F0) and GCI analysis. 
 Also optionally, use RAPT from SPTK for pitch analysis. These programs need to be installed separately, so this example does not use them. 
 
-``` python
-do_reaper_pitch_analysis = 0
-do_sptk_pitch_analysis = 0
+``` yaml
+do_reaper_pitch_analysis: false
+do_sptk_pitch_analysis: false
 ```
 
 Use GlottDNN to extract glottal vocoder features and pulses for  excitation model training.
-``` python
-do_glott_vocoder_analysis = 1
+``` yaml
+do_glott_vocoder_analysis: true
 ```
 
-Package data and train an excitation model for GlottDNN, as supported by the internal implementation. Uses `theano` for training and only supports simple fully connected nets with least squares training.
-``` python
-make_dnn_train_data = 1
-make_dnn_infofile = 1
-do_dnn_training = 1
+Package data and train an excitation model with the built-in PyTorch implementation.
+``` yaml
+make_dnn_train_data: true
+make_dnn_infofile: true
+do_dnn_training: true
 ```
 
 Do copy synthesis (using the internal implementation of DNN excitation)
-``` python
-do_glott_vocoder_synthesis = 1
+``` yaml
+do_glott_vocoder_synthesis: true
 ```
 
 ### Improvements from toy example
@@ -217,6 +215,9 @@ do_glott_vocoder_synthesis = 1
 When in trouble, open an issue at GitHub. Others will likely have similar issues and it's best to solve them collectively
 
 https://github.com/ljuvela/GlottDNN/issues
+
+For questions, contact Lauri Juvela (lauri.juvela@aalto.fi) or Manu
+Airaksinen (manu.airaksinen@aalto.fi).
 
 For more examples and explanation, check the documentation in
 

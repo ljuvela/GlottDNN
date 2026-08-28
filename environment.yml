@@ -5,6 +5,7 @@ channels:
 dependencies:
   - python=3.8
   - numpy
+  - pyyaml
   - scikit-learn
   - pytorch>=1.1
   - torchaudio

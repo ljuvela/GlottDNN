@@ -21,6 +21,8 @@ p*.dat
 data/*
 bin/*
 build*/
+dist/
+*.egg-info/
 src/Analysis
 src/Synthesis
 src/LsfPostFilter
