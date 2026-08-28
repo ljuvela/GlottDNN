@@ -25,19 +25,10 @@ def analyze_file(filename, default_config, user_config=""):
 
 def synthesize(data, default_config, user_config=""):
     """Synthesize an analyzed parameter dictionary entirely in memory."""
-    required = (
-        "fundf", "frame_energy", "excitation_pulses", "lsf_vocal_tract",
-        "lsf_glot", "hnr_glot",
-    )
-    missing = [name for name in required if name not in data]
-    if missing:
-        raise ValueError("missing synthesis fields: {}".format(", ".join(missing)))
-
     params = glottdnn_cpp.analysis.load_params(default_config, user_config)
-    frames = np.asarray(data["fundf"], dtype=np.float64)
-    if frames.ndim != 1 or frames.size == 0:
-        raise ValueError("fundf must be a non-empty one-dimensional array")
+    data = validate_synthesis_data(data, params)
 
+    frames = data["fundf"].shape[0]
     excitation = glottdnn_cpp.synthesis.create_excitation(
         data["fundf"], data["frame_energy"], data["excitation_pulses"],
         data["lsf_vocal_tract"], data["lsf_glot"], data["hnr_glot"],
@@ -52,16 +43,13 @@ def synthesize(data, default_config, user_config=""):
             data["fundf"], data["frame_energy"], data["lsf_glot"],
             excitation, default_config, user_config)
 
-    signal = np.zeros_like(excitation)
     spectrum = data.get("spectrum")
     if spectrum is None:
-        if params.use_generic_envelope:
-            raise ValueError("spectrum is required when use_generic_envelope is enabled")
-        spectrum = np.zeros((2049, frames.size), dtype=np.float64)
+        spectrum = np.zeros((2049, frames), dtype=np.float64)
     signal = glottdnn_cpp.synthesis.fft_filter_excitation(
         data["fundf"], data["frame_energy"], spectrum,
-        data["lsf_vocal_tract"], data["lsf_glot"], excitation, signal,
-        default_config, user_config,
+        data["lsf_vocal_tract"], data["lsf_glot"], excitation,
+        np.zeros_like(excitation), default_config, user_config,
     )
     signal = glottdnn_cpp.synthesis.generate_unvoiced_signal(
         data["fundf"], spectrum, data["lsf_vocal_tract"], data["lsf_glot"],
@@ -72,6 +60,60 @@ def synthesize(data, default_config, user_config=""):
         "excitation_signal": excitation,
         "sample_rate": int(data.get("sample_rate", params.fs)),
     }
+
+
+def validate_synthesis_data(data, params):
+    """Validate and normalize arrays before passing them to native synthesis."""
+    if not hasattr(data, "keys"):
+        raise ValueError("synthesis data must be a mapping")
+    required = (
+        "fundf", "frame_energy", "excitation_pulses", "lsf_vocal_tract",
+        "lsf_glot", "hnr_glot",
+    )
+    missing = [name for name in required if name not in data]
+    if missing:
+        raise ValueError("missing synthesis fields: {}".format(", ".join(missing)))
+
+    arrays = {}
+    for name in required:
+        arrays[name] = np.asarray(data[name], dtype=np.float64)
+
+    frames = arrays["fundf"].shape[0] if arrays["fundf"].ndim == 1 else 0
+    if frames == 0:
+        raise ValueError("fundf must be a non-empty one-dimensional array")
+    for name in ("frame_energy",):
+        if arrays[name].shape != (frames,):
+            raise ValueError("{} must have shape ({},)".format(name, frames))
+    expected_rows = {
+        "excitation_pulses": params.paf_pulse_length,
+        "lsf_vocal_tract": params.lpc_order_vt,
+        "lsf_glot": params.lpc_order_glot,
+        "hnr_glot": params.hnr_order,
+    }
+    for name, rows in expected_rows.items():
+        if arrays[name].ndim != 2 or arrays[name].shape != (rows, frames):
+            raise ValueError(
+                "{} must have shape ({}, {})".format(name, rows, frames)
+            )
+    if not all(np.all(np.isfinite(value)) for value in arrays.values()):
+        raise ValueError("synthesis arrays must contain only finite values")
+    if params.use_generic_envelope:
+        if "spectrum" not in data:
+            raise ValueError("spectrum is required when use_generic_envelope is enabled")
+    if "spectrum" in data:
+        arrays["spectrum"] = np.asarray(data["spectrum"], dtype=np.float64)
+        if arrays["spectrum"].shape != (2049, frames):
+            raise ValueError(
+                "spectrum must have shape (2049, {})".format(frames)
+            )
+        if not np.all(np.isfinite(arrays["spectrum"])):
+            raise ValueError("spectrum must contain only finite values")
+    if "sample_rate" in data:
+        sample_rate = data["sample_rate"]
+        if not isinstance(sample_rate, (int, float)) or sample_rate <= 0:
+            raise ValueError("sample_rate must be a positive number")
+    arrays["sample_rate"] = data.get("sample_rate", params.fs)
+    return arrays
 
 
 def synthesize_file(data, filename, default_config, user_config=""):

@@ -122,6 +122,8 @@ PYBIND11_MODULE(glottdnn_cpp, module) {
       .def_readwrite("signal_length", &Param::signal_length)
       .def_readwrite("lpc_order_vt", &Param::lpc_order_vt)
       .def_readwrite("lpc_order_glot", &Param::lpc_order_glot)
+      .def_readwrite("hnr_order", &Param::hnr_order)
+      .def_readwrite("paf_pulse_length", &Param::paf_pulse_length)
       .def_readwrite("lpc_order_glot_iaif", &Param::lpc_order_glot_iaif)
       .def_readwrite("gif_pre_emphasis_coefficient", &Param::gif_pre_emphasis_coefficient)
       .def_readwrite("unvoiced_pre_emphasis_coefficient", &Param::unvoiced_pre_emphasis_coefficient)

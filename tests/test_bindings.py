@@ -48,6 +48,23 @@ def test_in_memory_analysis_and_synthesis(audio_file, config_file):
     assert synthesized["signal"].size == synthesized["excitation_signal"].size
 
 
+def test_synthesis_rejects_malformed_data(config_file):
+    import numpy as np
+    import vocoder
+
+    params = glottdnn_cpp.analysis.load_params(str(config_file))
+    data = {
+        "fundf": np.ones(3),
+        "frame_energy": np.ones(2),
+        "excitation_pulses": np.zeros((params.paf_pulse_length, 3)),
+        "lsf_vocal_tract": np.zeros((params.lpc_order_vt, 3)),
+        "lsf_glot": np.zeros((params.lpc_order_glot, 3)),
+        "hnr_glot": np.zeros((params.hnr_order, 3)),
+    }
+    with pytest.raises(ValueError, match="frame_energy"):
+        vocoder.synthesize(data, str(config_file))
+
+
 def test_analysis_and_synthesis_bindings(audio_file, config_file, tmp_path):
     wav_file = tmp_path / "sample.wav"
     wav_file.write_bytes(audio_file.read_bytes())
