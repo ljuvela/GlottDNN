@@ -43,6 +43,12 @@ void FilterExcitation(const Param &params, const gsl::vector &fundf,
                       const gsl::matrix &lsf_vocal_tract,
                       const gsl::vector &excitation_signal,
                       gsl::vector *signal);
-void FftFilterExcitation(const Param &params, const SynthesisData &data, gsl::vector *signal);
+void FftFilterExcitation(const Param &params, const gsl::vector &fundf,
+                         const gsl::vector &frame_energy,
+                         const gsl::matrix &spectrum,
+                         const gsl::matrix &lsf_vocal_tract,
+                         const gsl::matrix &lsf_glot,
+                         const gsl::vector &excitation_signal,
+                         gsl::vector *signal);
 void NoiseGating(const Param &params, gsl::vector *frame_energy);
 #endif /* SRC_GLOTT_SYNTHESISFUNCTIONS_H_ */

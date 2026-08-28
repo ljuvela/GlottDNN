@@ -970,7 +970,12 @@ void NoiseGating(const Param &params, gsl::vector *frame_energy) {
   }
 }
 
-void FftFilterExcitation(const Param &params, const SynthesisData &data,
+void FftFilterExcitation(const Param &params, const gsl::vector &fundf,
+                         const gsl::vector &frame_energy,
+                         const gsl::matrix &spectrum,
+                         const gsl::matrix &lsf_vocal_tract,
+                         const gsl::matrix &lsf_glot,
+                         const gsl::vector &excitation_signal,
                          gsl::vector *signal) {
 
   /*
@@ -1019,7 +1024,7 @@ void FftFilterExcitation(const Param &params, const SynthesisData &data,
   size_t frame_index;
   for (frame_index = 0; frame_index < (size_t)params.number_of_frames;
        frame_index++) {
-    frame_is_voiced = data.fundf(frame_index) > 0;
+    frame_is_voiced = fundf(frame_index) > 0;
     //treat_frame_as_voiced = (frame_is_voiced
     //      || params.use_paf_unvoiced_synthesis
     //      || params.use_external_excitation);
@@ -1031,13 +1036,13 @@ void FftFilterExcitation(const Param &params, const SynthesisData &data,
 
     if (treat_frame_as_voiced) {
       /* Get spectrum of excitation */
-      GetFrame(data.excitation_signal, frame_index,
+      GetFrame(excitation_signal, frame_index,
                rint(params.frame_shift / params.speed_scale), &frame, NULL);
 
       if (treat_frame_as_voiced && params.use_waveforms_directly) {
          /* Copy excitation to signal as it is */
          ApplyWindowingFunction(HANN, &frame);
-         e_target = LogEnergy2FrameEnergy(data.frame_energy(frame_index), frame.size());
+         e_target = LogEnergy2FrameEnergy(frame_energy(frame_index), frame.size());
          frame *= e_target / getEnergy(frame) / sqrt(2.0);
          /* Normalize overlap-add window */
          frame /= 0.5 * (double)frame.size() / (double)params.frame_shift;
@@ -1060,13 +1065,13 @@ void FftFilterExcitation(const Param &params, const SynthesisData &data,
       if (params.use_generic_envelope) {
         for (i = 0; i < vt_fft.getSize(); i++) {
           vt_fft.setReal(
-              i, data.spectrum(i, frame_index) * tilt_exc_fft.getAbs(i));
+              i, spectrum(i, frame_index) * tilt_exc_fft.getAbs(i));
           vt_fft.setImag(i, 0.0);
         }
         Spectrum2MinPhase(&vt_fft);
       } else {
         /* Get spectrum of vocal tract and glot filter */
-        Lsf2Poly(data.lsf_vocal_tract.get_col_vec(frame_index), &A);
+        Lsf2Poly(lsf_vocal_tract.get_col_vec(frame_index), &A);
         if (params.warping_lambda_vt == 0.0) {
           FFTRadix2(A, NFFT, &vt_fft);
         } else {
@@ -1080,7 +1085,7 @@ void FftFilterExcitation(const Param &params, const SynthesisData &data,
         }
       }
 
-      Lsf2Poly(data.lsf_glot.get_col_vec(frame_index), &A_tilt);
+      Lsf2Poly(lsf_glot.get_col_vec(frame_index), &A_tilt);
       FFTRadix2(A_tilt, NFFT, &tilt_fft);
 
       double mag_vt, mag_exc, ang_vt, ang_exc, mag_tilt, ang_tilt, mag_tilt_exc,
@@ -1110,7 +1115,7 @@ void FftFilterExcitation(const Param &params, const SynthesisData &data,
           } else {
             mag = mag_exc * mag_vt;
             // mag = mag_exc*mag_vt / mag_tilt_exc; // whiten excitation
-            if (data.fundf(frame_index) > 0) {
+            if (fundf(frame_index) > 0) {
               ang = ang_exc + ang_vt;
             } else {
               ang = ang_exc;  // all-pole filter starts to ring for unvoiced
@@ -1127,7 +1132,7 @@ void FftFilterExcitation(const Param &params, const SynthesisData &data,
       ApplyWindowingFunction(COSINE, &frame);
 
       e_target =
-          LogEnergy2FrameEnergy(data.frame_energy(frame_index), frame.size());
+          LogEnergy2FrameEnergy(frame_energy(frame_index), frame.size());
       frame *= e_target / getEnergy(frame) / sqrt(2.0);
 
       /* Normalize overlap-add window */

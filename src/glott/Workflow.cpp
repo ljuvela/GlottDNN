@@ -152,7 +152,9 @@ int RunSynthesis(const std::string &filename,
    if (params.noise_gain_voiced > 0.0)
       HarmonicModification(params, data.fundf, data.hnr_glot,
                            &(data.excitation_signal));
-   FftFilterExcitation(params, data, &(data.signal));
+   FftFilterExcitation(params, data.fundf, data.frame_energy, data.spectrum,
+                       data.lsf_vocal_tract, data.lsf_glot,
+                       data.excitation_signal, &(data.signal));
    GenerateUnvoicedSignal(params, data.fundf, data.spectrum,
                           data.lsf_vocal_tract, data.lsf_glot,
                           data.frame_energy, data.excitation_signal,
@@ -202,7 +204,9 @@ int SynthesizeData(const std::string &default_config_filename,
       return EXIT_FAILURE;
    if (params.noise_gain_voiced > 0.0)
       HarmonicModification(params, data->fundf, data->hnr_glot, excitation);
-   FftFilterExcitation(params, *data, signal);
+   FftFilterExcitation(params, data->fundf, data->frame_energy, data->spectrum,
+                       data->lsf_vocal_tract, data->lsf_glot,
+                       data->excitation_signal, signal);
    GenerateUnvoicedSignal(params, data->fundf, data->spectrum,
                           data->lsf_vocal_tract, data->lsf_glot,
                           data->frame_energy, data->excitation_signal, signal);

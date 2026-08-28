@@ -111,3 +111,30 @@ def test_filter_excitation_binding():
     )
     assert filtered.shape == excitation.shape
     assert np.all(np.isfinite(filtered))
+
+
+def test_fft_filter_excitation_binding():
+    config_file = Path(__file__).resolve().parents[1] / "config" / "config_default_16k.cfg"
+    signal, _ = sf.read("data/tmp/slt_arctic_a0001.wav", dtype="float64")
+    analyzed = glottdnn_cpp.analysis.run_array(signal, str(config_file))
+    excitation = glottdnn_cpp.synthesis.create_excitation(
+        analyzed["fundf"],
+        analyzed["frame_energy"],
+        analyzed["excitation_pulses"],
+        analyzed["lsf_vocal_tract"],
+        analyzed["lsf_glot"],
+        analyzed["hnr_glot"],
+        str(config_file),
+    )
+    filtered = glottdnn_cpp.synthesis.fft_filter_excitation(
+        analyzed["fundf"],
+        analyzed["frame_energy"],
+        np.zeros((2049, analyzed["fundf"].size)),
+        analyzed["lsf_vocal_tract"],
+        analyzed["lsf_glot"],
+        excitation,
+        np.zeros_like(excitation),
+        str(config_file),
+    )
+    assert filtered.shape == excitation.shape
+    assert np.all(np.isfinite(filtered))
