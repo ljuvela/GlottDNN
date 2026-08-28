@@ -150,8 +150,7 @@ PYBIND11_MODULE(glottdnn_cpp, module) {
        gsl::vector result = ToVector(signal);
        Param params = LoadConfig(config, "");
        params.signal_length = result.size();
-       HighPassFiltering(params, &result);
-       return Vector(result);
+       return Vector(HighPassFiltering(params, result));
     }, py::arg("signal"), py::arg("default_config_filename"));
     analysis.def("spectral_analysis", [](py::array signal, py::array fundf,
                                          py::array gci_inds,

@@ -28,7 +28,7 @@ int RunAnalysis(const std::string &wav_filename,
    if (ReadWavFile(wav_filename.c_str(), &(data.signal), &params) == EXIT_FAILURE)
       return EXIT_FAILURE;
    data.AllocateData(params);
-   HighPassFiltering(params, &(data.signal));
+   data.signal = HighPassFiltering(params, data.signal);
 
    if (!params.use_external_f0 || !params.use_external_gci ||
        params.signal_polarity == POLARITY_DETECT)
@@ -77,7 +77,7 @@ int AnalyzeSignal(const std::string &default_config_filename,
       static_cast<int>(ceil(static_cast<double>(signal.size()) /
                             static_cast<double>(params.frame_shift)));
    data->AllocateData(params);
-   HighPassFiltering(params, &(data->signal));
+   data->signal = HighPassFiltering(params, data->signal);
    if (!params.use_external_f0 || !params.use_external_gci ||
        params.signal_polarity == POLARITY_DETECT)
       GetIaifResidual(params, data->signal, &(data->source_signal_iaif));

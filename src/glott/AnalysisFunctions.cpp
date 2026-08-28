@@ -725,29 +725,31 @@ void GetPulses(const Param &params, const gsl::vector &source_signal,
   std::cout << "done." << std::endl;
 }
 
-void HighPassFiltering(const Param &params, gsl::vector *signal) {
-  if (!params.use_highpass_filtering) return;
+gsl::vector HighPassFiltering(const Param &params, const gsl::vector &signal) {
+  gsl::vector result(signal);
+  if (!params.use_highpass_filtering) return result;
 
   std::cout
       << "High-pass filtering input signal with a cutoff frequency of 50Hz."
       << std::endl;
 
-  gsl::vector signal_cpy(signal->size());
-  signal_cpy.copy(*signal);
+  gsl::vector signal_cpy(signal.size());
+  signal_cpy.copy(signal);
 
   if (params.fs < 40000) {
-    Filter(k16HPCUTOFF50HZ, std::vector<double>{1}, signal_cpy, signal);
-    signal_cpy.copy(*signal);
+    Filter(k16HPCUTOFF50HZ, std::vector<double>{1}, signal_cpy, &result);
+    signal_cpy.copy(result);
     signal_cpy.reverse();
-    Filter(k16HPCUTOFF50HZ, std::vector<double>{1}, signal_cpy, signal);
-    (*signal).reverse();
+    Filter(k16HPCUTOFF50HZ, std::vector<double>{1}, signal_cpy, &result);
+    result.reverse();
   } else {
-    Filter(k44HPCUTOFF50HZ, std::vector<double>{1}, signal_cpy, signal);
-    signal_cpy.copy(*signal);
+    Filter(k44HPCUTOFF50HZ, std::vector<double>{1}, signal_cpy, &result);
+    signal_cpy.copy(result);
     signal_cpy.reverse();
-    Filter(k16HPCUTOFF50HZ, std::vector<double>{1}, signal_cpy, signal);
-    (*signal).reverse();
+    Filter(k16HPCUTOFF50HZ, std::vector<double>{1}, signal_cpy, &result);
+    result.reverse();
   }
+  return result;
 }
 
 void GetIaifResidual(const Param &params, const gsl::vector &signal,

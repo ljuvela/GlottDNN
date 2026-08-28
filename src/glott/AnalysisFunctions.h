@@ -15,7 +15,7 @@
 #ifndef SRC_GLOTT_ANALYSISFUNCTIONS_H_
 #define SRC_GLOTT_ANALYSISFUNCTIONS_H_
 
-void HighPassFiltering(const Param &params, gsl::vector *signal);
+gsl::vector HighPassFiltering(const Param &params, const gsl::vector &signal);
 int PolarityDetection(const Param &params, gsl::vector *signal, gsl::vector *source_signal_iaif);
 int GetF0(const Param &params, const gsl::vector &signal, const gsl::vector &source_signal_iaif, gsl::vector *fundf);
 int GetGci(const Param &params, const gsl::vector &signal, const gsl::vector &source_signal_iaif, const gsl::vector &fundf, gsl::vector_int *gci_inds);
