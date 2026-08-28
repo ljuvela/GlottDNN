@@ -1,3 +1,35 @@
 [build-system]
-requires = ["setuptools>=61"]
-build-backend = "setuptools.build_meta"
+requires = [
+    "scikit-build-core>=0.10",
+    "pybind11",
+]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "glottdnn"
+version = "1.2.0"
+description = "GlottDNN vocoder analysis and DNN tools"
+readme = "README.md"
+license = {text = "GPL-3.0-or-later"}
+requires-python = ">=3.8"
+dependencies = [
+    "numpy",
+    "soundfile",
+    "pyyaml",
+    "scikit-learn",
+    "torch>=1.1",
+]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.scripts]
+glottdnn = "GlottDnnScript:main"
+Analysis = "native_cli:analysis"
+Synthesis = "native_cli:synthesis"
+LsfPostFilter = "native_cli:lsf_post_filter"
+
+[tool.scikit-build]
+wheel.packages = []
+sdist.include = ["python/*.py", "config/*.yaml", "dnn_demo/*.yaml"]
+cmake.args = ["-GUnix Makefiles"]

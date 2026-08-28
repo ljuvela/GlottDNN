@@ -1,8 +1,19 @@
 cmake_minimum_required(VERSION 3.15)
 
+if(APPLE AND NOT DEFINED CMAKE_CXX_COMPILER)
+    set(CMAKE_CXX_COMPILER /usr/bin/clang++)
+endif()
+
 project(GlottDNN VERSION 1.2 LANGUAGES CXX)
 
 include(GNUInstallDirs)
+
+if(APPLE AND DEFINED ENV{CONDA_PREFIX})
+    set(CMAKE_BUILD_RPATH "$ENV{CONDA_PREFIX}/lib")
+    set(CMAKE_INSTALL_RPATH "$ENV{CONDA_PREFIX}/lib")
+    set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+endif()
+
 find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
 
@@ -92,7 +103,10 @@ foreach(target IN ITEMS Analysis Synthesis LsfPostFilter)
     )
 endforeach()
 
-pybind11_add_module(glottdnn_cpp src/glott/bindings.cpp)
+pybind11_add_module(glottdnn_cpp
+    src/glott/bindings.cpp
+    src/glott/SignalProcessingBindings.cpp
+)
 target_link_libraries(glottdnn_cpp PRIVATE
     glott_core
 )
@@ -105,4 +119,16 @@ target_include_directories(glottdnn_cpp PRIVATE
 install(TARGETS glottdnn_cpp
     LIBRARY DESTINATION .
     RUNTIME DESTINATION .
+)
+
+install(FILES
+    python/GlottDnnScript.py
+    python/TrainDnn.py
+    python/data_utils.py
+    python/dnnClasses.py
+    python/reaper_pitch_analysis.py
+    python/signal_processing.py
+    python/native_cli.py
+    python/vocoder.py
+    DESTINATION .
 )

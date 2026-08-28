@@ -19,3 +19,4 @@ dependencies:
   - gsl
   - libconfig
   - libsndfile
+  - pysoundfile

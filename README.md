@@ -1,13 +1,7 @@
 # GlottDNN Vocoder
 
-The GlottDNN package contains two main parts:
-
-1) The glottal vocoder written in C++
-   - Dependencies: `libsndfile`, `libgsl`, `libconfig`
-
-2) Python scripts for vocoder analysis, synthesis and training a DNN excitation model:
-   - Dependencies: `python3`, `numpy`, `pytorch>=1.1.0`
-
+The GlottDNN package contains a C++ glottal vocoder and Python tools for
+vocoder analysis, synthesis, and DNN excitation-model training.
 
 ## Installation and build
 
@@ -23,35 +17,37 @@ conda activate glottdnn
 python -m pip install -e .
 ```
 
-Configure and build the C++ executables and native Python bindings:
-```bash
-cmake -S . -B build \
-  -DCMAKE_PREFIX_PATH="$CONDA_PREFIX" \
-  -DCMAKE_INSTALL_PREFIX="$CONDA_PREFIX"
-cmake --build build
-```
-
-The executables can optionally be installed into the active environment:
-```bash
-cmake --install build
-```
+The editable install automatically configures and builds CMake, installs the
+native Python extension, and installs the `Analysis`, `Synthesis`, and
+`LsfPostFilter` executables.
 
 The build includes `Analysis`, `Synthesis`, `LsfPostFilter`, and the
 `glottdnn_cpp` Python extension. The extension exposes
 `glottdnn_cpp.analysis.run(wav, config, user_config=None)` and
 `glottdnn_cpp.synthesis.run(basename, config, user_config=None)`. The
-`signal_processing` submodule is reserved for future individual DSP functions.
+`signal_processing` contains NumPy wrappers for the currently bound pure DSP
+functions, and is the namespace for adding more functions later.
 
-Make the Conda libraries available to binaries started from this environment:
-```bash
-export DYLD_LIBRARY_PATH="$CONDA_PREFIX/lib${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}"  # macOS
-# Linux:
-export LD_LIBRARY_PATH="$CONDA_PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+The array-based API avoids intermediate parameter files:
+
+```python
+from vocoder import analyze_file, synthesize
+
+data = analyze_file("input.wav", "config/config_default_16k.cfg")
+output = synthesize(data, "config/config_default_16k.cfg")
 ```
 
-Run the binding tests from the repository root:
+For example:
+
+```python
+import signal_processing
+
+filtered = signal_processing.filter_signal([1.0], [1.0], samples)
+```
+
+Run the tests from the repository root:
 ```bash
-PYTHONPATH="$PWD/build:$PYTHONPATH" pytest
+pytest
 ```
 The test suite downloads the small Arctic sample once and verifies both the
 analysis and synthesis bindings.
@@ -76,7 +72,7 @@ curl -L -o "$DATADIR/$BASENAME.wav" $URL
 
 Now run GlottDNN Analysis program with default configuration
 ``` bash
-build-cmake/Analysis "$DATADIR/$BASENAME.wav" ./config/config_default_16k.cfg
+Analysis "$DATADIR/$BASENAME.wav" ./config/config_default_16k.cfg
 ```
 
 We should now have the following files 
@@ -99,7 +95,7 @@ First let's run copy synthesis with `SINGLE_PULSE` excitation. This method uses 
 
 ``` bash
 # Run synthesis with default config
-build-cmake/Synthesis "$DATADIR/$BASENAME" ./config/config_default_16k.cfg
+Synthesis "$DATADIR/$BASENAME" ./config/config_default_16k.cfg
 
 # Move generated file
 mv "$DATADIR/$BASENAME.syn.wav" "$DATADIR/$BASENAME.syn.sp.wav"    
@@ -119,11 +115,10 @@ First place one WAV file in the input directory and run:
 ```bash
 mkdir -p data/single_file/wav
 cp data/tmp/slt_arctic_a0001.wav data/single_file/wav/
-export DYLD_LIBRARY_PATH="$CONDA_PREFIX/lib${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}"  # macOS
 glottdnn dnn_demo/config_single_file.yaml
 ```
 
-On Linux, export `LD_LIBRARY_PATH` instead. The configuration uses
+The configuration uses
 `data/single_file/slt_arctic_a0001.wav` and a small two-layer network. It
 disables validation and test splits so all frames are used for training; when
 no validation split exists, the trainer uses the training data for its
@@ -147,7 +142,7 @@ echo 'USE_SPECTRAL_MATCHING = false;' >> $CONF_USR
 echo 'NOISE_GAIN_VOICED = 0.0;' >> $CONF_USR
 
 # Run synthesis with two config files
-build-cmake/Synthesis "$DATADIR/$BASENAME" ./config/config_default_16k.cfg $CONF_USR
+Synthesis "$DATADIR/$BASENAME" ./config/config_default_16k.cfg $CONF_USR
 
 # Move generated file
 mv "$DATADIR/$BASENAME.syn.wav" "$DATADIR/$BASENAME.syn.paf.wav"       
@@ -157,7 +152,7 @@ Of course the original pulses are not available in many applications (such as te
 
 ## Built-in neural net excitation model 
 
-The present version requires `pytorch>=1.1.0` and all `theano` dependencies have been removed.
+The present version uses PyTorch; all `theano` dependencies have been removed.
 
 Note that the following is a toy example, since we now use only 10 audio files. This example is intended as a quick sanity check and can be easily run on a CPU. For more data and more complex models, a GPU is recommended.
 
