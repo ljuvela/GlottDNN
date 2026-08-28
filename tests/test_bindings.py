@@ -36,6 +36,18 @@ def test_binding_namespaces():
     assert callable(glottdnn_cpp.analysis.spectral_analysis)
 
 
+def test_in_memory_analysis_and_synthesis(audio_file, config_file):
+    import soundfile as sf
+    import vocoder
+
+    signal, sample_rate = sf.read(audio_file, dtype="float64")
+    analyzed = vocoder.analyze(signal, sample_rate, str(config_file))
+    synthesized = vocoder.synthesize(analyzed, str(config_file))
+    assert synthesized["sample_rate"] == sample_rate
+    assert synthesized["signal"].ndim == 1
+    assert synthesized["signal"].size == synthesized["excitation_signal"].size
+
+
 def test_analysis_and_synthesis_bindings(audio_file, config_file, tmp_path):
     wav_file = tmp_path / "sample.wav"
     wav_file.write_bytes(audio_file.read_bytes())
