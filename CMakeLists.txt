@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.15)
 project(GlottDNN VERSION 1.2 LANGUAGES CXX)
 
 include(GNUInstallDirs)
+find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
+find_package(pybind11 CONFIG REQUIRED)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -53,43 +55,54 @@ set(GLOTT_SOURCES
     src/glott/Utils.cpp
 )
 
-add_executable(Analysis
-    src/glott/Analysis.cpp
+add_library(glott_core STATIC
     src/glott/AnalysisFunctions.cpp
     src/glott/PitchEstimation.cpp
     src/glott/QmfFunctions.cpp
+    src/glott/DnnClass.cpp
+    src/glott/SynthesisFunctions.cpp
+    src/glott/Workflow.cpp
     ${GLOTT_SOURCES}
 )
 
-add_executable(Synthesis
-    src/glott/Synthesis.cpp
-    src/glott/DnnClass.cpp
-    src/glott/SynthesisFunctions.cpp
-    ${GLOTT_SOURCES}
+target_include_directories(glott_core PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${GSL_INCLUDE_DIR}
+    ${LIBCONFIG_INCLUDE_DIR}
+    ${SNDFILE_INCLUDE_DIR}
+)
+target_link_libraries(glott_core PUBLIC
+    gslwrap
+    ${GSL_LIBRARY}
+    ${GSL_CBLAS_LIBRARY}
+    ${LIBCONFIG_LIBRARY}
+    ${SNDFILE_LIBRARY}
 )
 
-add_executable(LsfPostFilter
-    src/glott/LsfPostFilterMain.cpp
-    src/glott/DnnClass.cpp
-    src/glott/SynthesisFunctions.cpp
-    ${GLOTT_SOURCES}
-)
+add_executable(Analysis src/glott/Analysis.cpp)
+add_executable(Synthesis src/glott/Synthesis.cpp)
+add_executable(LsfPostFilter src/glott/LsfPostFilterMain.cpp)
+target_link_libraries(Analysis PRIVATE glott_core)
+target_link_libraries(Synthesis PRIVATE glott_core)
+target_link_libraries(LsfPostFilter PRIVATE glott_core)
 
 foreach(target IN ITEMS Analysis Synthesis LsfPostFilter)
-    target_link_libraries(${target}
-        PRIVATE
-            gslwrap
-            ${GSL_LIBRARY}
-            ${GSL_CBLAS_LIBRARY}
-            ${LIBCONFIG_LIBRARY}
-            ${SNDFILE_LIBRARY}
-    )
-    target_include_directories(${target}
-        PRIVATE
-            ${LIBCONFIG_INCLUDE_DIR}
-            ${SNDFILE_INCLUDE_DIR}
-    )
     install(TARGETS ${target}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
 endforeach()
+
+pybind11_add_module(glottdnn_cpp src/glott/bindings.cpp)
+target_link_libraries(glottdnn_cpp PRIVATE
+    glott_core
+)
+target_include_directories(glottdnn_cpp PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${GSL_INCLUDE_DIR}
+    ${LIBCONFIG_INCLUDE_DIR}
+    ${SNDFILE_INCLUDE_DIR}
+)
+install(TARGETS glottdnn_cpp
+    LIBRARY DESTINATION .
+    RUNTIME DESTINATION .
+)

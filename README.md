@@ -32,6 +32,26 @@ Since the build targets are rather generically named `Analysis` and `Synthesis`,
    cmake --install build
 ```
 
+   The native Python bindings are built alongside the executables:
+   ```bash
+   cmake --build build --target glottdnn_cpp
+   export PYTHONPATH="$PWD/build:$PYTHONPATH"
+   python -c "import glottdnn_cpp; print(glottdnn_cpp.analysis.run)"
+   ```
+
+   The bindings expose `glottdnn_cpp.analysis.run(wav, config, user_config=None)`
+   and `glottdnn_cpp.synthesis.run(basename, config, user_config=None)`. The
+   `signal_processing` submodule is reserved for future individual DSP
+   functions, so those bindings can be added without changing the main API.
+
+   Run the binding tests from the repository root after building the CMake
+   extension:
+   ```bash
+   pytest
+   ```
+   The test suite downloads the small Arctic sample once and verifies both the
+   analysis and synthesis bindings.
+
 ### Installation using a conda environment
 
 Conda environments are useful for managing dependencies and keeping a GlottDNN

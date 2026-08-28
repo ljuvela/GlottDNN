@@ -23,6 +23,7 @@ bin/*
 build*/
 dist/
 *.egg-info/
+.pytest_cache/
 src/Analysis
 src/Synthesis
 src/LsfPostFilter

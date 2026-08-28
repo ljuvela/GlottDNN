@@ -12,6 +12,8 @@ dependencies:
   - autoconf
   - automake
   - cmake
+  - pybind11
+  - pytest
   - make
   - cxx-compiler
   - gsl
