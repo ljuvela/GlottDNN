@@ -2,20 +2,21 @@ import sys
 import os
 import numpy as np
 import random
-from importlib.machinery import SourceFileLoader
+import argparse
+import yaml
+from types import SimpleNamespace
 
-# Config file 
-if len(sys.argv) < 2:
-    sys.exit("Usage: python GlottDnnScript.py config.py")
-if os.path.isfile(sys.argv[1]):
-    conf = SourceFileLoader('', sys.argv[1]).load_module()
-else:
-    sys.exit("Config file " + sys.argv[1] + " does not exist")
+conf = None
 
-# Import DNN training if used 
-if conf.do_dnn_training:
-    import TrainDnn
-    
+def load_config(filename):
+    if not os.path.isfile(filename):
+        raise FileNotFoundError("Config file " + filename + " does not exist")
+    with open(filename) as config_file:
+        values = yaml.safe_load(config_file)
+    if not isinstance(values, dict):
+        raise ValueError("Config file must contain a YAML mapping")
+    return SimpleNamespace(**values)
+
 def write_dnn_infofile():
     f = open(conf.weights_data_dir + '/' + conf.dnn_name + '.dnnInfo', 'w')
     # write layer sizes
@@ -91,7 +92,7 @@ def make_file_lists():
         scpfile = open(conf.datadir + '/scp/' + t + '.scp','w') 
         for f in sorted(set(os.listdir(conf.datadir + '/' + t))):
             if f.endswith(e):
-                scpfile.write(os.path.abspath(conf.datadir + '/' + t + '/' + f + '\n'))
+                scpfile.write(os.path.abspath(conf.datadir + '/' + t + '/' + f) + '\n')
         scpfile.close()
         
 def sptk_pitch_analysis():
@@ -173,7 +174,7 @@ def glott_vocoder_analysis():
                 conf_file.write('DATA_TYPE = \"FLOAT\";\n')
                 conf_file.close()
                 # run analysis program
-                cmd = f"export LD_LIBRARY_PATH={os.environ['LD_LIBRARY_PATH']};"
+                cmd = f"export LD_LIBRARY_PATH={os.environ.get('LD_LIBRARY_PATH', '')};"
                 cmd += conf.Analysis + ' ' + wavfile + ' ' + conf.config_default + ' ' + config_user
                 os.system(cmd)
                 # remove temporary config
@@ -200,7 +201,7 @@ def glott_vocoder_synthesis():
                 conf_file.write('DNN_WEIGHT_PATH = \"' + conf.weights_data_dir + '/' + conf.dnn_name + '\";\n')
                 
                 conf_file.close()
-                cmd = f"export LD_LIBRARY_PATH={os.environ['LD_LIBRARY_PATH']};"
+                cmd = f"export LD_LIBRARY_PATH={os.environ.get('LD_LIBRARY_PATH', '')};"
                 cmd += conf.Synthesis + ' ' + wavfile + ' ' + conf.config_default + ' ' + config_user
                 #print cmd
                 os.system(cmd)
@@ -339,7 +340,16 @@ def package_data():
     in_max.astype(np.float32).tofile(fid, sep='', format="%f")
     fid.close()
     
-def main(argv):
+def main(argv=None):
+    global conf
+    parser = argparse.ArgumentParser(description="GlottDNN analysis and synthesis pipeline")
+    parser.add_argument("config", help="YAML configuration file")
+    args = parser.parse_args(argv)
+    conf = load_config(args.config)
+
+    if conf.do_dnn_training:
+        import TrainDnn
+
    
     # Make directories
     if conf.make_dirs:
@@ -373,7 +383,7 @@ def main(argv):
     if conf.do_dnn_training:
         dim_in = sum(conf.input_dims)
         dim_out = sum(conf.output_dims)
-        TrainDnn.evaluate_dnn(n_in=dim_in, n_out=dim_out, n_hidden=conf.n_hidden, batch_size=conf.batch_size, 
+        TrainDnn.evaluate_dnn(conf, n_in=dim_in, n_out=dim_out, n_hidden=conf.n_hidden, batch_size=conf.batch_size,
                  learning_rate=conf.learning_rate, n_epochs = conf.max_epochs)
 
     # Copy-synthesis
@@ -381,4 +391,4 @@ def main(argv):
         glott_vocoder_synthesis()
     
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()

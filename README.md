@@ -9,78 +9,52 @@ The GlottDNN package contains two main parts:
    - Dependencies: `python3`, `numpy`, `pytorch>=1.1.0`
 
 
-## Installation
+## Installation and build
 
-The vocoder C++ code has the following library dependencies:
-- `libgsl` (GNU scientific library), for basic linear algebra and FFT etc.
-- `libsndfile` for reading and writing audio files
-- `libconfig++` for reading structured configuration files
+Conda environments are useful for managing dependencies and keeping a GlottDNN
+installation contained from the systemwide environment. The repository includes
+an environment specification with the C++ libraries, compiler toolchain, and
+Python packages required by the project.
 
-Usually the best way to install the dependencies is with the system package manager. For example, in Ubuntu use `apt-get` install the packages `libgsl0-dev`, `libsndfile1-dev`, `libconfig++-dev`
-
-The C++ part uses a standard GNU autotools build system. To compile the vocoder, run the following commands in the project root directory
-``` bash
-   ./configure
-   make
-```
-
-Since the build targets are rather generically named `Analysis` and `Synthesis`, you might not want them in your default system PATH. Use the `--prefix` flag to choose another install path
-``` bash
-   ./configure --prefix=/your/install/path/bin
-   make install
-```
-
-Usually `configure` and `make` should be enough, but if the process complains about missing files try running 
-``` bash
-automake --add-missing
-```
-
-### Installation using a conda environment
-
-Conda environments are useful for managing dependencies and keeping a GlottDNN installation contained from the systemwide environment. For more information about managing conda enviroments, see https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html
-
-
-Create and activate a new conda environment. 
+Create and activate the Conda environment, then install the Python package:
 ```bash
-conda create -n glottdnn
+conda env create -f environment.yml
 conda activate glottdnn
+python -m pip install -e .
 ```
 
-Install dependencies
-``` bash
-conda install -c conda-forge libsndfile gsl libconfig 
-```
-
-Optionally, install pytorch with conda
+Configure and build the C++ executables and native Python bindings:
 ```bash
-conda install pytorch torchaudio -c pytorch
+cmake -S . -B build \
+  -DCMAKE_PREFIX_PATH="$CONDA_PREFIX" \
+  -DCMAKE_INSTALL_PREFIX="$CONDA_PREFIX"
+cmake --build build
 ```
 
-Set compiler flags to compiler flags to point to the currently active conda environment. The compiled binaries will be installed in `$CONDA_PREFIX/bin/`  
-``` bash
-export LDFLAGS=-L$CONDA_PREFIX/lib/ 
-export CPPFLAGS=-I$CONDA_PREFIX/include/
-./configure --prefix $CONDA_PREFIX
-make
-make install
-```
-
-Library dependencies are linked dynamically, so we need to make sure they are is visible in `LD_LIBRARY_PATH`. Adding an `env_vars.sh` activate script is a convenient way to do this automatically whenever the conda environment is activatied.
+The executables can optionally be installed into the active environment:
 ```bash
-# any shell scripts in these directories are run at activation/deactivation
-mkdir -p $CONDA_PREFIX/etc/conda/activate.d
-mkdir -p $CONDA_PREFIX/etc/conda/deactivate.d
-
-# modify LD_LIBRARY_PATH at activation
-export ACTIVATE_SCRIPT=$CONDA_PREFIX/etc/conda/activate.d/env_vars.sh
-echo 'export OLD_LD_LIBRARY_PATH=${LD_LIBRARY_PATH}' > $ACTIVATE_SCRIPT
-echo 'export LD_LIBRARY_PATH='${CONDA_PREFIX}'/lib/:${LD_LIBRARY_PATH}' >> $ACTIVATE_SCRIPT
-
-# restore LD_LIBRARY_PATH state at deactivation
-export DEACTIVATE_SCRIPT=$CONDA_PREFIX/etc/conda/deactivate.d/env_vars.sh
-echo 'export LD_LIBRARY_PATH=${OLD_LD_LIBRARY_PATH}' > $DEACTIVATE_SCRIPT
-echo 'unset OLD_LD_LIBRARY_PATH' >> $DEACTIVATE_SCRIPT
+cmake --install build
 ```
+
+The build includes `Analysis`, `Synthesis`, `LsfPostFilter`, and the
+`glottdnn_cpp` Python extension. The extension exposes
+`glottdnn_cpp.analysis.run(wav, config, user_config=None)` and
+`glottdnn_cpp.synthesis.run(basename, config, user_config=None)`. The
+`signal_processing` submodule is reserved for future individual DSP functions.
+
+Make the Conda libraries available to binaries started from this environment:
+```bash
+export DYLD_LIBRARY_PATH="$CONDA_PREFIX/lib${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}"  # macOS
+# Linux:
+export LD_LIBRARY_PATH="$CONDA_PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+```
+
+Run the binding tests from the repository root:
+```bash
+PYTHONPATH="$PWD/build:$PYTHONPATH" pytest
+```
+The test suite downloads the small Arctic sample once and verifies both the
+analysis and synthesis bindings.
 
 ## Analysis-synthesis example
 
@@ -91,20 +65,18 @@ These examples assume 16kHz sampling rate audio. Other sampling rates are feasib
 
 Let's first get a wave file from the Arctic database
 ``` bash 
-#!/bin/bash
-
 URL='http://festvox.org/cmu_arctic/cmu_arctic/cmu_us_slt_arctic/wav/arctic_a0001.wav'
 DATADIR='./data/tmp'
 BASENAME='slt_arctic_a0001'
 mkdir -p $DATADIR
-wget -O "$DATADIR/$BASENAME.wav" $URL
+curl -L -o "$DATADIR/$BASENAME.wav" $URL
 ```
 
 ### Acoustic feature analysis
 
 Now run GlottDNN Analysis program with default configuration
 ``` bash
-./src/Analysis "$DATADIR/$BASENAME.wav" ./config/config_default_16k.cfg
+build-cmake/Analysis "$DATADIR/$BASENAME.wav" ./config/config_default_16k.cfg
 ```
 
 We should now have the following files 
@@ -127,7 +99,7 @@ First let's run copy synthesis with `SINGLE_PULSE` excitation. This method uses 
 
 ``` bash
 # Run synthesis with default config
-./src/Synthesis "$DATADIR/$BASENAME" ./config/config_default_16k.cfg
+build-cmake/Synthesis "$DATADIR/$BASENAME" ./config/config_default_16k.cfg
 
 # Move generated file
 mv "$DATADIR/$BASENAME.syn.wav" "$DATADIR/$BASENAME.syn.sp.wav"    
@@ -135,6 +107,28 @@ mv "$DATADIR/$BASENAME.syn.wav" "$DATADIR/$BASENAME.syn.sp.wav"
 
 A copy-synthesis wave file should now be at `./data/tmp/slt_arctic_a0001.syn.sp.wav`.
 The single pulse excitation will sound somewhat buzzy, so let's try if we can do better.
+
+### Single-file DNN training tutorial
+
+The built-in PyTorch model can also be trained on one analyzed audio file.
+This intentionally overfits the file and is a quick CPU smoke test rather than
+a useful speech model.
+
+First place one WAV file in the input directory and run:
+
+```bash
+mkdir -p data/single_file/wav
+cp data/tmp/slt_arctic_a0001.wav data/single_file/wav/
+export DYLD_LIBRARY_PATH="$CONDA_PREFIX/lib${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}"  # macOS
+glottdnn dnn_demo/config_single_file.yaml
+```
+
+On Linux, export `LD_LIBRARY_PATH` instead. The configuration uses
+`data/single_file/slt_arctic_a0001.wav` and a small two-layer network. It
+disables validation and test splits so all frames are used for training; when
+no validation split exists, the trainer uses the training data for its
+early-stopping metric. The generated DNN copy-synthesis output is written to
+`data/single_file/syn/slt_arctic_a0001.syn.wav`.
 
 ### Synthesis with original pulses
 
@@ -153,7 +147,7 @@ echo 'USE_SPECTRAL_MATCHING = false;' >> $CONF_USR
 echo 'NOISE_GAIN_VOICED = 0.0;' >> $CONF_USR
 
 # Run synthesis with two config files
-./src/Synthesis "$DATADIR/$BASENAME" ./config/config_default_16k.cfg $CONF_USR
+build-cmake/Synthesis "$DATADIR/$BASENAME" ./config/config_default_16k.cfg $CONF_USR
 
 # Move generated file
 mv "$DATADIR/$BASENAME.syn.wav" "$DATADIR/$BASENAME.syn.paf.wav"       
@@ -175,47 +169,47 @@ sh ./dnn_demo/get_data.sh
 
 Before we run anything, have a look into
 ```
-./dnn_demo/config_dnn_demo.py
+./dnn_demo/config_dnn_demo.yaml
 ```
 
 Then run the example script by saying
 ``` bash
-python3 ./python/GlottDnnScript.py ./dnn_demo/config_dnn_demo.py
+glottdnn ./dnn_demo/config_dnn_demo.yaml
 ```
 
 The demo script runs vocoder analysis, trains a DNN excitation model, and finally applies copy-synthesis to the samples.
 After running, the copy-synthesis results are stored in `./dnn_demo/data/syn` and the original wave files are in `./dnn_demo/data/wav`.
 
-### Python config contents
+### YAML configuration
 Prepare a directory structure under and make file lists based on contents of the `wav` sub-directory
-``` python
-make_dirs = 1
-make_scp = 1
+``` yaml
+make_dirs: true
+make_scp: true
 ```
 
 Optionally, use REAPER for pitch (F0) and GCI analysis. 
 Also optionally, use RAPT from SPTK for pitch analysis. These programs need to be installed separately, so this example does not use them. 
 
-``` python
-do_reaper_pitch_analysis = 0
-do_sptk_pitch_analysis = 0
+``` yaml
+do_reaper_pitch_analysis: false
+do_sptk_pitch_analysis: false
 ```
 
 Use GlottDNN to extract glottal vocoder features and pulses for  excitation model training.
-``` python
-do_glott_vocoder_analysis = 1
+``` yaml
+do_glott_vocoder_analysis: true
 ```
 
-Package data and train an excitation model for GlottDNN, as supported by the internal implementation. Uses `theano` for training and only supports simple fully connected nets with least squares training.
-``` python
-make_dnn_train_data = 1
-make_dnn_infofile = 1
-do_dnn_training = 1
+Package data and train an excitation model with the built-in PyTorch implementation.
+``` yaml
+make_dnn_train_data: true
+make_dnn_infofile: true
+do_dnn_training: true
 ```
 
 Do copy synthesis (using the internal implementation of DNN excitation)
-``` python
-do_glott_vocoder_synthesis = 1
+``` yaml
+do_glott_vocoder_synthesis: true
 ```
 
 ### Improvements from toy example
@@ -234,6 +228,9 @@ do_glott_vocoder_synthesis = 1
 When in trouble, open an issue at GitHub. Others will likely have similar issues and it's best to solve them collectively
 
 https://github.com/ljuvela/GlottDNN/issues
+
+For questions, contact Lauri Juvela (lauri.juvela@aalto.fi) or Manu
+Airaksinen (manu.airaksinen@aalto.fi).
 
 For more examples and explanation, check the documentation in
 

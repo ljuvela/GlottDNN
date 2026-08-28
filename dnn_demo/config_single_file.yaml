@@ -1,0 +1,40 @@
+make_dirs: true
+make_scp: true
+do_reaper_pitch_analysis: false
+do_sptk_pitch_analysis: false
+do_glott_vocoder_analysis: true
+make_dnn_train_data: true
+make_dnn_infofile: true
+do_dnn_training: true
+do_glott_vocoder_synthesis: true
+prjdir: .
+datadir: data/single_file
+reaper: reaper
+sox: sox
+pitch: pitch -a 0 -s 16.0 -p 80
+x2x: x2x
+Analysis: build-cmake/Analysis
+Synthesis: build-cmake/Synthesis
+config_default: config/config_default_16k.cfg
+sampling_frequency: 16000
+warping_lambda: 0.0
+use_external_gci: false
+inputs: [f0, gain, hnr, slsf, lsf]
+input_exts: [.f0, .gain, .hnr, .slsf, .lsf]
+input_dims: [1, 1, 5, 10, 30]
+outputs: [pls]
+output_exts: [.pls]
+output_dims: [400]
+dnn_name: single_file
+train_data_dir: data/single_file/train
+weights_data_dir: data/single_file/weights
+remove_unvoiced_frames: true
+validation_ratio: 0.0
+test_ratio: 0.0
+max_number_of_files: 1
+n_hidden: [32, 32]
+learning_rate: 0.001
+batch_size: 32
+max_epochs: 10
+patience: 3
+use_dnn_generated_excitation: true

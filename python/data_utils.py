@@ -1,4 +1,4 @@
-import cPickle as pickle 
+import pickle
 import os
 import numpy as np
 from sklearn.preprocessing import StandardScaler
@@ -151,7 +151,7 @@ class Dataset:
             
     def getData(self, ind):
         data = {}
-        for key, obj in self.DataObjs.iteritems():
+        for key, obj in self.DataObjs.items():
             data[key] = obj.getDataFile(ind, self.scalers[key])
         return data
     
@@ -163,13 +163,13 @@ class Dataset:
     
     def getFileTag(self, ind=None):
         if ind == None:
-            return self.DataObjs.values()[0].file_tags
+            return next(iter(self.DataObjs.values())).file_tags
         else:
-            return self.DataObjs.values()[0].file_tags[ind]   
+            return next(iter(self.DataObjs.values())).file_tags[ind]
         
     def getSubsetFlags(self, subset_key):
         
-        return self.DataObjs.values()[0].subset_membership[subset_key]
+        return next(iter(self.DataObjs.values())).subset_membership[subset_key]
     
     
     def getDataInputOutput(self, seq_ind, inputs, outputs):
