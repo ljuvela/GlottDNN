@@ -32,6 +32,8 @@ def test_binding_namespaces():
     assert callable(glottdnn_cpp.analysis.run)
     assert callable(glottdnn_cpp.synthesis.run)
     assert hasattr(glottdnn_cpp, "signal_processing")
+    assert callable(glottdnn_cpp.analysis.high_pass_filter)
+    assert callable(glottdnn_cpp.analysis.spectral_analysis)
 
 
 def test_analysis_and_synthesis_bindings(audio_file, config_file, tmp_path):

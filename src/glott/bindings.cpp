@@ -5,6 +5,8 @@
 
 #include "Workflow.h"
 #include "SignalProcessingBindings.h"
+#include "AnalysisFunctions.h"
+#include "ReadConfig.h"
 
 namespace py = pybind11;
 
@@ -61,6 +63,15 @@ py::array_t<int> IntVector(const gsl::vector_int &value) {
    for (size_t i = 0; i < value.size(); ++i) view(i) = value[i];
    return result;
 }
+Param LoadConfig(const std::string &config, const std::string &user_config) {
+   Param params;
+   if (ReadConfig(config.c_str(), true, &params) == EXIT_FAILURE)
+      throw std::runtime_error("could not read analysis configuration");
+   if (!user_config.empty() &&
+       ReadConfig(user_config.c_str(), false, &params) == EXIT_FAILURE)
+      throw std::runtime_error("could not read user configuration");
+   return params;
+}
 py::dict AnalysisResult(const AnalysisData &data) {
    py::dict result;
    result["signal"] = Vector(data.signal);
@@ -95,6 +106,31 @@ SynthesisData SynthesisInput(const py::dict &values) {
 PYBIND11_MODULE(glottdnn_cpp, module) {
    module.doc() = "Python bindings for the GlottDNN C++ vocoder";
 
+   py::enum_<WindowingFunctionType>(module, "WindowingFunctionType")
+      .value("HANN", HANN).value("HAMMING", HAMMING).value("BLACKMAN", BLACKMAN)
+      .value("COSINE", COSINE).value("HANNING", HANNING).value("RECT", RECT)
+      .value("NUTTALL", NUTTALL);
+   py::class_<Param>(module, "Param")
+      .def(py::init<>())
+      .def_readwrite("fs", &Param::fs)
+      .def_readwrite("frame_length", &Param::frame_length)
+      .def_readwrite("frame_length_long", &Param::frame_length_long)
+      .def_readwrite("frame_length_unvoiced", &Param::frame_length_unvoiced)
+      .def_readwrite("frame_shift", &Param::frame_shift)
+      .def_readwrite("number_of_frames", &Param::number_of_frames)
+      .def_readwrite("signal_length", &Param::signal_length)
+      .def_readwrite("lpc_order_vt", &Param::lpc_order_vt)
+      .def_readwrite("lpc_order_glot", &Param::lpc_order_glot)
+      .def_readwrite("lpc_order_glot_iaif", &Param::lpc_order_glot_iaif)
+      .def_readwrite("gif_pre_emphasis_coefficient", &Param::gif_pre_emphasis_coefficient)
+      .def_readwrite("unvoiced_pre_emphasis_coefficient", &Param::unvoiced_pre_emphasis_coefficient)
+      .def_readwrite("warping_lambda_vt", &Param::warping_lambda_vt)
+      .def_readwrite("default_windowing_function", &Param::default_windowing_function)
+      .def_readwrite("paf_analysis_window", &Param::paf_analysis_window)
+      .def_readwrite("use_iterative_gif", &Param::use_iterative_gif)
+      .def_readwrite("use_pitch_synchronous_analysis", &Param::use_pitch_synchronous_analysis)
+      .def_readwrite("use_external_lsf_vt", &Param::use_external_lsf_vt);
+
    py::module analysis = module.def_submodule(
        "analysis", "File-based acoustic analysis operations");
    analysis.def("run", &RunAnalysis,
@@ -109,6 +145,50 @@ PYBIND11_MODULE(glottdnn_cpp, module) {
        return AnalysisResult(data);
     }, py::arg("signal"), py::arg("default_config_filename"),
        py::arg("user_config_filename") = "");
+    analysis.def("high_pass_filter", [](py::array signal,
+                                        const std::string &config) {
+       gsl::vector result = ToVector(signal);
+       Param params = LoadConfig(config, "");
+       params.signal_length = result.size();
+       HighPassFiltering(params, &result);
+       return Vector(result);
+    }, py::arg("signal"), py::arg("default_config_filename"));
+    analysis.def("spectral_analysis", [](py::array signal, py::array fundf,
+                                         py::array gci_inds,
+                                         const std::string &config) {
+       gsl::vector input_signal = ToVector(signal);
+       gsl::vector input_fundf = ToVector(fundf);
+       gsl::vector_int input_gci = ToIntVector(gci_inds);
+       Param params = LoadConfig(config, "");
+       params.signal_length = input_signal.size();
+       params.number_of_frames = input_fundf.size();
+       gsl::matrix result(params.lpc_order_vt + 1,
+                          input_fundf.size(), true);
+       if (SpectralAnalysis(params, input_signal, input_fundf, input_gci,
+                            &result) == EXIT_FAILURE)
+          throw std::runtime_error("spectral analysis failed");
+       return Matrix(result);
+    }, py::arg("signal"), py::arg("fundf"), py::arg("gci_indices"),
+       py::arg("default_config_filename"));
+    analysis.def("load_params", &LoadConfig,
+                 py::arg("default_config_filename"),
+                 py::arg("user_config_filename") = "");
+    analysis.def("spectral_analysis_with_params",
+       [](py::array signal, py::array fundf, py::array gci_inds,
+          Param &params) {
+          gsl::vector input_signal = ToVector(signal);
+          gsl::vector input_fundf = ToVector(fundf);
+          gsl::vector_int input_gci = ToIntVector(gci_inds);
+          params.signal_length = input_signal.size();
+          params.number_of_frames = input_fundf.size();
+          gsl::matrix result(params.lpc_order_vt + 1,
+                             input_fundf.size(), true);
+          if (SpectralAnalysis(params, input_signal, input_fundf, input_gci,
+                               &result) == EXIT_FAILURE)
+             throw std::runtime_error("spectral analysis failed");
+          return Matrix(result);
+       }, py::arg("signal"), py::arg("fundf"), py::arg("gci_indices"),
+          py::arg("params"));
 
    py::module synthesis = module.def_submodule(
        "synthesis", "File-based waveform synthesis operations");

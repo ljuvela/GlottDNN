@@ -217,7 +217,8 @@ int GetGain(const Param &params, const gsl::vector &fundf,
  *
  *
  */
-int SpectralAnalysis(const Param &params, const AnalysisData &data,
+int SpectralAnalysis(const Param &params, const gsl::vector &signal,
+                     const gsl::vector &fundf, const gsl::vector_int &gci_inds,
                      gsl::matrix *poly_vocal_tract) {                         
   gsl::vector frame(params.frame_length);
   gsl::vector unvoiced_frame(params.frame_length_unvoiced, true);
@@ -242,17 +243,17 @@ int SpectralAnalysis(const Param &params, const AnalysisData &data,
       // GetPitchSynchFrame(data.signal, frame_index, params.frame_shift,
       // &frame, &pre_frame);
       /** Voiced analysis **/
-      if (data.fundf(frame_index) != 0) {
+      if (fundf(frame_index) != 0) {
         if (params.use_pitch_synchronous_analysis)
-          GetPitchSynchFrame(params, data.signal, data.gci_inds, frame_index,
-                             params.frame_shift, data.fundf(frame_index),
+          GetPitchSynchFrame(params, signal, gci_inds, frame_index,
+                             params.frame_shift, fundf(frame_index),
                              &frame, &pre_frame);
         else
-          GetFrame(data.signal, frame_index, params.frame_shift, &frame,
+          GetFrame(signal, frame_index, params.frame_shift, &frame,
                    &pre_frame);
 
         /* Estimate Weighted Linear Prediction weight */
-        GetLpWeight(params, params.lp_weighting_function, data.gci_inds, frame,
+        GetLpWeight(params, params.lp_weighting_function, gci_inds, frame,
                     frame_index, &lp_weight);
         /* Pre-emphasis and windowing */
         Filter(std::vector<double>{1.0, -params.gif_pre_emphasis_coefficient},
@@ -283,7 +284,7 @@ int SpectralAnalysis(const Param &params, const AnalysisData &data,
         }
         /** Unvoiced analysis **/
       } else {
-        GetFrame(data.signal, frame_index, params.frame_shift, &unvoiced_frame,
+        GetFrame(signal, frame_index, params.frame_shift, &unvoiced_frame,
                  &pre_frame);
         if (params.unvoiced_pre_emphasis_coefficient > 0.0) {
           Filter(

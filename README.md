@@ -21,36 +21,11 @@ The editable install automatically configures and builds CMake, installs the
 native Python extension, and installs the `Analysis`, `Synthesis`, and
 `LsfPostFilter` executables.
 
-The build includes `Analysis`, `Synthesis`, `LsfPostFilter`, and the
-`glottdnn_cpp` Python extension. The extension exposes
-`glottdnn_cpp.analysis.run(wav, config, user_config=None)` and
-`glottdnn_cpp.synthesis.run(basename, config, user_config=None)`. The
-`signal_processing` contains NumPy wrappers for the currently bound pure DSP
-functions, and is the namespace for adding more functions later.
-
-The array-based API avoids intermediate parameter files:
-
-```python
-from vocoder import analyze_file, synthesize
-
-data = analyze_file("input.wav", "config/config_default_16k.cfg")
-output = synthesize(data, "config/config_default_16k.cfg")
-```
-
-For example:
-
-```python
-import signal_processing
-
-filtered = signal_processing.filter_signal([1.0], [1.0], samples)
-```
-
 Run the tests from the repository root:
 ```bash
 pytest
 ```
-The test suite downloads the small Arctic sample once and verifies both the
-analysis and synthesis bindings.
+The test suite downloads the small Arctic sample once.
 
 ## Analysis-synthesis example
 
@@ -217,6 +192,39 @@ do_glott_vocoder_synthesis: true
     - https://github.com/ljuvela/multiscale-GAN
     - https://github.com/ljuvela/ResGAN
     - Build your own
+
+## Python bindings
+
+The CMake build also installs the `glottdnn_cpp` extension. The original
+file-based workflows are available as:
+
+```python
+import glottdnn_cpp
+
+glottdnn_cpp.analysis.run("input.wav", "config/config_default_16k.cfg")
+glottdnn_cpp.synthesis.run("input", "config/config_default_16k.cfg")
+```
+
+Individual analysis stages can be called without parameter files:
+
+```python
+params = glottdnn_cpp.analysis.load_params("config/config_default_16k.cfg")
+poly = glottdnn_cpp.analysis.spectral_analysis_with_params(
+    signal, fundf, gci_indices, params
+)
+```
+
+The `signal_processing` module contains NumPy wrappers for pure DSP functions.
+The higher-level `vocoder` module provides an array-based analysis/synthesis
+interface that returns Python dictionaries instead of intermediate parameter
+files:
+
+```python
+from vocoder import analyze_file, synthesize
+
+data = analyze_file("input.wav", "config/config_default_16k.cfg")
+output = synthesize(data, "config/config_default_16k.cfg")
+```
 
 ## Support
 

@@ -43,7 +43,8 @@ int RunAnalysis(const std::string &wav_filename,
    if (params.qmf_subband_analysis)
       SpectralAnalysisQmf(params, data, &(data.poly_vocal_tract));
    else
-      SpectralAnalysis(params, data, &(data.poly_vocal_tract));
+      SpectralAnalysis(params, data.signal, data.fundf, data.gci_inds,
+                       &(data.poly_vocal_tract));
    Poly2Lsf(data.poly_vocal_tract, &data.lsf_vocal_tract);
    MedianFilter(5, &data.lsf_vocal_tract);
    MovingAverageFilter(3, &data.lsf_vocal_tract);
@@ -91,7 +92,8 @@ int AnalyzeSignal(const std::string &default_config_filename,
    if (params.qmf_subband_analysis)
       SpectralAnalysisQmf(params, *data, &(data->poly_vocal_tract));
    else
-      SpectralAnalysis(params, *data, &(data->poly_vocal_tract));
+      SpectralAnalysis(params, data->signal, data->fundf, data->gci_inds,
+                       &(data->poly_vocal_tract));
    Poly2Lsf(data->poly_vocal_tract, &data->lsf_vocal_tract);
    MedianFilter(5, &data->lsf_vocal_tract);
    MovingAverageFilter(3, &data->lsf_vocal_tract);
