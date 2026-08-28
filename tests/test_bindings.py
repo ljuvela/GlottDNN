@@ -48,6 +48,31 @@ def test_in_memory_analysis_and_synthesis(audio_file, config_file):
     assert synthesized["signal"].size == synthesized["excitation_signal"].size
 
 
+def test_analysis_and_synthesis_share_params(audio_file, config_file):
+    import soundfile as sf
+    import vocoder
+
+    signal, sample_rate = sf.read(audio_file, dtype="float64")
+    params = vocoder.load_config(str(config_file))
+    analyzed = vocoder.analyze(signal, sample_rate, params)
+    params.excitation_method = glottdnn_cpp.ExcitationMethod.SINGLE_PULSE
+    result = vocoder.synthesize(analyzed, params)
+    assert result["sample_rate"] == sample_rate
+
+
+def test_in_memory_single_pulse_synthesis(audio_file, config_file):
+    import soundfile as sf
+    import vocoder
+
+    signal, sample_rate = sf.read(audio_file, dtype="float64")
+    data = vocoder.analyze(signal, sample_rate, str(config_file))
+    params = vocoder.load_config(str(config_file))
+    params.excitation_method = glottdnn_cpp.ExcitationMethod.SINGLE_PULSE
+    result = vocoder.synthesize(data, params)
+    assert result["sample_rate"] == sample_rate
+    assert result["signal"].size > 0
+
+
 def test_synthesis_rejects_malformed_data(config_file):
     import numpy as np
     import vocoder

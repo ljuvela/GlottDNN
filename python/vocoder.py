@@ -6,13 +6,33 @@ import soundfile as sf
 import glottdnn_cpp
 
 
+def load_config(default_config, user_config=""):
+    """Load a mutable native configuration object for Python workflows."""
+    return glottdnn_cpp.analysis.load_params(default_config, user_config)
+
+
+def single_pulse_excitation(data, params):
+    """Create excitation using the fixed GlottDNN single-pulse model."""
+    validated = validate_synthesis_data(data, params)
+    params.excitation_method = glottdnn_cpp.ExcitationMethod.SINGLE_PULSE
+    return glottdnn_cpp.synthesis.create_excitation_with_params(
+        validated["fundf"], validated["frame_energy"],
+        validated["excitation_pulses"], validated["lsf_vocal_tract"],
+        validated["lsf_glot"], validated["hnr_glot"], params,
+    )
+
+
 def analyze(signal, sample_rate, default_config, user_config=""):
     """Analyze a mono signal and return its vocoder parameters as a dictionary."""
     samples = np.asarray(signal, dtype=np.float64)
     if samples.ndim != 1:
         raise ValueError("signal must be one-dimensional")
-    result = dict(glottdnn_cpp.analysis.run_array(
-        samples, default_config, user_config))
+    if isinstance(default_config, glottdnn_cpp.Param):
+        params = default_config
+        result = dict(glottdnn_cpp.analysis.run_array_with_params(samples, params))
+    else:
+        params = glottdnn_cpp.analysis.load_params(default_config, user_config)
+        result = dict(glottdnn_cpp.analysis.run_array_with_params(samples, params))
     result["sample_rate"] = int(sample_rate)
     return result
 
@@ -25,36 +45,63 @@ def analyze_file(filename, default_config, user_config=""):
 
 def synthesize(data, default_config, user_config=""):
     """Synthesize an analyzed parameter dictionary entirely in memory."""
-    params = glottdnn_cpp.analysis.load_params(default_config, user_config)
+    if isinstance(default_config, glottdnn_cpp.Param):
+        params = default_config
+        use_params = True
+    else:
+        params = glottdnn_cpp.analysis.load_params(default_config, user_config)
+        use_params = False
     data = validate_synthesis_data(data, params)
 
     frames = data["fundf"].shape[0]
-    excitation = glottdnn_cpp.synthesis.create_excitation(
+    if use_params:
+        excitation = glottdnn_cpp.synthesis.create_excitation_with_params(
+            data["fundf"], data["frame_energy"], data["excitation_pulses"],
+            data["lsf_vocal_tract"], data["lsf_glot"], data["hnr_glot"], params)
+    else:
+        excitation = glottdnn_cpp.synthesis.create_excitation(
         data["fundf"], data["frame_energy"], data["excitation_pulses"],
         data["lsf_vocal_tract"], data["lsf_glot"], data["hnr_glot"],
         default_config, user_config,
-    )
+        )
     if params.noise_gain_voiced > 0.0:
-        excitation = glottdnn_cpp.synthesis.harmonic_modification(
-            data["fundf"], data["hnr_glot"], excitation, default_config,
-            user_config)
+        if use_params:
+            excitation = glottdnn_cpp.synthesis.harmonic_modification_with_params(
+                data["fundf"], data["hnr_glot"], excitation, params)
+        else:
+            excitation = glottdnn_cpp.synthesis.harmonic_modification(
+                data["fundf"], data["hnr_glot"], excitation, default_config,
+                user_config)
     if params.use_spectral_matching:
-        excitation = glottdnn_cpp.synthesis.spectral_match_excitation(
-            data["fundf"], data["frame_energy"], data["lsf_glot"],
-            excitation, default_config, user_config)
+        if use_params:
+            excitation = glottdnn_cpp.synthesis.spectral_match_excitation_with_params(
+                data["fundf"], data["frame_energy"], data["lsf_glot"],
+                excitation, params)
+        else:
+            excitation = glottdnn_cpp.synthesis.spectral_match_excitation(
+                data["fundf"], data["frame_energy"], data["lsf_glot"],
+                excitation, default_config, user_config)
 
     spectrum = data.get("spectrum")
     if spectrum is None:
         spectrum = np.zeros((2049, frames), dtype=np.float64)
-    signal = glottdnn_cpp.synthesis.fft_filter_excitation(
-        data["fundf"], data["frame_energy"], spectrum,
-        data["lsf_vocal_tract"], data["lsf_glot"], excitation,
-        np.zeros_like(excitation), default_config, user_config,
-    )
-    signal = glottdnn_cpp.synthesis.generate_unvoiced_signal(
-        data["fundf"], spectrum, data["lsf_vocal_tract"], data["lsf_glot"],
-        data["frame_energy"], excitation, signal, default_config, user_config,
-    )
+    if use_params:
+        signal = glottdnn_cpp.synthesis.fft_filter_excitation_with_params(
+            data["fundf"], data["frame_energy"], spectrum,
+            data["lsf_vocal_tract"], data["lsf_glot"], excitation,
+            np.zeros_like(excitation), params)
+        signal = glottdnn_cpp.synthesis.generate_unvoiced_signal_with_params(
+            data["fundf"], spectrum, data["lsf_vocal_tract"], data["lsf_glot"],
+            data["frame_energy"], excitation, signal, params)
+    else:
+        signal = glottdnn_cpp.synthesis.fft_filter_excitation(
+            data["fundf"], data["frame_energy"], spectrum,
+            data["lsf_vocal_tract"], data["lsf_glot"], excitation,
+            np.zeros_like(excitation), default_config, user_config)
+        signal = glottdnn_cpp.synthesis.generate_unvoiced_signal(
+            data["fundf"], spectrum, data["lsf_vocal_tract"], data["lsf_glot"],
+            data["frame_energy"], excitation, signal, default_config,
+            user_config)
     return {
         "signal": signal,
         "excitation_signal": excitation,

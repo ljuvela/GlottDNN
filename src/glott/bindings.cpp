@@ -111,6 +111,12 @@ PYBIND11_MODULE(glottdnn_cpp, module) {
       .value("HANN", HANN).value("HAMMING", HAMMING).value("BLACKMAN", BLACKMAN)
       .value("COSINE", COSINE).value("HANNING", HANNING).value("RECT", RECT)
       .value("NUTTALL", NUTTALL);
+   py::enum_<ExcitationMethod>(module, "ExcitationMethod")
+      .value("SINGLE_PULSE", SINGLE_PULSE_EXCITATION)
+      .value("DNN_GENERATED", DNN_GENERATED_EXCITATION)
+      .value("PULSES_AS_FEATURES", PULSES_AS_FEATURES_EXCITATION)
+      .value("EXTERNAL", EXTERNAL_EXCITATION)
+      .value("IMPULSE", IMPULSE_EXCITATION);
    py::class_<Param>(module, "Param")
       .def(py::init<>())
       .def_readwrite("fs", &Param::fs)
@@ -128,6 +134,8 @@ PYBIND11_MODULE(glottdnn_cpp, module) {
       .def_readwrite("gif_pre_emphasis_coefficient", &Param::gif_pre_emphasis_coefficient)
       .def_readwrite("unvoiced_pre_emphasis_coefficient", &Param::unvoiced_pre_emphasis_coefficient)
       .def_readwrite("warping_lambda_vt", &Param::warping_lambda_vt)
+      .def_readwrite("speed_scale", &Param::speed_scale)
+      .def_readwrite("pitch_scale", &Param::pitch_scale)
       .def_readwrite("default_windowing_function", &Param::default_windowing_function)
       .def_readwrite("paf_analysis_window", &Param::paf_analysis_window)
       .def_readwrite("use_iterative_gif", &Param::use_iterative_gif)
@@ -135,7 +143,8 @@ PYBIND11_MODULE(glottdnn_cpp, module) {
       .def_readwrite("use_external_lsf_vt", &Param::use_external_lsf_vt)
       .def_readwrite("use_spectral_matching", &Param::use_spectral_matching)
       .def_readwrite("use_generic_envelope", &Param::use_generic_envelope)
-      .def_readwrite("noise_gain_voiced", &Param::noise_gain_voiced);
+      .def_readwrite("noise_gain_voiced", &Param::noise_gain_voiced)
+      .def_readwrite("excitation_method", &Param::excitation_method);
 
    py::module analysis = module.def_submodule(
        "analysis", "File-based acoustic analysis operations");
@@ -151,6 +160,12 @@ PYBIND11_MODULE(glottdnn_cpp, module) {
        return AnalysisResult(data);
     }, py::arg("signal"), py::arg("default_config_filename"),
        py::arg("user_config_filename") = "");
+    analysis.def("run_array_with_params", [](py::array signal, Param &params) {
+       AnalysisData data;
+       if (AnalyzeSignalWithParams(ToVector(signal), &params, &data) != 0)
+          throw std::runtime_error("analysis failed");
+       return AnalysisResult(data);
+    }, py::arg("signal"), py::arg("params"));
     analysis.def("high_pass_filter", [](py::array signal,
                                         const std::string &config) {
        gsl::vector result = ToVector(signal);
@@ -282,6 +297,27 @@ PYBIND11_MODULE(glottdnn_cpp, module) {
        py::arg("lsf_glot"), py::arg("hnr_glot"),
        py::arg("default_config_filename"),
        py::arg("user_config_filename") = "");
+     synthesis.def("create_excitation_with_params",
+       [](py::array fundf, py::array frame_energy, py::array excitation_pulses,
+          py::array lsf_vocal_tract, py::array lsf_glot, py::array hnr_glot,
+          Param &params) {
+       gsl::vector f0 = ToVector(fundf);
+       gsl::vector gain = ToVector(frame_energy);
+       gsl::matrix pulses = ToMatrix(excitation_pulses);
+       gsl::matrix lsf_vt = ToMatrix(lsf_vocal_tract);
+       gsl::matrix lsf_source = ToMatrix(lsf_glot);
+       gsl::matrix hnr = ToMatrix(hnr_glot);
+       params.number_of_frames = static_cast<int>(f0.size());
+       params.signal_length = static_cast<int>(
+          rint(params.number_of_frames * params.frame_shift / params.speed_scale));
+       gsl::vector result(static_cast<size_t>(params.signal_length), true);
+       if (CreateExcitation(params, f0, gain, pulses, lsf_vt, lsf_source,
+                            hnr, &result) == EXIT_FAILURE)
+          throw std::runtime_error("excitation creation failed");
+       return Vector(result);
+     }, py::arg("fundf"), py::arg("frame_energy"),
+       py::arg("excitation_pulses"), py::arg("lsf_vocal_tract"),
+       py::arg("lsf_glot"), py::arg("hnr_glot"), py::arg("params"));
      synthesis.def("harmonic_modification",
        [](py::array fundf, py::array hnr_glot, py::array excitation_signal,
           const std::string &config, const std::string &user_config) {
@@ -296,6 +332,18 @@ PYBIND11_MODULE(glottdnn_cpp, module) {
      }, py::arg("fundf"), py::arg("hnr_glot"),
        py::arg("excitation_signal"), py::arg("default_config_filename"),
        py::arg("user_config_filename") = "");
+     synthesis.def("harmonic_modification_with_params",
+       [](py::array fundf, py::array hnr_glot, py::array excitation_signal,
+          Param &params) {
+       gsl::vector f0 = ToVector(fundf);
+       gsl::matrix hnr = ToMatrix(hnr_glot);
+       gsl::vector result = ToVector(excitation_signal);
+       params.number_of_frames = static_cast<int>(f0.size());
+       params.signal_length = static_cast<int>(result.size());
+       HarmonicModification(params, f0, hnr, &result);
+       return Vector(result);
+     }, py::arg("fundf"), py::arg("hnr_glot"),
+       py::arg("excitation_signal"), py::arg("params"));
      synthesis.def("spectral_match_excitation",
        [](py::array fundf, py::array frame_energy, py::array lsf_glot,
           py::array excitation_signal, const std::string &config,
@@ -314,6 +362,19 @@ PYBIND11_MODULE(glottdnn_cpp, module) {
        py::arg("lsf_glot"), py::arg("excitation_signal"),
        py::arg("default_config_filename"),
        py::arg("user_config_filename") = "");
+     synthesis.def("spectral_match_excitation_with_params",
+       [](py::array fundf, py::array frame_energy, py::array lsf_glot,
+          py::array excitation_signal, Param &params) {
+       gsl::vector f0 = ToVector(fundf);
+       gsl::vector energy = ToVector(frame_energy);
+       gsl::matrix lsf = ToMatrix(lsf_glot);
+       gsl::vector result = ToVector(excitation_signal);
+       params.number_of_frames = static_cast<int>(f0.size());
+       params.signal_length = static_cast<int>(result.size());
+       SpectralMatchExcitation(params, f0, energy, lsf, &result);
+       return Vector(result);
+     }, py::arg("fundf"), py::arg("frame_energy"), py::arg("lsf_glot"),
+       py::arg("excitation_signal"), py::arg("params"));
      synthesis.def("generate_unvoiced_signal",
        [](py::array fundf, py::array spectrum, py::array lsf_vocal_tract,
           py::array lsf_glot, py::array frame_energy,
@@ -338,6 +399,26 @@ PYBIND11_MODULE(glottdnn_cpp, module) {
        py::arg("frame_energy"), py::arg("excitation_signal"),
        py::arg("signal"), py::arg("default_config_filename"),
        py::arg("user_config_filename") = "");
+     synthesis.def("generate_unvoiced_signal_with_params",
+       [](py::array fundf, py::array spectrum, py::array lsf_vocal_tract,
+          py::array lsf_glot, py::array frame_energy,
+          py::array excitation_signal, py::array signal, Param &params) {
+       gsl::vector f0 = ToVector(fundf);
+       gsl::matrix spec = ToMatrix(spectrum);
+       gsl::matrix lsf_vt = ToMatrix(lsf_vocal_tract);
+       gsl::matrix lsf_source = ToMatrix(lsf_glot);
+       gsl::vector energy = ToVector(frame_energy);
+       gsl::vector excitation = ToVector(excitation_signal);
+       gsl::vector result = ToVector(signal);
+       params.number_of_frames = static_cast<int>(f0.size());
+       params.signal_length = static_cast<int>(result.size());
+       GenerateUnvoicedSignal(params, f0, spec, lsf_vt, lsf_source, energy,
+                              excitation, &result);
+       return Vector(result);
+     }, py::arg("fundf"), py::arg("spectrum"),
+       py::arg("lsf_vocal_tract"), py::arg("lsf_glot"),
+       py::arg("frame_energy"), py::arg("excitation_signal"),
+       py::arg("signal"), py::arg("params"));
      synthesis.def("filter_excitation",
        [](py::array fundf, py::array frame_energy, py::array lsf_vocal_tract,
           py::array excitation_signal, py::array signal,
@@ -381,6 +462,25 @@ PYBIND11_MODULE(glottdnn_cpp, module) {
        py::arg("lsf_glot"), py::arg("excitation_signal"),
        py::arg("signal"), py::arg("default_config_filename"),
        py::arg("user_config_filename") = "");
+     synthesis.def("fft_filter_excitation_with_params",
+       [](py::array fundf, py::array frame_energy, py::array spectrum,
+          py::array lsf_vocal_tract, py::array lsf_glot,
+          py::array excitation_signal, py::array signal, Param &params) {
+       gsl::vector f0 = ToVector(fundf);
+       gsl::vector energy = ToVector(frame_energy);
+       gsl::matrix spec = ToMatrix(spectrum);
+       gsl::matrix lsf_vt = ToMatrix(lsf_vocal_tract);
+       gsl::matrix lsf_source = ToMatrix(lsf_glot);
+       gsl::vector excitation = ToVector(excitation_signal);
+       gsl::vector result = ToVector(signal);
+       params.number_of_frames = static_cast<int>(f0.size());
+       params.signal_length = static_cast<int>(result.size());
+       FftFilterExcitation(params, f0, energy, spec, lsf_vt, lsf_source,
+                           excitation, &result);
+       return Vector(result);
+     }, py::arg("fundf"), py::arg("frame_energy"), py::arg("spectrum"),
+       py::arg("lsf_vocal_tract"), py::arg("lsf_glot"),
+       py::arg("excitation_signal"), py::arg("signal"), py::arg("params"));
 
    py::module signal_processing = module.def_submodule(
        "signal_processing",

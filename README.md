@@ -68,6 +68,25 @@ ls ./data/tmp/
 
 First let's run copy synthesis with `SINGLE_PULSE` excitation. This method uses a single fixed glottal pulse, which is modified according to F0 and HNR (similarly to the original GlottHMM vocoder).
 
+The recommended in-memory Python API is:
+
+```python
+import glottdnn_cpp
+from vocoder import analyze_file, load_config, synthesize
+
+import soundfile as sf
+
+signal, sample_rate = sf.read("input.wav", dtype="float64")
+params = load_config("config/config_default_16k.cfg")
+data = analyze(signal, sample_rate, params)
+params.excitation_method = glottdnn_cpp.ExcitationMethod.SINGLE_PULSE
+result = synthesize(data, params)
+```
+
+The complete synthesized waveform is available as `result["signal"]`.
+
+The file-based workflow below is retained as a legacy interface:
+
 ``` bash
 # Run synthesis with default config
 Synthesis "$DATADIR/$BASENAME" ./config/config_default_16k.cfg
@@ -220,10 +239,29 @@ interface that returns Python dictionaries instead of intermediate parameter
 files:
 
 ```python
-from vocoder import analyze_file, synthesize
+import soundfile as sf
+from vocoder import analyze, load_config, synthesize
 
-data = analyze_file("input.wav", "config/config_default_16k.cfg")
-output = synthesize(data, "config/config_default_16k.cfg")
+signal, sample_rate = sf.read("input.wav", dtype="float64")
+params = load_config("config/config_default_16k.cfg")
+data = analyze(signal, sample_rate, params)
+output = synthesize(data, params)
+```
+
+Configuration objects can be loaded and modified directly in Python. For
+example, to generate single-pulse excitation with a changed synthesis speed:
+
+```python
+import soundfile as sf
+from vocoder import analyze, load_config, single_pulse_excitation
+import glottdnn_cpp
+
+signal, sample_rate = sf.read("input.wav", dtype="float64")
+params = load_config("config/config_default_16k.cfg")
+data = analyze(signal, sample_rate, params)
+params.speed_scale = 0.8
+params.excitation_method = glottdnn_cpp.ExcitationMethod.SINGLE_PULSE
+excitation = single_pulse_excitation(data, params)
 ```
 
 ## Support
