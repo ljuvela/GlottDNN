@@ -1,0 +1,17 @@
+name: glottdnn
+channels:
+  - pytorch
+  - conda-forge
+dependencies:
+  - python=3.8
+  - numpy
+  - scikit-learn
+  - pytorch>=1.1
+  - torchaudio
+  - autoconf
+  - automake
+  - make
+  - cxx-compiler
+  - gsl
+  - libconfig
+  - libsndfile

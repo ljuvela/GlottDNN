@@ -37,49 +37,36 @@ automake --add-missing
 
 ### Installation using a conda environment
 
-Conda environments are useful for managing dependencies and keeping a GlottDNN installation contained from the systemwide environment. For more information about managing conda enviroments, see https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html
+Conda environments are useful for managing dependencies and keeping a GlottDNN
+installation contained from the systemwide environment. The repository includes
+an environment specification with the C++ libraries, compiler toolchain, and
+Python packages required by the project.
 
-
-Create and activate a new conda environment. 
+Create and activate the environment:
 ```bash
-conda create -n glottdnn
+conda env create -f environment.yml
 conda activate glottdnn
 ```
 
-Install dependencies
-``` bash
-conda install -c conda-forge libsndfile gsl libconfig 
-```
-
-Optionally, install pytorch with conda
+Build and install the vocoder into the active environment:
 ```bash
-conda install pytorch torchaudio -c pytorch
-```
-
-Set compiler flags to compiler flags to point to the currently active conda environment. The compiled binaries will be installed in `$CONDA_PREFIX/bin/`  
-``` bash
-export LDFLAGS=-L$CONDA_PREFIX/lib/ 
-export CPPFLAGS=-I$CONDA_PREFIX/include/
-./configure --prefix $CONDA_PREFIX
+autoreconf -fi
+export LDFLAGS="-L$CONDA_PREFIX/lib"
+export CPPFLAGS="-I$CONDA_PREFIX/include"
+./configure --prefix="$CONDA_PREFIX"
 make
 make install
 ```
 
-Library dependencies are linked dynamically, so we need to make sure they are is visible in `LD_LIBRARY_PATH`. Adding an `env_vars.sh` activate script is a convenient way to do this automatically whenever the conda environment is activatied.
+On Linux, make the Conda libraries available to binaries started from this
+environment:
 ```bash
-# any shell scripts in these directories are run at activation/deactivation
-mkdir -p $CONDA_PREFIX/etc/conda/activate.d
-mkdir -p $CONDA_PREFIX/etc/conda/deactivate.d
+export LD_LIBRARY_PATH="$CONDA_PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+```
 
-# modify LD_LIBRARY_PATH at activation
-export ACTIVATE_SCRIPT=$CONDA_PREFIX/etc/conda/activate.d/env_vars.sh
-echo 'export OLD_LD_LIBRARY_PATH=${LD_LIBRARY_PATH}' > $ACTIVATE_SCRIPT
-echo 'export LD_LIBRARY_PATH='${CONDA_PREFIX}'/lib/:${LD_LIBRARY_PATH}' >> $ACTIVATE_SCRIPT
-
-# restore LD_LIBRARY_PATH state at deactivation
-export DEACTIVATE_SCRIPT=$CONDA_PREFIX/etc/conda/deactivate.d/env_vars.sh
-echo 'export LD_LIBRARY_PATH=${OLD_LD_LIBRARY_PATH}' > $DEACTIVATE_SCRIPT
-echo 'unset OLD_LD_LIBRARY_PATH' >> $DEACTIVATE_SCRIPT
+On macOS, use `DYLD_LIBRARY_PATH` instead:
+```bash
+export DYLD_LIBRARY_PATH="$CONDA_PREFIX/lib${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}"
 ```
 
 ## Analysis-synthesis example
