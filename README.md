@@ -18,21 +18,18 @@ The vocoder C++ code has the following library dependencies:
 
 Usually the best way to install the dependencies is with the system package manager. For example, in Ubuntu use `apt-get` install the packages `libgsl0-dev`, `libsndfile1-dev`, `libconfig++-dev`
 
-The C++ part uses a standard GNU autotools build system. To compile the vocoder, run the following commands in the project root directory
+The C++ part uses CMake. To compile the vocoder, run the following commands in
+the project root directory:
 ``` bash
-   ./configure
-   make
+   cmake -S . -B build
+   cmake --build build
 ```
 
 Since the build targets are rather generically named `Analysis` and `Synthesis`, you might not want them in your default system PATH. Use the `--prefix` flag to choose another install path
 ``` bash
-   ./configure --prefix=/your/install/path/bin
-   make install
-```
-
-Usually `configure` and `make` should be enough, but if the process complains about missing files try running 
-``` bash
-automake --add-missing
+   cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/your/install/path
+   cmake --build build
+   cmake --install build
 ```
 
 ### Installation using a conda environment
@@ -50,12 +47,11 @@ conda activate glottdnn
 
 Build and install the vocoder into the active environment:
 ```bash
-autoreconf -fi
-export LDFLAGS="-L$CONDA_PREFIX/lib"
-export CPPFLAGS="-I$CONDA_PREFIX/include"
-./configure --prefix="$CONDA_PREFIX"
-make
-make install
+cmake -S . -B build \
+  -DCMAKE_PREFIX_PATH="$CONDA_PREFIX" \
+  -DCMAKE_INSTALL_PREFIX="$CONDA_PREFIX"
+cmake --build build
+cmake --install build
 ```
 
 On Linux, make the Conda libraries available to binaries started from this

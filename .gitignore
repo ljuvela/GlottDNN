@@ -25,6 +25,7 @@ p*.dat
 *.PLS
 data/*
 bin/*
+build*/
 src/Analysis
 src/Synthesis
 src/LsfPostFilter

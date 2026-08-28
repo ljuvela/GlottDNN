@@ -10,6 +10,7 @@ dependencies:
   - torchaudio
   - autoconf
   - automake
+  - cmake
   - make
   - cxx-compiler
   - gsl
