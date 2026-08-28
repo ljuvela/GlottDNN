@@ -6,11 +6,6 @@ src/gslwrap/*~
 src/.DS_Store
 .cproject
 .project
-Makefile
-src/Makefile
-src/glott/Makefile
-autom4te.cache/*
-autom4te.cache/requests
 src/libgslwrap.a
 *.o
 p*.dat
@@ -32,10 +27,6 @@ src/LsfPostFilter
 src/Analysis.dSYM/
 src/glott/.deps/
 src/gslwrap/.deps/
-aclocal.m4
-config.log
-config.status
-xsconfig.status
 *.pyc
 doc/GlottDNN_manual.aux
 doc/GlottDNN_manual.log

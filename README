@@ -9,8 +9,8 @@ This is a readme file for the GlottDNN package. The package contains two main pa
    - Dependencies: python, numpy, theano
 
 To compile the system, run the following commands:
-   ./configure
-   make
+   cmake -S . -B build
+   cmake --build build
 
 Some typical use cases: 
      Case 1: Train excitation model 16kHz sample rate
@@ -24,5 +24,4 @@ Some typical use cases:
 Please contact the authors for any questions, or open an issue at github:
 Lauri Juvela: lauri.juvela@aalto.fi
 Manu Airaksinen: manu.airaksinen@aalto.fi
-
 
