@@ -19,7 +19,7 @@ def load_data(filename, size2):
     return torch.tensor(var).to(device)
 
 
-def save_network(layerList, layer_out):
+def save_network(conf, layerList, layer_out):
     fid = open( conf.weights_data_dir + '/' + conf.dnn_name + '.dnnData','w')   
     # hidden layers
     for layer in layerList[:-1]:
@@ -46,10 +46,15 @@ def evaluate_dnn(conf, learning_rate=0.1, n_epochs=150,
     nndata_basename = conf.train_data_dir + '/' + conf.dnn_name 
     
     # load data as torch.tensor
-    valid_set_x = load_data(nndata_basename + '.val.idat', n_in)
-    valid_set_y = load_data(nndata_basename + '.val.odat', n_out)
     train_set_x = load_data(nndata_basename + '.train.idat', n_in)
     train_set_y = load_data(nndata_basename + '.train.odat', n_out)
+    validation_basename = nndata_basename + '.val'
+    if os.path.isfile(validation_basename + '.idat') and os.path.isfile(validation_basename + '.odat'):
+        valid_set_x = load_data(validation_basename + '.idat', n_in)
+        valid_set_y = load_data(validation_basename + '.odat', n_out)
+    else:
+        valid_set_x = train_set_x
+        valid_set_y = train_set_y
 
     # compute number of minibatches for training and validation
     n_train_batches = train_set_x.shape[0]
@@ -159,7 +164,7 @@ def evaluate_dnn(conf, learning_rate=0.1, n_epochs=150,
             # save best validation score and iteration number
             best_validation_loss = this_validation_loss
             # test it on the test set      
-            save_network(layerList, layer_out)
+            save_network(conf, layerList, layer_out)
         else:
             patience -= 1    
             
@@ -171,4 +176,3 @@ def evaluate_dnn(conf, learning_rate=0.1, n_epochs=150,
     print('Optimization complete.')
  
     print(('The code ran for %.2fm' % ((end_time - start_time) / 60.)))
-

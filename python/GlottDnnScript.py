@@ -92,7 +92,7 @@ def make_file_lists():
         scpfile = open(conf.datadir + '/scp/' + t + '.scp','w') 
         for f in sorted(set(os.listdir(conf.datadir + '/' + t))):
             if f.endswith(e):
-                scpfile.write(os.path.abspath(conf.datadir + '/' + t + '/' + f + '\n'))
+                scpfile.write(os.path.abspath(conf.datadir + '/' + t + '/' + f) + '\n')
         scpfile.close()
         
 def sptk_pitch_analysis():

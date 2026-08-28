@@ -43,6 +43,7 @@ Create and activate the environment:
 ```bash
 conda env create -f environment.yml
 conda activate glottdnn
+python -m pip install -e .
 ```
 
 Build and install the vocoder into the active environment:
@@ -116,6 +117,28 @@ mv "$DATADIR/$BASENAME.syn.wav" "$DATADIR/$BASENAME.syn.sp.wav"
 
 A copy-synthesis wave file should now be at `./data/tmp/slt_arctic_a0001.syn.sp.wav`.
 The single pulse excitation will sound somewhat buzzy, so let's try if we can do better.
+
+### Single-file DNN training tutorial
+
+The built-in PyTorch model can also be trained on one analyzed audio file.
+This intentionally overfits the file and is a quick CPU smoke test rather than
+a useful speech model.
+
+First place one WAV file in the input directory and run:
+
+```bash
+mkdir -p data/single_file/wav
+cp data/tmp/slt_arctic_a0001.wav data/single_file/wav/
+export DYLD_LIBRARY_PATH="$CONDA_PREFIX/lib${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}"  # macOS
+glottdnn dnn_demo/config_single_file.yaml
+```
+
+On Linux, export `LD_LIBRARY_PATH` instead. The configuration uses
+`data/single_file/slt_arctic_a0001.wav` and a small two-layer network. It
+disables validation and test splits so all frames are used for training; when
+no validation split exists, the trainer uses the training data for its
+early-stopping metric. The generated DNN copy-synthesis output is written to
+`data/single_file/syn/slt_arctic_a0001.syn.wav`.
 
 ### Synthesis with original pulses
 
