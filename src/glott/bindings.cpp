@@ -189,6 +189,22 @@ PYBIND11_MODULE(glottdnn_cpp, module) {
           return Matrix(result);
        }, py::arg("signal"), py::arg("fundf"), py::arg("gci_indices"),
           py::arg("params"));
+    analysis.def("spectral_analysis_qmf", [](py::array signal, py::array fundf,
+                                            py::array gci_inds,
+                                            const std::string &config) {
+       gsl::vector input_signal = ToVector(signal);
+       gsl::vector input_fundf = ToVector(fundf);
+       gsl::vector_int input_gci = ToIntVector(gci_inds);
+       Param params = LoadConfig(config, "");
+       params.signal_length = input_signal.size();
+       params.number_of_frames = input_fundf.size();
+       gsl::matrix result(params.lpc_order_vt + 1, input_fundf.size(), true);
+       if (SpectralAnalysisQmf(params, input_signal, input_fundf, input_gci,
+                               &result) == EXIT_FAILURE)
+          throw std::runtime_error("QMF spectral analysis failed");
+       return Matrix(result);
+    }, py::arg("signal"), py::arg("fundf"), py::arg("gci_indices"),
+       py::arg("default_config_filename"));
     analysis.def("inverse_filter", [](py::array signal, py::array gci_inds,
                                       py::array fundf, py::array frame_energy,
                                       py::array poly_vocal_tract,

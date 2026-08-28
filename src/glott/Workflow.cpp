@@ -41,7 +41,8 @@ int RunAnalysis(const std::string &wav_filename,
       return EXIT_FAILURE;
    GetGain(params, data.fundf, data.signal, &(data.frame_energy));
    if (params.qmf_subband_analysis)
-      SpectralAnalysisQmf(params, data, &(data.poly_vocal_tract));
+      SpectralAnalysisQmf(params, data.signal, data.fundf, data.gci_inds,
+                          &(data.poly_vocal_tract));
    else
       SpectralAnalysis(params, data.signal, data.fundf, data.gci_inds,
                        &(data.poly_vocal_tract));
@@ -92,7 +93,8 @@ int AnalyzeSignal(const std::string &default_config_filename,
       return EXIT_FAILURE;
    GetGain(params, data->fundf, data->signal, &(data->frame_energy));
    if (params.qmf_subband_analysis)
-      SpectralAnalysisQmf(params, *data, &(data->poly_vocal_tract));
+      SpectralAnalysisQmf(params, data->signal, data->fundf, data->gci_inds,
+                         &(data->poly_vocal_tract));
    else
       SpectralAnalysis(params, data->signal, data->fundf, data->gci_inds,
                        &(data->poly_vocal_tract));

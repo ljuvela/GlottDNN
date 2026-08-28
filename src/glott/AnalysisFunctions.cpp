@@ -328,7 +328,9 @@ int SpectralAnalysis(const Param &params, const gsl::vector &signal,
   return EXIT_SUCCESS;
 }
 
-int SpectralAnalysisQmf(const Param &params, const AnalysisData &data,
+int SpectralAnalysisQmf(const Param &params, const gsl::vector &signal,
+                        const gsl::vector &fundf,
+                        const gsl::vector_int &gci_inds,
                         gsl::matrix *poly_vocal_tract) {
   gsl::vector frame(params.frame_length);
   gsl::vector frame_pre_emph(params.frame_length);
@@ -365,10 +367,10 @@ int SpectralAnalysisQmf(const Param &params, const AnalysisData &data,
   size_t frame_index;
   for (frame_index = 0; frame_index < (size_t)params.number_of_frames;
        frame_index++) {
-    GetFrame(data.signal, frame_index, params.frame_shift, &frame, &pre_frame);
+    GetFrame(signal, frame_index, params.frame_shift, &frame, &pre_frame);
 
     /** Voiced analysis (Low-band = QCP, High-band = LPC) **/
-    if (data.fundf(frame_index) != 0) {
+    if (fundf(frame_index) != 0) {
       /* Pre-emphasis */
       Filter(lip_radiation, B, frame, &frame_pre_emph);
       Qmf::GetSubBands(frame_pre_emph, H0, H1, &frame_qmf1, &frame_qmf2);
@@ -381,7 +383,7 @@ int SpectralAnalysisQmf(const Param &params, const AnalysisData &data,
       gain_qmf = 20 * log10(e2 / e1);
 
       /** Low-band analysis **/
-      GetLpWeight(params, params.lp_weighting_function, data.gci_inds, frame,
+      GetLpWeight(params, params.lp_weighting_function, gci_inds, frame,
                   frame_index, &lp_weight);
       Qmf::Decimate(lp_weight, 2, &lp_weight_downsampled);
 
