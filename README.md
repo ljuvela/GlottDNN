@@ -9,82 +9,52 @@ The GlottDNN package contains two main parts:
    - Dependencies: `python3`, `numpy`, `pytorch>=1.1.0`
 
 
-## Installation
-
-The vocoder C++ code has the following library dependencies:
-- `libgsl` (GNU scientific library), for basic linear algebra and FFT etc.
-- `libsndfile` for reading and writing audio files
-- `libconfig++` for reading structured configuration files
-
-Usually the best way to install the dependencies is with the system package manager. For example, in Ubuntu use `apt-get` install the packages `libgsl0-dev`, `libsndfile1-dev`, `libconfig++-dev`
-
-The C++ part uses CMake. To compile the vocoder, run the following commands in
-the project root directory:
-``` bash
-   cmake -S . -B build
-   cmake --build build
-```
-
-Since the build targets are rather generically named `Analysis` and `Synthesis`, you might not want them in your default system PATH. Use the `--prefix` flag to choose another install path
-``` bash
-   cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/your/install/path
-   cmake --build build
-   cmake --install build
-```
-
-   The native Python bindings are built alongside the executables:
-   ```bash
-   cmake --build build --target glottdnn_cpp
-   export PYTHONPATH="$PWD/build:$PYTHONPATH"
-   python -c "import glottdnn_cpp; print(glottdnn_cpp.analysis.run)"
-   ```
-
-   The bindings expose `glottdnn_cpp.analysis.run(wav, config, user_config=None)`
-   and `glottdnn_cpp.synthesis.run(basename, config, user_config=None)`. The
-   `signal_processing` submodule is reserved for future individual DSP
-   functions, so those bindings can be added without changing the main API.
-
-   Run the binding tests from the repository root after building the CMake
-   extension:
-   ```bash
-   pytest
-   ```
-   The test suite downloads the small Arctic sample once and verifies both the
-   analysis and synthesis bindings.
-
-### Installation using a conda environment
+## Installation and build
 
 Conda environments are useful for managing dependencies and keeping a GlottDNN
 installation contained from the systemwide environment. The repository includes
 an environment specification with the C++ libraries, compiler toolchain, and
 Python packages required by the project.
 
-Create and activate the environment:
+Create and activate the Conda environment, then install the Python package:
 ```bash
 conda env create -f environment.yml
 conda activate glottdnn
 python -m pip install -e .
 ```
 
-Build and install the vocoder into the active environment:
+Configure and build the C++ executables and native Python bindings:
 ```bash
 cmake -S . -B build \
   -DCMAKE_PREFIX_PATH="$CONDA_PREFIX" \
   -DCMAKE_INSTALL_PREFIX="$CONDA_PREFIX"
 cmake --build build
+```
+
+The executables can optionally be installed into the active environment:
+```bash
 cmake --install build
 ```
 
-On Linux, make the Conda libraries available to binaries started from this
-environment:
+The build includes `Analysis`, `Synthesis`, `LsfPostFilter`, and the
+`glottdnn_cpp` Python extension. The extension exposes
+`glottdnn_cpp.analysis.run(wav, config, user_config=None)` and
+`glottdnn_cpp.synthesis.run(basename, config, user_config=None)`. The
+`signal_processing` submodule is reserved for future individual DSP functions.
+
+Make the Conda libraries available to binaries started from this environment:
 ```bash
+export DYLD_LIBRARY_PATH="$CONDA_PREFIX/lib${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}"  # macOS
+# Linux:
 export LD_LIBRARY_PATH="$CONDA_PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 ```
 
-On macOS, use `DYLD_LIBRARY_PATH` instead:
+Run the binding tests from the repository root:
 ```bash
-export DYLD_LIBRARY_PATH="$CONDA_PREFIX/lib${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}"
+PYTHONPATH="$PWD/build:$PYTHONPATH" pytest
 ```
+The test suite downloads the small Arctic sample once and verifies both the
+analysis and synthesis bindings.
 
 ## Analysis-synthesis example
 
