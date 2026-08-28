@@ -727,7 +727,9 @@ void HarmonicModification(const Param &params, const gsl::vector &fundf,
   std::cout << " done." << std::endl;
 }
 
-void SpectralMatchExcitation(const Param &params, const SynthesisData &data,
+void SpectralMatchExcitation(const Param &params, const gsl::vector &fundf,
+                             const gsl::vector &frame_energy,
+                             const gsl::matrix &lsf_glot,
                              gsl::vector *excitation_signal) {
   /* Get analysis filters for synthetic excitation */
   size_t frame_index;
@@ -784,21 +786,21 @@ void SpectralMatchExcitation(const Param &params, const SynthesisData &data,
                            (double)(params.number_of_frames - 1);
       InterpolateLinear(lsf_glot_syn, frame_index_double,
                         &lsf_gen_interpolated);
-      InterpolateLinear(data.lsf_glot, frame_index_double,
+      InterpolateLinear(lsf_glot, frame_index_double,
                         &lsf_tar_interpolated);
       Lsf2Poly(lsf_gen_interpolated, &a_gen);
       Lsf2Poly(lsf_tar_interpolated, &a_tar);
       // a_tar.set_all(0.0);
       // TODO: Add interpolation to frame_energy.
       gain_target_db = InterpolateLinear(
-          data.frame_energy(floor(frame_index_double)),
-          data.frame_energy(ceil(frame_index_double)), frame_index_double);
+          frame_energy(floor(frame_index_double)),
+          frame_energy(ceil(frame_index_double)), frame_index_double);
 
       gain = GetFilteringGain(
           a_gen, a_tar, excitation_orig, gain_target_db, sample_index,
           params.frame_length,
           0.0);  // Should this be from ecitation_signal or excitation_orig?
-      if (data.fundf(rint(frame_index_double)) == 0.0) {
+      if (fundf(rint(frame_index_double)) == 0.0) {
         gain *= params.noise_gain_unvoiced;
       }
       a_tar(0) = 0.0;

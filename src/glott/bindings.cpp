@@ -288,6 +288,22 @@ PYBIND11_MODULE(glottdnn_cpp, module) {
        return Vector(result);
      }, py::arg("fundf"), py::arg("hnr_glot"),
        py::arg("excitation_signal"), py::arg("default_config_filename"));
+     synthesis.def("spectral_match_excitation",
+       [](py::array fundf, py::array frame_energy, py::array lsf_glot,
+          py::array excitation_signal, const std::string &config) {
+       gsl::vector input_fundf = ToVector(fundf);
+       gsl::vector input_energy = ToVector(frame_energy);
+       gsl::matrix input_lsf = ToMatrix(lsf_glot);
+       gsl::vector result = ToVector(excitation_signal);
+       Param params = LoadConfig(config, "");
+       params.number_of_frames = static_cast<int>(input_fundf.size());
+       params.signal_length = static_cast<int>(result.size());
+       SpectralMatchExcitation(params, input_fundf, input_energy, input_lsf,
+                               &result);
+       return Vector(result);
+     }, py::arg("fundf"), py::arg("frame_energy"),
+       py::arg("lsf_glot"), py::arg("excitation_signal"),
+       py::arg("default_config_filename"));
 
    py::module signal_processing = module.def_submodule(
        "signal_processing",
