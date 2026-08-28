@@ -24,7 +24,9 @@ int CreateExcitation(const Param &params, const gsl::vector &fundf,
                      const gsl::matrix &lsf_glot,
                      const gsl::matrix &hnr_glot,
                      gsl::vector *excitation_signal);
-void HarmonicModification(const Param &params, const SynthesisData &data, gsl::vector *excitation_signal);
+void HarmonicModification(const Param &params, const gsl::vector &fundf,
+                          const gsl::matrix &hnr_glot,
+                          gsl::vector *excitation_signal);
 void SpectralMatchExcitation(const Param &params,const SynthesisData &data, gsl::vector *excitation_signal);
 void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data, gsl::vector *signal);
 void FilterExcitation(const Param &params, const SynthesisData &data, gsl::vector *signal);

@@ -150,7 +150,8 @@ int RunSynthesis(const std::string &filename,
                         &(data.excitation_signal)) == EXIT_FAILURE)
       return EXIT_FAILURE;
    if (params.noise_gain_voiced > 0.0)
-      HarmonicModification(params, data, &(data.excitation_signal));
+      HarmonicModification(params, data.fundf, data.hnr_glot,
+                           &(data.excitation_signal));
    FftFilterExcitation(params, data, &(data.signal));
    GenerateUnvoicedSignal(params, data, &(data.signal));
    std::string out_fname = GetParamPath("exc", ".exc.wav", params.dir_exc, params);
@@ -197,7 +198,7 @@ int SynthesizeData(const std::string &default_config_filename,
                         data->lsf_glot, data->hnr_glot, excitation) == EXIT_FAILURE)
       return EXIT_FAILURE;
    if (params.noise_gain_voiced > 0.0)
-      HarmonicModification(params, *data, excitation);
+      HarmonicModification(params, data->fundf, data->hnr_glot, excitation);
    FftFilterExcitation(params, *data, signal);
    GenerateUnvoicedSignal(params, *data, signal);
    return EXIT_SUCCESS;

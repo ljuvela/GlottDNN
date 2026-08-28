@@ -559,7 +559,8 @@ int CreateExcitation(const Param &params, const gsl::vector &fundf,
   return EXIT_SUCCESS;
 }
 
-void HarmonicModification(const Param &params, const SynthesisData &data,
+void HarmonicModification(const Param &params, const gsl::vector &fundf,
+                          const gsl::matrix &hnr_glot,
                           gsl::vector *excitation_signal) {
   std::cout << "HNR modification ...";
 
@@ -617,7 +618,7 @@ void HarmonicModification(const Param &params, const SynthesisData &data,
     // excitation_signal); continue;
 
     /* only modify voiced frames */
-    if (true && data.fundf(frame_index) > 0) {
+    if (true && fundf(frame_index) > 0) {
       /* Integrate excitation for modulating noise with glottal flow */
       Filter(B, A_integrator, frame, &flow_vec);
       flow_vec += -1.0 * flow_vec.min() + 0.001;
@@ -639,8 +640,8 @@ void HarmonicModification(const Param &params, const SynthesisData &data,
       }
 
       /* Upper and lower envelope estimates for synthetic signal */
-      if (data.fundf(frame_index) > 0) {
-        UpperLowerEnvelope(fft_mag, data.fundf(frame_index), params.fs,
+      if (fundf(frame_index) > 0) {
+        UpperLowerEnvelope(fft_mag, fundf(frame_index), params.fs,
                            &fft_upper_env, &fft_lower_env);
       } else {
         // Unvoiced pseudo-pitch is the frame_shift
@@ -650,7 +651,7 @@ void HarmonicModification(const Param &params, const SynthesisData &data,
       }
 
       /* Convert HNR from ERB to linear frequency scale */
-      Erb2Linear(data.hnr_glot.get_col_vec(frame_index), params.fs,
+      Erb2Linear(hnr_glot.get_col_vec(frame_index), params.fs,
                  &hnr_interp);
 
       /* Calculate target noise floor level based on upper envelope and HNR */

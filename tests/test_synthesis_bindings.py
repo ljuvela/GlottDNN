@@ -20,3 +20,26 @@ def test_create_excitation_binding():
     )
     assert excitation.ndim == 1
     assert excitation.size > 0
+
+
+def test_harmonic_modification_binding():
+    config_file = Path(__file__).resolve().parents[1] / "config" / "config_default_16k.cfg"
+    signal, _ = sf.read("data/tmp/slt_arctic_a0001.wav", dtype="float64")
+    analyzed = glottdnn_cpp.analysis.run_array(signal, str(config_file))
+    excitation = glottdnn_cpp.synthesis.create_excitation(
+        analyzed["fundf"],
+        analyzed["frame_energy"],
+        analyzed["excitation_pulses"],
+        analyzed["lsf_vocal_tract"],
+        analyzed["lsf_glot"],
+        analyzed["hnr_glot"],
+        str(config_file),
+    )
+    modified = glottdnn_cpp.synthesis.harmonic_modification(
+        analyzed["fundf"],
+        analyzed["hnr_glot"],
+        excitation,
+        str(config_file),
+    )
+    assert modified.shape == excitation.shape
+    assert np.all(np.isfinite(modified))
