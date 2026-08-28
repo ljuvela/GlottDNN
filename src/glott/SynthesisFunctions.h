@@ -31,7 +31,13 @@ void SpectralMatchExcitation(const Param &params, const gsl::vector &fundf,
                              const gsl::vector &frame_energy,
                              const gsl::matrix &lsf_glot,
                              gsl::vector *excitation_signal);
-void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data, gsl::vector *signal);
+void GenerateUnvoicedSignal(const Param &params, const gsl::vector &fundf,
+                            const gsl::matrix &spectrum,
+                            const gsl::matrix &lsf_vocal_tract,
+                            const gsl::matrix &lsf_glot,
+                            const gsl::vector &frame_energy,
+                            const gsl::vector &excitation_signal,
+                            gsl::vector *signal);
 void FilterExcitation(const Param &params, const SynthesisData &data, gsl::vector *signal);
 void FftFilterExcitation(const Param &params, const SynthesisData &data, gsl::vector *signal);
 void NoiseGating(const Param &params, gsl::vector *frame_energy);

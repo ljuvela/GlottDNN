@@ -816,7 +816,12 @@ void SpectralMatchExcitation(const Param &params, const gsl::vector &fundf,
   std::cout << " done." << std::endl;
 }
 
-void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data,
+void GenerateUnvoicedSignal(const Param &params, const gsl::vector &fundf,
+                            const gsl::matrix &spectrum,
+                            const gsl::matrix &lsf_vocal_tract,
+                            const gsl::matrix &lsf_glot,
+                            const gsl::vector &frame_energy,
+                            const gsl::vector &excitation_signal,
                             gsl::vector *signal) {
   /* When using pulses-as-features for unvoiced, unvoiced part is filtered as
    * voiced */
@@ -866,16 +871,16 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data,
 
   size_t frame_index;
   for (frame_index = 0; frame_index < params.number_of_frames; frame_index++) {
-    if (data.fundf(frame_index) == 0) {
+    if (fundf(frame_index) == 0) {
 
       if (params.use_generic_envelope) {
         for (i = 0; i < vt_fft.getSize(); i++) {
-          vt_fft.setReal(i, data.spectrum(i, frame_index));
+          vt_fft.setReal(i, spectrum(i, frame_index));
           vt_fft.setImag(i, 0.0);
         }
         // Spectrum2MinPhase(&vt_fft);
       } else {
-        Lsf2Poly(data.lsf_vocal_tract.get_col_vec(frame_index), &A);
+        Lsf2Poly(lsf_vocal_tract.get_col_vec(frame_index), &A);
         if (params.warping_lambda_vt == 0.0) {
           FFTRadix2(A, NFFT, &vt_fft);
         } else {
@@ -890,7 +895,7 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data,
       }
 
       if (params.use_external_excitation) {
-        GetFrame(data.excitation_signal, frame_index,
+        GetFrame(excitation_signal, frame_index,
                     rint(params.frame_shift / params.speed_scale), &noise_vec, NULL);
       } else {
         for (i = 0; i < noise_vec.size(); i++) {
@@ -911,7 +916,7 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data,
       ApplyWindowingFunction(COSINE, &noise_vec);
 
       FFTRadix2(noise_vec, NFFT, &noise_vec_fft);
-      Lsf2Poly(data.lsf_glot.get_col_vec(frame_index), &A_tilt);
+      Lsf2Poly(lsf_glot.get_col_vec(frame_index), &A_tilt);
       FFTRadix2(A_tilt, NFFT, &tilt_fft);
 
       // Randomize phase
@@ -936,7 +941,7 @@ void GenerateUnvoicedSignal(const Param &params, const SynthesisData &data,
         noise_vec_fft.setImag(i, mag * sin(double(ang)));
       }
       double e_target;
-      e_target = LogEnergy2FrameEnergy(data.frame_energy(frame_index),
+      e_target = LogEnergy2FrameEnergy(frame_energy(frame_index),
                                        noise_vec.size());
 
       IFFTRadix2(noise_vec_fft, &noise_vec);

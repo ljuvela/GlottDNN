@@ -304,6 +304,29 @@ PYBIND11_MODULE(glottdnn_cpp, module) {
      }, py::arg("fundf"), py::arg("frame_energy"),
        py::arg("lsf_glot"), py::arg("excitation_signal"),
        py::arg("default_config_filename"));
+     synthesis.def("generate_unvoiced_signal",
+       [](py::array fundf, py::array spectrum, py::array lsf_vocal_tract,
+          py::array lsf_glot, py::array frame_energy,
+          py::array excitation_signal, py::array signal,
+          const std::string &config) {
+       gsl::vector input_fundf = ToVector(fundf);
+       gsl::matrix input_spectrum = ToMatrix(spectrum);
+       gsl::matrix input_lsf_vt = ToMatrix(lsf_vocal_tract);
+       gsl::matrix input_lsf_glot = ToMatrix(lsf_glot);
+       gsl::vector input_energy = ToVector(frame_energy);
+       gsl::vector input_excitation = ToVector(excitation_signal);
+       gsl::vector result = ToVector(signal);
+       Param params = LoadConfig(config, "");
+       params.number_of_frames = static_cast<int>(input_fundf.size());
+       params.signal_length = static_cast<int>(result.size());
+       GenerateUnvoicedSignal(params, input_fundf, input_spectrum, input_lsf_vt,
+                              input_lsf_glot, input_energy, input_excitation,
+                              &result);
+       return Vector(result);
+     }, py::arg("fundf"), py::arg("spectrum"),
+       py::arg("lsf_vocal_tract"), py::arg("lsf_glot"),
+       py::arg("frame_energy"), py::arg("excitation_signal"),
+       py::arg("signal"), py::arg("default_config_filename"));
 
    py::module signal_processing = module.def_submodule(
        "signal_processing",
