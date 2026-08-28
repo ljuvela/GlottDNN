@@ -1139,7 +1139,10 @@ void FftFilterExcitation(const Param &params, const SynthesisData &data,
   }
 }
 
-void FilterExcitation(const Param &params, const SynthesisData &data,
+void FilterExcitation(const Param &params, const gsl::vector &fundf,
+                      const gsl::vector &frame_energy,
+                      const gsl::matrix &lsf_vocal_tract,
+                      const gsl::vector &excitation_signal,
                       gsl::vector *signal) {
   int sample_index, i;
   double gain = 1.0, gain_target_db, sum, frame_index_double;
@@ -1155,23 +1158,23 @@ void FilterExcitation(const Param &params, const SynthesisData &data,
   double tmpr;
 
   int UPDATE_INTERVAL = params.filter_update_interval_vt;
-  signal->copy(data.excitation_signal);
+  signal->copy(excitation_signal);
   for (sample_index = 0; sample_index < (int)signal->size(); sample_index++) {
     if (sample_index % UPDATE_INTERVAL == 0) {
       frame_index_double = params.speed_scale * (double)sample_index /
                            (double)(params.signal_length - 1) *
                            (double)(params.number_of_frames - 1);
-      InterpolateLinear(data.lsf_vocal_tract, frame_index_double, &lsf_interp);
+      InterpolateLinear(lsf_vocal_tract, frame_index_double, &lsf_interp);
       Lsf2Poly(lsf_interp, &a_interp);
       if (params.warping_lambda_vt != 0.0)
         WarpingAlphas2Sigmas(a_interp, params.warping_lambda_vt, &sigma);
 
       gain_target_db = InterpolateLinear(
-          data.frame_energy(floor(frame_index_double)),
-          data.frame_energy(ceil(frame_index_double)), frame_index_double);
+          frame_energy(floor(frame_index_double)),
+          frame_energy(ceil(frame_index_double)), frame_index_double);
 
-      if (data.fundf(round(frame_index_double)) > 0.0) {
-        gain = GetFilteringGain(B, a_interp, data.excitation_signal,
+      if (fundf(round(frame_index_double)) > 0.0) {
+        gain = GetFilteringGain(B, a_interp, excitation_signal,
                                 gain_target_db, sample_index,
                                 params.frame_length, params.warping_lambda_vt);
       } else {
@@ -1182,14 +1185,14 @@ void FilterExcitation(const Param &params, const SynthesisData &data,
     }
     /** Normal filtering **/
     if (params.warping_lambda_vt == 0.0) {
-      sum = data.excitation_signal(sample_index) * gain;
+      sum = excitation_signal(sample_index) * gain;
       for (i = 1; i < GSL_MIN(params.lpc_order_vt + 1, sample_index); i++) {
         sum -= (*signal)(sample_index - i) * a_interp(i);
       }
       (*signal)(sample_index) = sum;
       /** Warped filtering **/
     } else {
-      sum = data.excitation_signal(sample_index) * gain;
+      sum = excitation_signal(sample_index) * gain;
       /* Update feedbackward sum */
       for (i = 0; i < bdim; i++) {
         sum -= sigma(i) * rmem(i);
