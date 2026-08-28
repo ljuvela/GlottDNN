@@ -138,7 +138,10 @@ int RunSynthesis(const std::string &filename,
    StabilizeLsf(&(data.lsf_vocal_tract));
    if (params.use_spectral_matching)
       StabilizeLsf(&(data.lsf_glot));
-   if (CreateExcitation(params, data, &(data.excitation_signal)) == EXIT_FAILURE)
+   if (CreateExcitation(params, data.fundf, data.frame_energy,
+                        data.excitation_pulses,
+                        data.lsf_vocal_tract, data.lsf_glot, data.hnr_glot,
+                        &(data.excitation_signal)) == EXIT_FAILURE)
       return EXIT_FAILURE;
    if (params.noise_gain_voiced > 0.0)
       HarmonicModification(params, data, &(data.excitation_signal));
@@ -183,7 +186,9 @@ int SynthesizeData(const std::string &default_config_filename,
    StabilizeLsf(&(data->lsf_vocal_tract));
    if (params.use_spectral_matching)
       StabilizeLsf(&(data->lsf_glot));
-   if (CreateExcitation(params, *data, excitation) == EXIT_FAILURE)
+   if (CreateExcitation(params, data->fundf, data->frame_energy,
+                        data->excitation_pulses, data->lsf_vocal_tract,
+                        data->lsf_glot, data->hnr_glot, excitation) == EXIT_FAILURE)
       return EXIT_FAILURE;
    if (params.noise_gain_voiced > 0.0)
       HarmonicModification(params, *data, excitation);

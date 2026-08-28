@@ -235,7 +235,12 @@ gsl::vector GetDnnPulse(const size_t &pulse_len, const double &energy,
   return pulse;
 }
 
-int CreateExcitation(const Param &params, const SynthesisData &data,
+int CreateExcitation(const Param &params, const gsl::vector &fundf,
+                     const gsl::vector &frame_energy,
+                     const gsl::matrix &excitation_pulses,
+                     const gsl::matrix &lsf_vocal_tract,
+                     const gsl::matrix &lsf_glot,
+                     const gsl::matrix &hnr_glot,
                      gsl::vector *excitation_signal) {
   gsl::vector single_pulse_base;
   gsl::random_generator rand_gen;
@@ -309,11 +314,11 @@ int CreateExcitation(const Param &params, const SynthesisData &data,
     /** Voiced excitation **/
     // if(data.fundf(frame_index) > 0 || params.use_paf_unvoiced_synthesis) {
 
-    if (data.fundf(frame_index) > 0) {
+    if (fundf(frame_index) > 0) {
       double pulse_sign = 1.0;
-      if (data.fundf(frame_index) > 0) {
+      if (fundf(frame_index) > 0) {
         // Voiced
-        T0 = params.fs / data.fundf(frame_index);
+        T0 = params.fs / fundf(frame_index);
       } else {
         // Unvoiced
         int offset =
@@ -343,8 +348,8 @@ int CreateExcitation(const Param &params, const SynthesisData &data,
       //   t0_pr = (double)params.frame_shift;
 
       pulse_len = rint(2 * T0);
-      if (data.fundf(frame_index) == 0) pulse_len = params.paf_pulse_length;
-      energy = LogEnergy2FrameEnergy(data.frame_energy(frame_index), pulse_len);
+      if (fundf(frame_index) == 0) pulse_len = params.paf_pulse_length;
+      energy = LogEnergy2FrameEnergy(frame_energy(frame_index), pulse_len);
 
       // std::cout << "excitation method " << params.excitation_method << " "<<
       // SINGLE_PULSE_EXCITATION << std::endl;
@@ -381,13 +386,25 @@ int CreateExcitation(const Param &params, const SynthesisData &data,
           // use_wsola = false;
           if (use_wsola) {
             // get unwindowed pulse from DNN
+            SynthesisData dnn_data;
+            dnn_data.fundf = fundf;
+            dnn_data.frame_energy = frame_energy;
+            dnn_data.lsf_vocal_tract = lsf_vocal_tract;
+            dnn_data.lsf_glot = lsf_glot;
+            dnn_data.hnr_glot = hnr_glot;
             pulse = GetDnnPulse(params.paf_pulse_length, energy, frame_index,
-                                data, excDnn);
+                                dnn_data, excDnn);
             pulse = GetPulseWsola(
                 pulse, T0, energy, sample_index, (pulse_prev.size() == 1),
                 params.use_wsola_pitch_shift, excitation_signal);
           } else {
-            pulse = GetDnnPulse(pulse_len, energy, frame_index, data, excDnn);
+            SynthesisData dnn_data;
+            dnn_data.fundf = fundf;
+            dnn_data.frame_energy = frame_energy;
+            dnn_data.lsf_vocal_tract = lsf_vocal_tract;
+            dnn_data.lsf_glot = lsf_glot;
+            dnn_data.hnr_glot = hnr_glot;
+            pulse = GetDnnPulse(pulse_len, energy, frame_index, dnn_data, excDnn);
           }
 
           pulse_orig = pulse;
@@ -399,8 +416,7 @@ int CreateExcitation(const Param &params, const SynthesisData &data,
           /* Waveform similarity PSOLA is available only when PAF waveforms
            * haven't been windowed */
           if (use_wsola) {
-            gsl::vector pulse_full(
-                data.excitation_pulses.get_col_vec(frame_index));
+            gsl::vector pulse_full(excitation_pulses.get_col_vec(frame_index));
             pulse = GetPulseWsola(
                 pulse_full, T0, energy, sample_index, (pulse_prev.size() == 1),
                 params.use_wsola_pitch_shift, excitation_signal);
@@ -411,13 +427,13 @@ int CreateExcitation(const Param &params, const SynthesisData &data,
               pulse = GetExternalPulse(
                   pulse_len, params.use_pulse_interpolation, energy,
                   frame_index, params.psola_windowing_function,
-                  data.excitation_pulses);
+                  excitation_pulses);
             } else {
               double nan_val = NAN;
               pulse = GetExternalPulse(
                   pulse_len, params.use_pulse_interpolation, nan_val,
                   frame_index, params.psola_windowing_function,
-                  data.excitation_pulses);
+                  excitation_pulses);
             }
           }
           pulse_orig = pulse;
@@ -456,7 +472,7 @@ int CreateExcitation(const Param &params, const SynthesisData &data,
       // -params.gif_pre_emphasis_coefficient},noise_cpy, &noise);
       noise += -1 * getMean(noise);
       energy =
-          LogEnergy2FrameEnergy(data.frame_energy(frame_index), noise.size());
+          LogEnergy2FrameEnergy(frame_energy(frame_index), noise.size());
 
       switch (params.excitation_method) {
         case SINGLE_PULSE_EXCITATION:
@@ -485,7 +501,7 @@ int CreateExcitation(const Param &params, const SynthesisData &data,
             int uv_pulse_len = params.paf_pulse_length - 0;  // trim edges
             pulse = GetExternalPulse(uv_pulse_len, false, energy, frame_index,
                                      params.psola_windowing_function,
-                                     data.excitation_pulses);
+                                     excitation_pulses);
 
             pulse /= 0.5 * (double)uv_pulse_len /
                      (double)params.frame_shift;  // Compensate OLA gain

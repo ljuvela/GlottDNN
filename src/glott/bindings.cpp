@@ -6,6 +6,7 @@
 #include "Workflow.h"
 #include "SignalProcessingBindings.h"
 #include "AnalysisFunctions.h"
+#include "SynthesisFunctions.h"
 #include "ReadConfig.h"
 
 namespace py = pybind11;
@@ -208,6 +209,30 @@ PYBIND11_MODULE(glottdnn_cpp, module) {
        return result;
     }, py::arg("data"), py::arg("default_config_filename"),
        py::arg("user_config_filename") = "");
+    synthesis.def("create_excitation", [](py::array fundf, py::array frame_energy,
+                                          py::array excitation_pulses,
+                                          py::array lsf_vocal_tract,
+                                          py::array lsf_glot, py::array hnr_glot,
+                                          const std::string &config) {
+       gsl::vector f0 = ToVector(fundf);
+       gsl::vector gain = ToVector(frame_energy);
+       gsl::matrix pulses = ToMatrix(excitation_pulses);
+       gsl::matrix lsf_vt = ToMatrix(lsf_vocal_tract);
+       gsl::matrix lsf_source = ToMatrix(lsf_glot);
+       gsl::matrix hnr = ToMatrix(hnr_glot);
+       Param params = LoadConfig(config, "");
+       params.number_of_frames = static_cast<int>(f0.size());
+       params.signal_length = static_cast<int>(
+          rint(params.number_of_frames * params.frame_shift / params.speed_scale));
+       gsl::vector result(static_cast<size_t>(params.signal_length), true);
+       if (CreateExcitation(params, f0, gain, pulses, lsf_vt, lsf_source,
+                            hnr, &result) == EXIT_FAILURE)
+          throw std::runtime_error("excitation creation failed");
+       return Vector(result);
+    }, py::arg("fundf"), py::arg("frame_energy"),
+       py::arg("excitation_pulses"), py::arg("lsf_vocal_tract"),
+       py::arg("lsf_glot"), py::arg("hnr_glot"),
+       py::arg("default_config_filename"));
 
    py::module signal_processing = module.def_submodule(
        "signal_processing",
