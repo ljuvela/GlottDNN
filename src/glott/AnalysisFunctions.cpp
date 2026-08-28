@@ -431,7 +431,10 @@ int SpectralAnalysisQmf(const Param &params, const AnalysisData &data,
   return EXIT_SUCCESS;
 }
 
-int InverseFilter(const Param &params, const AnalysisData &data,
+int InverseFilter(const Param &params, const gsl::vector &signal,
+                  const gsl::vector_int &gci_inds, const gsl::vector &fundf,
+                  const gsl::vector &frame_energy,
+                  const gsl::matrix &poly_vocal_tract,
                   gsl::matrix *poly_glot, gsl::vector *source_signal) {
   size_t frame_index;
   gsl::vector frame(params.frame_length, true);
@@ -455,14 +458,14 @@ int InverseFilter(const Param &params, const AnalysisData &data,
   for (frame_index = 0; frame_index < (size_t)params.number_of_frames;
        frame_index++) {
     if (params.use_pitch_synchronous_analysis) {
-      GetPitchSynchFrame(params, data.signal, data.gci_inds, frame_index,
-                         params.frame_shift, data.fundf(frame_index), &frame,
+      GetPitchSynchFrame(params, signal, gci_inds, frame_index,
+                         params.frame_shift, fundf(frame_index), &frame,
                          &pre_frame);
       frame_residual.resize(frame.size());
     } else {
-      GetFrame(data.signal, frame_index, params.frame_shift, &frame,
+      GetFrame(signal, frame_index, params.frame_shift, &frame,
                &pre_frame);
-      GetFrame(data.signal, frame_index, params.frame_shift, &frame,
+      GetFrame(signal, frame_index, params.frame_shift, &frame,
                &pre_frame_high_order);
     }
 
@@ -470,10 +473,10 @@ int InverseFilter(const Param &params, const AnalysisData &data,
     ConcatenateFrames(pre_frame_high_order, frame, &frame_full_high_order);
 
     if (params.warping_lambda_vt == 0.0) {
-      Filter(data.poly_vocal_tract.get_col_vec(frame_index), b, frame_full,
+      Filter(poly_vocal_tract.get_col_vec(frame_index), b, frame_full,
              &frame_residual);
     } else {
-      gsl::vector a_warp(data.poly_vocal_tract.get_col_vec(frame_index));
+      gsl::vector a_warp(poly_vocal_tract.get_col_vec(frame_index));
       // get warped filter linear frequency response via impulse response
       imp_response.set_zero();
       impulse.set_zero();
@@ -490,7 +493,7 @@ int InverseFilter(const Param &params, const AnalysisData &data,
     double ola_gain =
         (double)params.frame_length / ((double)params.frame_shift * 2.0);
     // Scale by frame energy, TODO: remove?
-    frame_residual *= LogEnergy2FrameEnergy(data.frame_energy(frame_index),
+    frame_residual *=     LogEnergy2FrameEnergy(frame_energy(frame_index),
                                             frame_residual.size()) /
                       getEnergy(frame_residual) / ola_gain;
     ApplyWindowingFunction(params.default_windowing_function, &frame_residual);

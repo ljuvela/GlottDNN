@@ -53,3 +53,21 @@ def test_params_object_can_be_loaded_and_reused(config_file):
     signal = np.zeros(256)
     filtered = glottdnn_cpp.analysis.high_pass_filter(signal, str(config_file))
     assert filtered.shape == signal.shape
+
+
+def test_inverse_filter_binding(audio_file, config_file):
+    from scipy.io import wavfile
+
+    _, values = wavfile.read(audio_file)
+    signal = values.astype(np.float64) / 32768.0
+    analyzed = glottdnn_cpp.analysis.run_array(signal, str(config_file))
+    result = glottdnn_cpp.analysis.inverse_filter(
+        analyzed["signal"],
+        analyzed["gci_inds"],
+        analyzed["fundf"],
+        analyzed["frame_energy"],
+        analyzed["poly_vocal_tract"],
+        str(config_file),
+    )
+    assert result["source_signal"].shape == analyzed["signal"].shape
+    assert result["poly_glot"].shape[1] == analyzed["fundf"].shape[0]

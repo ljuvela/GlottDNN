@@ -189,6 +189,32 @@ PYBIND11_MODULE(glottdnn_cpp, module) {
           return Matrix(result);
        }, py::arg("signal"), py::arg("fundf"), py::arg("gci_indices"),
           py::arg("params"));
+    analysis.def("inverse_filter", [](py::array signal, py::array gci_inds,
+                                      py::array fundf, py::array frame_energy,
+                                      py::array poly_vocal_tract,
+                                      const std::string &config) {
+       gsl::vector input_signal = ToVector(signal);
+       gsl::vector_int input_gci = ToIntVector(gci_inds);
+       gsl::vector input_fundf = ToVector(fundf);
+       gsl::vector input_energy = ToVector(frame_energy);
+       gsl::matrix input_poly = ToMatrix(poly_vocal_tract);
+       Param params = LoadConfig(config, "");
+       params.signal_length = input_signal.size();
+       params.number_of_frames = input_fundf.size();
+       gsl::matrix poly_glot(params.lpc_order_glot + 1,
+                             input_fundf.size(), true);
+       gsl::vector source(input_signal.size(), true);
+       if (InverseFilter(params, input_signal, input_gci, input_fundf,
+                         input_energy, input_poly, &poly_glot, &source) ==
+           EXIT_FAILURE)
+          throw std::runtime_error("inverse filtering failed");
+       py::dict result;
+       result["poly_glot"] = Matrix(poly_glot);
+       result["source_signal"] = Vector(source);
+       return result;
+    }, py::arg("signal"), py::arg("gci_indices"), py::arg("fundf"),
+       py::arg("frame_energy"), py::arg("poly_vocal_tract"),
+       py::arg("default_config_filename"));
 
    py::module synthesis = module.def_submodule(
        "synthesis", "File-based waveform synthesis operations");

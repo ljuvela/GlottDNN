@@ -49,7 +49,9 @@ int RunAnalysis(const std::string &wav_filename,
    MedianFilter(5, &data.lsf_vocal_tract);
    MovingAverageFilter(3, &data.lsf_vocal_tract);
    Lsf2Poly(data.lsf_vocal_tract, &data.poly_vocal_tract);
-   InverseFilter(params, data, &(data.poly_glot), &(data.source_signal));
+   InverseFilter(params, data.signal, data.gci_inds, data.fundf,
+                 data.frame_energy, data.poly_vocal_tract,
+                 &(data.poly_glot), &(data.source_signal));
    if (params.use_waveforms_directly)
       GetPulses(params, data.signal, data.gci_inds, data.fundf, &(data.excitation_pulses));
    else
@@ -98,7 +100,9 @@ int AnalyzeSignal(const std::string &default_config_filename,
    MedianFilter(5, &data->lsf_vocal_tract);
    MovingAverageFilter(3, &data->lsf_vocal_tract);
    Lsf2Poly(data->lsf_vocal_tract, &data->poly_vocal_tract);
-   InverseFilter(params, *data, &(data->poly_glot), &(data->source_signal));
+   InverseFilter(params, data->signal, data->gci_inds, data->fundf,
+                 data->frame_energy, data->poly_vocal_tract,
+                 &(data->poly_glot), &(data->source_signal));
    if (params.use_waveforms_directly)
       GetPulses(params, data->signal, data->gci_inds, data->fundf,
                 &(data->excitation_pulses));
