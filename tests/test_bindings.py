@@ -87,6 +87,32 @@ def test_params_object_can_toggle_verbose_mode(config_file):
     assert params.verbose is False
 
 
+def test_param_string_repr_is_readable(config_file):
+    import vocoder
+
+    params = vocoder.load_config(str(config_file))
+    text = str(params)
+    assert text.startswith("Param(")
+    assert "fs=" in text
+    assert "verbose=" in text
+    assert "excitation_method=" in text
+    assert repr(params) == text
+
+
+def test_param_wrapper_exposes_safe_accessors(config_file):
+    import vocoder
+
+    params = vocoder.load_config(str(config_file))
+    assert isinstance(params, vocoder.ParamWrapper)
+    assert params.native is not None
+    assert params["fs"] == params.native.fs
+    params["speed_scale"] = 0.75
+    assert params.speed_scale == 0.75
+    assert "fs" in params
+    assert "speed_scale" in params.members()
+    assert set(params.keys()) >= {"fs", "speed_scale", "verbose"}
+
+
 def test_in_memory_single_pulse_synthesis(audio_file, config_file):
     import soundfile as sf
     import vocoder
