@@ -4,7 +4,7 @@ import timeit
 import numpy as np
 import torch
 
-from dnnClasses import HiddenLayer
+from dnn_classes import HiddenLayer
 
 # Set torch device
 if torch.cuda.is_available():

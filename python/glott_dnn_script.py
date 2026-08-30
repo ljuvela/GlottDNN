@@ -348,7 +348,7 @@ def main(argv=None):
     conf = load_config(args.config)
 
     if conf.do_dnn_training:
-        import TrainDnn
+        import train_dnn
 
    
     # Make directories
@@ -383,7 +383,7 @@ def main(argv=None):
     if conf.do_dnn_training:
         dim_in = sum(conf.input_dims)
         dim_out = sum(conf.output_dims)
-        TrainDnn.evaluate_dnn(conf, n_in=dim_in, n_out=dim_out, n_hidden=conf.n_hidden, batch_size=conf.batch_size,
+        train_dnn.evaluate_dnn(conf, n_in=dim_in, n_out=dim_out, n_hidden=conf.n_hidden, batch_size=conf.batch_size,
                  learning_rate=conf.learning_rate, n_epochs = conf.max_epochs)
 
     # Copy-synthesis

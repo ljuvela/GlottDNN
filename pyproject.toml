@@ -24,7 +24,7 @@ dependencies = [
 test = ["pytest"]
 
 [project.scripts]
-glottdnn = "GlottDnnScript:main"
+glottdnn = "glott_dnn_script:main"
 Analysis = "native_cli:analysis"
 Synthesis = "native_cli:synthesis"
 LsfPostFilter = "native_cli:lsf_post_filter"

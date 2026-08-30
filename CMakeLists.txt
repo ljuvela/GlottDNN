@@ -122,10 +122,10 @@ install(TARGETS glottdnn_cpp
 )
 
 install(FILES
-    python/GlottDnnScript.py
-    python/TrainDnn.py
+    python/glott_dnn_script.py
+    python/train_dnn.py
     python/data_utils.py
-    python/dnnClasses.py
+    python/dnn_classes.py
     python/reaper_pitch_analysis.py
     python/signal_processing.py
     python/native_cli.py

@@ -109,7 +109,7 @@ First place one WAV file in the input directory and run:
 ```bash
 mkdir -p data/single_file/wav
 cp data/tmp/slt_arctic_a0001.wav data/single_file/wav/
-glottdnn dnn_demo/config_single_file.yaml
+python python/glott_dnn_script.py dnn_demo/config_single_file.yaml
 ```
 
 The configuration uses
