@@ -72,18 +72,18 @@ The recommended in-memory Python API is:
 
 ```python
 import glottdnn_cpp
-from vocoder import analyze_file, load_config, synthesize
-
 import soundfile as sf
+from vocoder import analyze, load_config, synthesize
 
-signal, sample_rate = sf.read("input.wav", dtype="float64")
+signal, sample_rate = sf.read("data/tmp/slt_arctic_a0001.wav", dtype="float64")
 params = load_config("config/config_default_16k.cfg")
 data = analyze(signal, sample_rate, params)
 params.excitation_method = glottdnn_cpp.ExcitationMethod.SINGLE_PULSE
 result = synthesize(data, params)
+sf.write("data/tmp/slt_arctic_a0001.syn.sp.wav", result["signal"], result["sample_rate"])
 ```
 
-The complete synthesized waveform is available as `result["signal"]`.
+This writes the single-pulse copy-synthesis result to `./data/tmp/slt_arctic_a0001.syn.sp.wav` without writing intermediate feature files.
 
 The file-based workflow below is retained as a legacy interface:
 
