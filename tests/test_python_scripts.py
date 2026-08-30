@@ -8,6 +8,8 @@ def test_python_package_import_smoke():
         "glottdnn",
         "glottdnn.params",
         "glottdnn.vocoder",
+        "glottdnn.data_utils",
+        "glottdnn.signal_processing",
     ]
     for name in package_names:
         module = importlib.import_module(name)
@@ -23,9 +25,7 @@ def test_python_helper_script_import_smoke():
             "glott_dnn_script",
             "train_dnn",
             "dnn_classes",
-            "data_utils",
             "reaper_pitch_analysis",
-            "signal_processing",
             "native_cli",
         ]
         for name in script_names:

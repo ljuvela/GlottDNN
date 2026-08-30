@@ -1,6 +1,6 @@
 import numpy as np
 
-import signal_processing
+import glottdnn.signal_processing as signal_processing
 
 
 def test_convolve_and_statistics():
