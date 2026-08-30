@@ -4,7 +4,7 @@ import numpy as np
 import soundfile as sf
 
 import glottdnn_cpp
-from params import ParamWrapper, _resolve_params, _unwrap_params, load_config
+from .params import ParamWrapper, _resolve_params, _unwrap_params, load_config
 
 ParamWrapper = ParamWrapper
 load_config = load_config
@@ -67,9 +67,9 @@ def synthesize(data, default_config, user_config="", verbose=None):
             data["lsf_vocal_tract"], data["lsf_glot"], data["hnr_glot"], params_native)
     else:
         excitation = glottdnn_cpp.synthesis.create_excitation(
-        data["fundf"], data["frame_energy"], data["excitation_pulses"],
-        data["lsf_vocal_tract"], data["lsf_glot"], data["hnr_glot"],
-        default_config, user_config,
+            data["fundf"], data["frame_energy"], data["excitation_pulses"],
+            data["lsf_vocal_tract"], data["lsf_glot"], data["hnr_glot"],
+            default_config, user_config,
         )
     if params.noise_gain_voiced > 0.0:
         if use_params:
