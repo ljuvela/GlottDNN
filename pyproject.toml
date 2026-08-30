@@ -30,6 +30,6 @@ Synthesis = "native_cli:synthesis"
 LsfPostFilter = "native_cli:lsf_post_filter"
 
 [tool.scikit-build]
-wheel.packages = []
-sdist.include = ["python/*.py", "config/*.yaml", "dnn_demo/*.yaml"]
+wheel.packages = ["glottdnn"]
+sdist.include = ["glottdnn/*.py", "config/*.yaml", "dnn_demo/*.yaml"]
 cmake.args = ["-GUnix Makefiles"]

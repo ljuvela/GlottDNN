@@ -73,7 +73,7 @@ The recommended in-memory Python API is:
 ```python
 import glottdnn_cpp
 import soundfile as sf
-from vocoder import analyze, load_config, synthesize
+from glottdnn.vocoder import analyze, load_config, synthesize
 
 signal, sample_rate = sf.read("data/tmp/slt_arctic_a0001.wav")
 params = load_config("config/config_default_16k.cfg")
@@ -240,7 +240,7 @@ files:
 
 ```python
 import soundfile as sf
-from vocoder import analyze, load_config, synthesize
+from glottdnn.vocoder import analyze, load_config, synthesize
 
 signal, sample_rate = sf.read("input.wav", dtype="float64")
 params = load_config("config/config_default_16k.cfg")
@@ -253,7 +253,7 @@ example, to generate single-pulse excitation with a changed synthesis speed:
 
 ```python
 import soundfile as sf
-from vocoder import analyze, load_config, single_pulse_excitation
+from glottdnn.vocoder import analyze, load_config, single_pulse_excitation
 import glottdnn_cpp
 
 signal, sample_rate = sf.read("input.wav", dtype="float64")

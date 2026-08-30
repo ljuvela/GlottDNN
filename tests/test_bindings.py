@@ -38,7 +38,7 @@ def test_binding_namespaces():
 
 def test_in_memory_analysis_and_synthesis(audio_file, config_file):
     import soundfile as sf
-    import vocoder
+    import glottdnn.vocoder as vocoder
 
     signal, sample_rate = sf.read(audio_file, dtype="float64")
     analyzed = vocoder.analyze(signal, sample_rate, str(config_file))
@@ -50,7 +50,7 @@ def test_in_memory_analysis_and_synthesis(audio_file, config_file):
 
 def test_analysis_and_synthesis_share_params(audio_file, config_file):
     import soundfile as sf
-    import vocoder
+    import glottdnn.vocoder as vocoder
 
     signal, sample_rate = sf.read(audio_file, dtype="float64")
     params = vocoder.load_config(str(config_file))
@@ -62,7 +62,7 @@ def test_analysis_and_synthesis_share_params(audio_file, config_file):
 
 def test_verbose_toggle_is_default_quiet_and_can_be_enabled(audio_file, config_file, capfd):
     import soundfile as sf
-    import vocoder
+    import glottdnn.vocoder as vocoder
 
     signal, sample_rate = sf.read(audio_file, dtype="float64")
     params = vocoder.load_config(str(config_file))
@@ -78,7 +78,7 @@ def test_verbose_toggle_is_default_quiet_and_can_be_enabled(audio_file, config_f
 
 
 def test_params_object_can_toggle_verbose_mode(config_file):
-    import vocoder
+    import glottdnn.vocoder as vocoder
 
     params = vocoder.load_config(str(config_file))
     params.verbose = True
@@ -88,7 +88,7 @@ def test_params_object_can_toggle_verbose_mode(config_file):
 
 
 def test_param_string_repr_is_readable(config_file):
-    import vocoder
+    import glottdnn.vocoder as vocoder
 
     params = vocoder.load_config(str(config_file))
     text = str(params)
@@ -100,7 +100,7 @@ def test_param_string_repr_is_readable(config_file):
 
 
 def test_param_wrapper_exposes_safe_accessors(config_file):
-    import vocoder
+    import glottdnn.vocoder as vocoder
 
     params = vocoder.load_config(str(config_file))
     assert isinstance(params, vocoder.ParamWrapper)
@@ -115,7 +115,7 @@ def test_param_wrapper_exposes_safe_accessors(config_file):
 
 def test_in_memory_single_pulse_synthesis(audio_file, config_file):
     import soundfile as sf
-    import vocoder
+    import glottdnn.vocoder as vocoder
 
     signal, sample_rate = sf.read(audio_file, dtype="float64")
     data = vocoder.analyze(signal, sample_rate, str(config_file))
@@ -128,7 +128,7 @@ def test_in_memory_single_pulse_synthesis(audio_file, config_file):
 
 def test_synthesis_rejects_malformed_data(config_file):
     import numpy as np
-    import vocoder
+    import glottdnn.vocoder as vocoder
 
     params = glottdnn_cpp.analysis.load_params(str(config_file))
     data = {

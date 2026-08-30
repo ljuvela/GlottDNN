@@ -23,7 +23,7 @@ def test_create_excitation_binding():
 
 
 def test_single_pulse_excitation_with_modified_params():
-    import vocoder
+    import glottdnn.vocoder as vocoder
 
     config_file = Path(__file__).resolve().parents[1] / "config" / "config_default_16k.cfg"
     signal, _ = sf.read("data/tmp/slt_arctic_a0001.wav", dtype="float64")
