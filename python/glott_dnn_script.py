@@ -4,7 +4,11 @@ import numpy as np
 import random
 import argparse
 import yaml
+import soundfile as sf
 from types import SimpleNamespace
+
+from glottdnn.vocoder import analyze as analyze_signal
+from glottdnn.vocoder import load_config as load_vocoder_config
 
 conf = None
 
@@ -207,6 +211,59 @@ def glott_vocoder_synthesis():
                 os.system(cmd)
 
 
+def prepare_single_file_training_data(conf):
+    wav_dir = os.path.join(conf.datadir, 'wav')
+    if not os.path.isdir(wav_dir):
+        raise FileNotFoundError("Single-file DNN config requires a wav/ directory: {}".format(wav_dir))
+
+    wav_files = sorted(
+        os.path.join(wav_dir, name)
+        for name in os.listdir(wav_dir)
+        if name.lower().endswith('.wav')
+    )
+    if not wav_files:
+        raise FileNotFoundError("No WAV files found in {}".format(wav_dir))
+
+    wavfile = wav_files[0]
+    signal, sample_rate = sf.read(wavfile, dtype='float64')
+    params = load_vocoder_config(conf.config_default)
+    data = analyze_signal(signal, sample_rate, params)
+
+    voiced = data['fundf'] > 0.0
+    if not np.any(voiced):
+        raise ValueError("No voiced frames found in input signal {}".format(wavfile))
+
+    x = np.concatenate((
+        data['fundf'][voiced, None],
+        data['frame_energy'][voiced, None],
+        data['hnr_glot'][:, voiced].T,
+        data['lsf_glot'][:, voiced].T,
+        data['lsf_vocal_tract'][:, voiced].T,
+    ), axis=1).astype(np.float32)
+    y = data['excitation_pulses'][:, voiced].T.astype(np.float32)
+
+    in_min = np.min(x, axis=0)
+    in_max = np.max(x, axis=0)
+    denom = in_max - in_min
+    denom[denom == 0.0] = 1.0
+    x_norm = 0.1 + 0.8 * ((x - in_min) / denom)
+
+    os.makedirs(conf.train_data_dir, exist_ok=True)
+    os.makedirs(conf.weights_data_dir, exist_ok=True)
+
+    train_x_path = os.path.join(conf.train_data_dir, conf.dnn_name + '.train.idat')
+    train_y_path = os.path.join(conf.train_data_dir, conf.dnn_name + '.train.odat')
+    x_norm.astype(np.float32).tofile(train_x_path, sep='', format='%f')
+    y.astype(np.float32).tofile(train_y_path, sep='', format='%f')
+
+    minmax_path = os.path.join(conf.weights_data_dir, conf.dnn_name + '.dnnMinMax')
+    np.concatenate((in_min.astype(np.float32), in_max.astype(np.float32))).tofile(
+        minmax_path, sep='', format='%f'
+    )
+
+    return x_norm, y
+
+
 def package_data():
     # read and shuffle wav filelist
     wavscp = conf.datadir + '/scp/wav.scp' 
@@ -295,7 +352,7 @@ def package_data():
             # allocate input and output data
             input_data = np.empty([n_frames[file_idx], sum(conf.input_dims)], dtype=np.float32)
             output_data = np.empty([n_frames[file_idx], sum(conf.output_dims)], dtype=np.float32)
-   
+    
             # read input data
             feat_start = 0
             for (ftype, ext, dim) in zip( conf.inputs, conf.input_exts, conf.input_dims):
@@ -355,25 +412,30 @@ def main(argv=None):
     if conf.make_dirs:
         make_directories()
 
+    single_file_mode = conf.max_number_of_files == 1 and os.path.isdir(os.path.join(conf.datadir, 'wav'))
+
     # Make SCP list for wav
-    if conf.make_scp:
+    if conf.make_scp and not single_file_mode:
         make_file_lists()
 
     # Reaper pitch estimation
-    if conf.do_reaper_pitch_analysis:
+    if conf.do_reaper_pitch_analysis and not single_file_mode:
         reaper_pitch_analysis()
-       
+        
     # SPTK pitch estimation
-    if conf.do_sptk_pitch_analysis:
+    if conf.do_sptk_pitch_analysis and not single_file_mode:
         sptk_pitch_analysis()
     
     # GlottDNN Analysis
-    if conf.do_glott_vocoder_analysis:
+    if conf.do_glott_vocoder_analysis and not single_file_mode:
         glott_vocoder_analysis()
 
     # Package data for DNN training
     if conf.make_dnn_train_data:
-        package_data()
+        if single_file_mode:
+            prepare_single_file_training_data(conf)
+        else:
+            package_data()
         
     # Write Dnn infofile
     if conf.make_dnn_infofile:
@@ -387,7 +449,7 @@ def main(argv=None):
                  learning_rate=conf.learning_rate, n_epochs = conf.max_epochs)
 
     # Copy-synthesis
-    if conf.do_glott_vocoder_synthesis:
+    if conf.do_glott_vocoder_synthesis and not single_file_mode:
         glott_vocoder_synthesis()
     
 if __name__ == "__main__":

@@ -104,20 +104,26 @@ The built-in PyTorch model can also be trained on one analyzed audio file.
 This intentionally overfits the file and is a quick CPU smoke test rather than
 a useful speech model.
 
-First place one WAV file in the input directory and run:
+The recommended workflow no longer writes intermediate feature files to disk.
+Instead, analyze the waveform once in memory, package the extracted features in
+the same `.idat`/`.odat` training format used by the C++ workflow, and let the
+`glott_dnn_script.py` helper train the model directly.
 
 ```bash
-mkdir -p data/single_file/wav
-cp data/tmp/slt_arctic_a0001.wav data/single_file/wav/
 python python/glott_dnn_script.py dnn_demo/config_single_file.yaml
 ```
 
-The configuration uses
-`data/single_file/slt_arctic_a0001.wav` and a small two-layer network. It
-disables validation and test splits so all frames are used for training; when
-no validation split exists, the trainer uses the training data for its
-early-stopping metric. The generated DNN copy-synthesis output is written to
-`data/single_file/syn/slt_arctic_a0001.syn.wav`.
+The script loads the 16kHz Arctic sample, calls `glottdnn.vocoder.analyze(...)`
+in memory, removes unvoiced frames, writes normalized training arrays to
+`data/single_file/train/single_file.train.idat` and
+`data/single_file/train/single_file.train.odat`, and trains a small PyTorch
+model using `train_dnn.evaluate_dnn(...)`. The trained weights are saved in the
+native C++ model format as
+`data/single_file/weights/single_file.dnnData` together with the matching
+`single_file.dnnInfo` and `single_file.dnnMinMax` metadata files.
+
+This keeps the feature preparation in Python while still producing the native
+DNN weights expected by the C++ synthesis pipeline.
 
 ### Synthesis with original pulses
 
