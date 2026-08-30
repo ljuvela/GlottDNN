@@ -91,6 +91,7 @@ struct Param
 	bool extract_gci_signal;
 	bool extract_pulses_as_features;
 	bool use_paf_energy_normalization;
+	bool verbose;
 	int lpc_order_vt_qmf1;
 	int lpc_order_vt_qmf2;
 	double f0_max;

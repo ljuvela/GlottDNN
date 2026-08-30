@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
    gsl::vector fundf(lsf.get_cols());
    fundf.set_all(1.0);
 
-   PostFilter(params.postfilter_coefficient, params.fs, fundf, &lsf);
+   PostFilter(params.postfilter_coefficient, params.fs, fundf, &lsf, params.verbose);
 
    /* Check LSF stability and fix if needed */
    StabilizeLsf(&lsf);

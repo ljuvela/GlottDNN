@@ -75,7 +75,7 @@ import glottdnn_cpp
 import soundfile as sf
 from vocoder import analyze, load_config, synthesize
 
-signal, sample_rate = sf.read("data/tmp/slt_arctic_a0001.wav", dtype="float64")
+signal, sample_rate = sf.read("data/tmp/slt_arctic_a0001.wav")
 params = load_config("config/config_default_16k.cfg")
 data = analyze(signal, sample_rate, params)
 params.excitation_method = glottdnn_cpp.ExcitationMethod.SINGLE_PULSE

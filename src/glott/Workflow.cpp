@@ -61,7 +61,7 @@ int RunAnalysis(const std::string &wav_filename,
    Poly2Lsf(data.poly_vocal_tract, &(data.lsf_vocal_tract));
    Poly2Lsf(data.poly_glot, &(data.lsf_glot));
    data.SaveData(params);
-   std::cout << "Finished analysis." << std::endl << std::endl;
+   if (params.verbose) std::cout << "Finished analysis." << std::endl << std::endl;
    return EXIT_SUCCESS;
 }
 
@@ -125,13 +125,13 @@ int AnalyzeSignalWithParams(const gsl::vector &signal, Param *params,
 int RunSynthesis(const std::string &filename,
                  const std::string &default_config_filename,
                  const std::string &user_config_filename) {
-   std::cout << "Synthesis of " << filename << std::endl;
    Param params;
    if (ReadConfig(default_config_filename.c_str(), true, &params) == EXIT_FAILURE)
       return EXIT_FAILURE;
    if (!user_config_filename.empty() &&
        ReadConfig(user_config_filename.c_str(), false, &params) == EXIT_FAILURE)
       return EXIT_FAILURE;
+   if (params.verbose) std::cout << "Synthesis of " << filename << std::endl;
 
    SynthesisData data;
    if (ReadSynthesisData(filename.c_str(), &params, &data) == EXIT_FAILURE)
@@ -140,10 +140,10 @@ int RunSynthesis(const std::string &filename,
       NoiseGating(params, &(data.frame_energy));
    if (params.use_postfiltering)
       PostFilter(params.postfilter_coefficient, params.fs, data.fundf,
-                 &(data.lsf_vocal_tract));
+                 &(data.lsf_vocal_tract), params.verbose);
    if (params.use_postfiltering || params.use_spectral_matching)
       PostFilter(params.postfilter_coefficient_glot, params.fs, data.fundf,
-                 &(data.lsf_glot));
+                 &(data.lsf_glot), params.verbose);
    if (params.use_trajectory_smoothing)
       ParameterSmoothing(params, &data);
    StabilizeLsf(&(data.lsf_vocal_tract));
@@ -168,10 +168,10 @@ int RunSynthesis(const std::string &filename,
    if (WriteWavFile(out_fname, data.excitation_signal, params.fs) == EXIT_FAILURE)
       return EXIT_FAILURE;
    out_fname = GetParamPath("syn", ".syn.wav", params.dir_syn, params);
-   std::cout << out_fname << std::endl;
+   if (params.verbose) std::cout << out_fname << std::endl;
    if (WriteWavFile(out_fname, data.signal, params.fs) == EXIT_FAILURE)
       return EXIT_FAILURE;
-   std::cout << "Finished synthesis" << std::endl;
+   if (params.verbose) std::cout << "Finished synthesis" << std::endl;
    return EXIT_SUCCESS;
 }
 
@@ -194,10 +194,10 @@ int SynthesizeData(const std::string &default_config_filename,
       NoiseGating(params, &(data->frame_energy));
    if (params.use_postfiltering)
       PostFilter(params.postfilter_coefficient, params.fs, data->fundf,
-                 &(data->lsf_vocal_tract));
+                 &(data->lsf_vocal_tract), params.verbose);
    if (params.use_postfiltering || params.use_spectral_matching)
       PostFilter(params.postfilter_coefficient_glot, params.fs, data->fundf,
-                 &(data->lsf_glot));
+                 &(data->lsf_glot), params.verbose);
    if (params.use_trajectory_smoothing)
       ParameterSmoothing(params, data);
    StabilizeLsf(&(data->lsf_vocal_tract));

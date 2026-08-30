@@ -60,6 +60,33 @@ def test_analysis_and_synthesis_share_params(audio_file, config_file):
     assert result["sample_rate"] == sample_rate
 
 
+def test_verbose_toggle_is_default_quiet_and_can_be_enabled(audio_file, config_file, capfd):
+    import soundfile as sf
+    import vocoder
+
+    signal, sample_rate = sf.read(audio_file, dtype="float64")
+    params = vocoder.load_config(str(config_file))
+    assert params.verbose is False
+
+    vocoder.analyze(signal, sample_rate, params, verbose=False)
+    captured = capfd.readouterr()
+    assert "F0 analysis" not in captured.out
+
+    vocoder.analyze(signal, sample_rate, params, verbose=True)
+    captured = capfd.readouterr()
+    assert "F0 analysis" in captured.out
+
+
+def test_params_object_can_toggle_verbose_mode(config_file):
+    import vocoder
+
+    params = vocoder.load_config(str(config_file))
+    params.verbose = True
+    assert params.verbose is True
+    params.verbose = False
+    assert params.verbose is False
+
+
 def test_in_memory_single_pulse_synthesis(audio_file, config_file):
     import soundfile as sf
     import vocoder

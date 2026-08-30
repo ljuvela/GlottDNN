@@ -73,6 +73,7 @@ Param::Param() {
 	extract_original_signal = false;
 	extract_pulses_as_features = false;
 	use_paf_energy_normalization = true;
+	verbose = false;
 	lpc_order_vt_qmf1 = 48;
 	lpc_order_vt_qmf2 = 12;
 	f0_max = 500;

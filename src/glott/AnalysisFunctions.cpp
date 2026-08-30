@@ -36,20 +36,24 @@ int PolarityDetection(const Param &params, gsl::vector *signal,
       return EXIT_SUCCESS;
 
     case POLARITY_INVERT:
-      std::cout << " -- Inverting polarity (SIGNAL_POLARITY = \"INVERT\")"
-                << std::endl;
+      if (params.verbose) {
+        std::cout << " -- Inverting polarity (SIGNAL_POLARITY = \"INVERT\")"
+                  << std::endl;
+      }
       (*signal) *= (double)-1.0;
       return EXIT_SUCCESS;
 
     case POLARITY_DETECT:
-      std::cout << "Using automatic polarity detection ...";
+      if (params.verbose) std::cout << "Using automatic polarity detection ...";
 
       if (Skewness(*source_signal_iaif) > 0) {
-        std::cout << "... Detected negative polarity. Inverting signal."
-                  << std::endl;
+        if (params.verbose) {
+          std::cout << "... Detected negative polarity. Inverting signal."
+                    << std::endl;
+        }
         (*signal) *= (double)-1.0;
         (*source_signal_iaif) *= (double)-1.0;
-      } else {
+      } else if (params.verbose) {
         std::cout << "... Detected positive polarity." << std::endl;
       }
       return EXIT_SUCCESS;
@@ -65,23 +69,27 @@ int PolarityDetection(const Param &params, gsl::vector *signal,
  */
 int GetF0(const Param &params, const gsl::vector &signal,
           const gsl::vector &source_signal_iaif, gsl::vector *fundf) {
-  std::cout << "F0 analysis ";
+  if (params.verbose) std::cout << "F0 analysis ";
 
   if (params.use_external_f0) {
-    std::cout << "using external F0 file: " << params.external_f0_filename
-              << " ...";
+    if (params.verbose) {
+      std::cout << "using external F0 file: " << params.external_f0_filename
+               << " ...";
+    }
     gsl::vector fundf_ext;
     if (ReadGslVector(params.external_f0_filename.c_str(), params.data_type,
                       &fundf_ext) == EXIT_FAILURE)
       return EXIT_FAILURE;
 
     if (fundf_ext.size() != (size_t)params.number_of_frames) {
-      std::cout << "Warning: External F0 file length differs from number of "
-                   "frames. Interpolating external "
-                   "F0 length to match number of frames.  External F0 length: "
-                << fundf_ext.size()
-                << ", Number of frames: " << params.number_of_frames
-                << std::endl;
+      if (params.verbose) {
+        std::cout << "Warning: External F0 file length differs from number of "
+                     "frames. Interpolating external "
+                     "F0 length to match number of frames.  External F0 length: "
+                  << fundf_ext.size()
+                  << ", Number of frames: " << params.number_of_frames
+                  << std::endl;
+      }
       InterpolateNearest(fundf_ext, params.number_of_frames, fundf);
     } else {
       fundf->copy(fundf_ext);
@@ -123,7 +131,7 @@ int GetF0(const Param &params, const gsl::vector &signal,
     FundfPostProcessing(params, fundf_orig, fundf_candidates, fundf);
     MedianFilter(3, fundf);
   }
-  std::cout << " done." << std::endl;
+  if (params.verbose) std::cout << " done." << std::endl;
   return EXIT_SUCCESS;
 }
 
@@ -135,7 +143,9 @@ int GetF0(const Param &params, const gsl::vector &signal,
  */
 int GetGci(const Param &params, const gsl::vector &signal, const gsl::vector &source_signal_iaif, const gsl::vector &fundf, gsl::vector_int *gci_inds) {
 	if(params.use_external_gci) {
-		std::cout << "Reading GCI information from external file: " << params.external_gci_filename << " ...";
+		if (params.verbose) {
+			std::cout << "Reading GCI information from external file: " << params.external_gci_filename << " ...";
+		}
 		gsl::vector gcis;
 		if(ReadGslVector(params.external_gci_filename.c_str(), params.data_type, &gcis) == EXIT_FAILURE)
          return EXIT_FAILURE;
@@ -146,7 +156,7 @@ int GetGci(const Param &params, const gsl::vector &signal, const gsl::vector &so
 			(*gci_inds)(i) = (int)round(gcis(i) * params.fs);
 		}
 	} else {
-      std::cout << "GCI estimation using the SEDREAMS algorithm ...";
+      if (params.verbose) std::cout << "GCI estimation using the SEDREAMS algorithm ...";
 
       gsl::vector mean_based_signal(signal.size(),true);
 
@@ -157,7 +167,7 @@ int GetGci(const Param &params, const gsl::vector &signal, const gsl::vector &so
 
 	}
     
-   std::cout << " done." << std::endl;
+   if (params.verbose) std::cout << " done." << std::endl;
 	return EXIT_SUCCESS;
 }
 
@@ -235,9 +245,8 @@ int SpectralAnalysis(const Param &params, const gsl::vector &signal,
   gsl::vector residual(params.frame_length);
 
   if (params.use_external_lsf_vt == false) {
-    std::cout << "Spectral analysis ...";
-    /* Do analysis frame-wise */
-    size_t frame_index;
+    if (params.verbose) std::cout << "Spectral analysis ...";
+    /* Do analysis frame-wise */    size_t frame_index;
     for (frame_index = 0; frame_index < (size_t)params.number_of_frames;
          frame_index++) {
       // GetPitchSynchFrame(data.signal, frame_index, params.frame_shift,
@@ -300,15 +309,17 @@ int SpectralAnalysis(const Param &params, const gsl::vector &signal,
       poly_vocal_tract->set_col_vec(frame_index, A);
     }
   } else {
-    std::cout << "Using external vocal tract LSFs ... ";
+    if (params.verbose) std::cout << "Using external vocal tract LSFs ... ";
     /* Read external vocal tract filter LSFs*/
     gsl::matrix external_lsf;
     ReadGslMatrix(params.external_lsf_vt_filename, params.data_type,
                   params.lpc_order_vt, &external_lsf);
     if (external_lsf.size2() < poly_vocal_tract->size2()) {
-      std::cerr << "Warning: external LSF is missing "
-                << poly_vocal_tract->size2() - external_lsf.size2()
-                << " frames, zero-padding at the end" << std::endl;
+      if (params.verbose) {
+        std::cerr << "Warning: external LSF is missing "
+                  << poly_vocal_tract->size2() - external_lsf.size2()
+                  << " frames, zero-padding at the end" << std::endl;
+      }
     }
     gsl::vector a(params.lpc_order_vt + 1);
     for (size_t i = 0; i < poly_vocal_tract->size2(); i++) {
@@ -324,7 +335,7 @@ int SpectralAnalysis(const Param &params, const gsl::vector &signal,
     }
   }
 
-  std::cout << " done." << std::endl;
+  if (params.verbose) std::cout << " done." << std::endl;
   return EXIT_SUCCESS;
 }
 
@@ -362,7 +373,7 @@ int SpectralAnalysisQmf(const Param &params, const gsl::vector &signal,
   // gsl::vector frame_full; // frame + preframe
   // gsl::vector residual_full; // residual with preframe
 
-  std::cout << "QMF sub-band-based spectral analysis ...";
+  if (params.verbose) std::cout << "QMF sub-band-based spectral analysis ...";
 
   size_t frame_index;
   for (frame_index = 0; frame_index < (size_t)params.number_of_frames;
@@ -620,7 +631,7 @@ void GetPulses(const Param &params, const gsl::vector &source_signal,
                gsl::matrix *pulses_mat) {
   if (params.extract_pulses_as_features == false) return;
 
-  std::cout << "Extracting excitation pulses ";
+  if (params.verbose) std::cout << "Extracting excitation pulses ";
 
   size_t frame_index;
   for (frame_index = 0; frame_index < (size_t)params.number_of_frames;
@@ -727,16 +738,18 @@ void GetPulses(const Param &params, const gsl::vector &source_signal,
     /* Save to matrix */
     pulses_mat->set_col_vec(frame_index, paf_pulse);
   }
-  std::cout << "done." << std::endl;
+  if (params.verbose) std::cout << "done." << std::endl;
 }
 
 gsl::vector HighPassFiltering(const Param &params, const gsl::vector &signal) {
   gsl::vector result(signal);
   if (!params.use_highpass_filtering) return result;
 
-  std::cout
-      << "High-pass filtering input signal with a cutoff frequency of 50Hz."
-      << std::endl;
+  if (params.verbose) {
+    std::cout
+        << "High-pass filtering input signal with a cutoff frequency of 50Hz."
+        << std::endl;
+  }
 
   gsl::vector signal_cpy(signal.size());
   signal_cpy.copy(signal);
@@ -811,7 +824,7 @@ void GetIaifResidual(const Param &params, const gsl::vector &signal,
 
 void HnrAnalysis(const Param &params, const gsl::vector &source_signal,
                  const gsl::vector &fundf, gsl::matrix *hnr_glott) {
-  std::cout << "HNR Analysis ...";
+  if (params.verbose) std::cout << "HNR Analysis ...";
 
   /* Variables */
   int hnr_channels = params.hnr_order;
@@ -874,7 +887,7 @@ void HnrAnalysis(const Param &params, const gsl::vector &source_signal,
     Linear2Erb(hnr_interp, params.fs, &hnr_erb);
     hnr_glott->set_col_vec(frame_index, hnr_erb);
   }
-  std::cout << " done." << std::endl;
+  if (params.verbose) std::cout << " done." << std::endl;
 }
 
 int GetPitchSynchFrame(const Param &params, const gsl::vector &signal,

@@ -26,7 +26,8 @@
 #include "SynthesisFunctions.h"
 
 void PostFilter(const double &postfilter_coefficient, const int &fs,
-                const gsl::vector &fundf, gsl::matrix *lsf) {
+                const gsl::vector &fundf, gsl::matrix *lsf,
+                bool verbose) {
   if (postfilter_coefficient == 1.0) return;
 
   size_t POWER_SPECTRUM_FRAME_LEN = 4096;
@@ -42,8 +43,10 @@ void PostFilter(const double &postfilter_coefficient, const int &fs,
   // as 20 samples, should be fs adaptive?
   int POWER_SPECTRUM_WIN = rint(20 * 16000 / fs);
 
-  std::cout << "Using LPC postfiltering with a coefficient of "
-            << postfilter_coefficient << std::endl;
+  if (verbose) {
+    std::cout << "Using LPC postfiltering with a coefficient of "
+              << postfilter_coefficient << std::endl;
+  }
 
   /* Loop for every index of the LSF matrix */
   for (frame_index = 0; frame_index < lsf->get_cols(); frame_index++) {
@@ -562,7 +565,7 @@ int CreateExcitation(const Param &params, const gsl::vector &fundf,
 void HarmonicModification(const Param &params, const gsl::vector &fundf,
                           const gsl::matrix &hnr_glot,
                           gsl::vector *excitation_signal) {
-  std::cout << "HNR modification ...";
+  if (params.verbose) std::cout << "HNR modification ...";
 
   /* Variables */
   gsl::vector frame(params.frame_length_long);
@@ -724,7 +727,7 @@ void HarmonicModification(const Param &params, const gsl::vector &fundf,
                excitation_signal);
   }
 
-  std::cout << " done." << std::endl;
+  if (params.verbose) std::cout << " done." << std::endl;
 }
 
 void SpectralMatchExcitation(const Param &params, const gsl::vector &fundf,
@@ -762,7 +765,7 @@ void SpectralMatchExcitation(const Param &params, const gsl::vector &fundf,
 
   StabilizeLsf(&(lsf_glot_syn));
 
-  std::cout << "Excitation spectral matching ... ";
+  if (params.verbose) std::cout << "Excitation spectral matching ... ";
 
   /* Spectral match excitation */
   gsl::vector excitation_orig(excitation_signal->size());
@@ -813,7 +816,7 @@ void SpectralMatchExcitation(const Param &params, const gsl::vector &fundf,
     (*excitation_signal)(sample_index) = sum;
   }
 
-  std::cout << " done." << std::endl;
+  if (params.verbose) std::cout << " done." << std::endl;
 }
 
 void GenerateUnvoicedSignal(const Param &params, const gsl::vector &fundf,
@@ -985,7 +988,9 @@ void FftFilterExcitation(const Param &params, const gsl::vector &fundf,
        (*signal)(i) += data.excitation_signal(i);
      }
     ///signal->copy(data.excitation_signal);
-    std::cout << "Using waveforms directly, no filtering" << std::endl;;
+    if (params.verbose) {
+      std::cout << "Using waveforms directly, no filtering" << std::endl;
+    }
     return;
   }
   */

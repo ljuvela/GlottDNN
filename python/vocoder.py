@@ -11,8 +11,21 @@ def load_config(default_config, user_config=""):
     return glottdnn_cpp.analysis.load_params(default_config, user_config)
 
 
-def single_pulse_excitation(data, params):
+def _resolve_params(default_config, user_config="", verbose=None):
+    """Resolve a Param object and optionally toggle native progress output."""
+    if isinstance(default_config, glottdnn_cpp.Param):
+        params = default_config
+    else:
+        params = glottdnn_cpp.analysis.load_params(default_config, user_config)
+    if verbose is not None:
+        params.verbose = bool(verbose)
+    return params
+
+
+def single_pulse_excitation(data, params, verbose=None):
     """Create excitation using the fixed GlottDNN single-pulse model."""
+    if verbose is not None:
+        params.verbose = bool(verbose)
     validated = validate_synthesis_data(data, params)
     params.excitation_method = glottdnn_cpp.ExcitationMethod.SINGLE_PULSE
     return glottdnn_cpp.synthesis.create_excitation_with_params(
@@ -22,35 +35,27 @@ def single_pulse_excitation(data, params):
     )
 
 
-def analyze(signal, sample_rate, default_config, user_config=""):
+def analyze(signal, sample_rate, default_config, user_config="", verbose=None):
     """Analyze a mono signal and return its vocoder parameters as a dictionary."""
     samples = np.asarray(signal, dtype=np.float64)
     if samples.ndim != 1:
         raise ValueError("signal must be one-dimensional")
-    if isinstance(default_config, glottdnn_cpp.Param):
-        params = default_config
-        result = dict(glottdnn_cpp.analysis.run_array_with_params(samples, params))
-    else:
-        params = glottdnn_cpp.analysis.load_params(default_config, user_config)
-        result = dict(glottdnn_cpp.analysis.run_array_with_params(samples, params))
+    params = _resolve_params(default_config, user_config, verbose)
+    result = dict(glottdnn_cpp.analysis.run_array_with_params(samples, params))
     result["sample_rate"] = int(sample_rate)
     return result
 
 
-def analyze_file(filename, default_config, user_config=""):
+def analyze_file(filename, default_config, user_config="", verbose=None):
     """Read a WAV file and return its vocoder parameters as a dictionary."""
     signal, sample_rate = sf.read(filename, dtype="float64")
-    return analyze(signal, sample_rate, default_config, user_config)
+    return analyze(signal, sample_rate, default_config, user_config, verbose=verbose)
 
 
-def synthesize(data, default_config, user_config=""):
+def synthesize(data, default_config, user_config="", verbose=None):
     """Synthesize an analyzed parameter dictionary entirely in memory."""
-    if isinstance(default_config, glottdnn_cpp.Param):
-        params = default_config
-        use_params = True
-    else:
-        params = glottdnn_cpp.analysis.load_params(default_config, user_config)
-        use_params = False
+    params = _resolve_params(default_config, user_config, verbose)
+    use_params = isinstance(default_config, glottdnn_cpp.Param)
     data = validate_synthesis_data(data, params)
 
     frames = data["fundf"].shape[0]
@@ -163,8 +168,8 @@ def validate_synthesis_data(data, params):
     return arrays
 
 
-def synthesize_file(data, filename, default_config, user_config=""):
+def synthesize_file(data, filename, default_config, user_config="", verbose=None):
     """Synthesize data and write its waveform to a WAV file."""
-    result = synthesize(data, default_config, user_config)
+    result = synthesize(data, default_config, user_config, verbose=verbose)
     sf.write(filename, result["signal"], result["sample_rate"])
     return result

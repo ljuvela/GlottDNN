@@ -144,6 +144,7 @@ PYBIND11_MODULE(glottdnn_cpp, module) {
       .def_readwrite("use_spectral_matching", &Param::use_spectral_matching)
       .def_readwrite("use_generic_envelope", &Param::use_generic_envelope)
       .def_readwrite("noise_gain_voiced", &Param::noise_gain_voiced)
+      .def_readwrite("verbose", &Param::verbose)
       .def_readwrite("excitation_method", &Param::excitation_method);
 
    py::module analysis = module.def_submodule(

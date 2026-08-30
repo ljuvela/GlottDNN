@@ -16,7 +16,9 @@
 #define SRC_GLOTT_SYNTHESISFUNCTIONS_H_
 
 void ParameterSmoothing(const Param &params, SynthesisData *data);
-void PostFilter(const double &postfilter_coefficient, const int &fs, const gsl::vector &fundf, gsl::matrix *lsf);
+void PostFilter(const double &postfilter_coefficient, const int &fs,
+                const gsl::vector &fundf, gsl::matrix *lsf,
+                bool verbose = false);
 int CreateExcitation(const Param &params, const gsl::vector &fundf,
                      const gsl::vector &frame_energy,
                      const gsl::matrix &excitation_pulses,
