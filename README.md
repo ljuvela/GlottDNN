@@ -141,28 +141,30 @@ early-stopping metric. The generated DNN copy-synthesis output is written to
 
 ### Synthesis with original pulses
 
- We already extracted glottal pulses from the signal and stored them in `./data/tmp/slt_arctic_a0001.pls`. 
- Better quality can be achieved by re-assembling the original pulses using pitch synchronous overlap-add. 
+The analyzed result contains the extracted glottal pulses in
+`data["excitation_pulses"]`. Reassemble them with pitch-synchronous
+overlap-add using the Python API:
 
-To override some of the default config values, we can create a "user config" file and run Synthesis with two config files
+```python
+import glottdnn_cpp
+import soundfile as sf
+from glottdnn.vocoder import analyze, load_config, synthesize
 
-``` bash
-# Create user config
-CONF_USR="$DATADIR/config_usr.cfg"
-echo '# Comment: User config for GlottDNN' > $CONF_USR  
-echo 'EXCITATION_METHOD = "PULSES_AS_FEATURES";' >> $CONF_USR
-echo 'USE_WSOLA = true;' >> $CONF_USR
-echo 'USE_SPECTRAL_MATCHING = false;' >> $CONF_USR
-echo 'NOISE_GAIN_VOICED = 0.0;' >> $CONF_USR
+signal, sample_rate = sf.read("data/tmp/slt_arctic_a0001.wav", dtype="float64")
+params = load_config("config/config_default_16k.cfg")
+data = analyze(signal, sample_rate, params)
 
-# Run synthesis with two config files
-Synthesis "$DATADIR/$BASENAME" ./config/config_default_16k.cfg $CONF_USR
-
-# Move generated file
-mv "$DATADIR/$BASENAME.syn.wav" "$DATADIR/$BASENAME.syn.paf.wav"       
+params.excitation_method = glottdnn_cpp.ExcitationMethod.PULSES_AS_FEATURES
+params.use_wsola = True
+params.use_spectral_matching = False
+params.noise_gain_voiced = 0.0
+result = synthesize(data, params)
+sf.write(
+    "data/tmp/slt_arctic_a0001.syn.paf.wav",
+    result["signal"],
+    result["sample_rate"],
+)
 ```
-
-Of course the original pulses are not available in many applications (such as text-to-speech). For this, we can use a trainable excitation model (neural net), which generates the pulses from acoustic features.
 
 ## Built-in neural net excitation model 
 

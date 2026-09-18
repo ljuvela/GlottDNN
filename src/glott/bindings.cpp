@@ -142,6 +142,7 @@ PYBIND11_MODULE(glottdnn_cpp, module) {
       .def_readwrite("use_pitch_synchronous_analysis", &Param::use_pitch_synchronous_analysis)
       .def_readwrite("use_external_lsf_vt", &Param::use_external_lsf_vt)
       .def_readwrite("use_spectral_matching", &Param::use_spectral_matching)
+      .def_readwrite("use_wsola", &Param::use_wsola)
       .def_readwrite("use_generic_envelope", &Param::use_generic_envelope)
       .def_readwrite("noise_gain_voiced", &Param::noise_gain_voiced)
       .def_readwrite("verbose", &Param::verbose)
