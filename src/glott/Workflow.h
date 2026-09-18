@@ -15,6 +15,9 @@ int AnalyzeSignal(const std::string &default_config_filename,
                   const gsl::vector &signal, AnalysisData *data);
 int AnalyzeSignalWithParams(const gsl::vector &signal, Param *params,
                             AnalysisData *data);
+int AnalyzeSignalWithFundf(const gsl::vector &signal,
+                           const gsl::vector *fundf,
+                           Param *params, AnalysisData *data);
 int SynthesizeData(const std::string &default_config_filename,
                    const std::string &user_config_filename,
                    SynthesisData *data, gsl::vector *signal,

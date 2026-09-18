@@ -79,20 +79,32 @@ int AnalyzeSignal(const std::string &default_config_filename,
 
 int AnalyzeSignalWithParams(const gsl::vector &signal, Param *params,
                            AnalysisData *data) {
+   return AnalyzeSignalWithFundf(signal, NULL, params, data);
+}
+
+int AnalyzeSignalWithFundf(const gsl::vector &signal,
+                           const gsl::vector *external_fundf,
+                           Param *params, AnalysisData *data) {
    data->signal = signal;
    params->signal_length = signal.size();
    params->number_of_frames =
       static_cast<int>(ceil(static_cast<double>(signal.size()) /
                             static_cast<double>(params->frame_shift)));
+   if (external_fundf != NULL &&
+       external_fundf->size() != static_cast<size_t>(params->number_of_frames))
+      return EXIT_FAILURE;
    data->AllocateData(*params);
    data->signal = HighPassFiltering(*params, data->signal);
    if (!params->use_external_f0 || !params->use_external_gci ||
       params->signal_polarity == POLARITY_DETECT)
       GetIaifResidual(*params, data->signal, &(data->source_signal_iaif));
    PolarityDetection(*params, &(data->signal), &(data->source_signal_iaif));
-   if (GetF0(*params, data->signal, data->source_signal_iaif,
-             &(data->fundf)) == EXIT_FAILURE)
+   if (external_fundf != NULL) {
+      data->fundf.copy(*external_fundf);
+   } else if (GetF0(*params, data->signal, data->source_signal_iaif,
+                    &(data->fundf)) == EXIT_FAILURE) {
       return EXIT_FAILURE;
+   }
    if (GetGci(*params, data->signal, data->source_signal_iaif, data->fundf,
              &(data->gci_inds)) == EXIT_FAILURE)
       return EXIT_FAILURE;

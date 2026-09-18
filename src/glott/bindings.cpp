@@ -167,6 +167,24 @@ PYBIND11_MODULE(glottdnn_cpp, module) {
           throw std::runtime_error("analysis failed");
        return AnalysisResult(data);
     }, py::arg("signal"), py::arg("params"));
+    analysis.def("run_array_with_fundf",
+       [](py::array signal, py::array fundf, Param &params) {
+          gsl::vector input_signal = ToVector(signal);
+          gsl::vector input_fundf = ToVector(fundf);
+          if (input_fundf.size() == 0)
+             throw std::invalid_argument("fundf must not be empty");
+          const size_t expected_frames =
+             (input_signal.size() + params.frame_shift - 1) /
+             params.frame_shift;
+          if (input_fundf.size() != expected_frames)
+             throw std::invalid_argument(
+                "fundf length must match the analysis frame count");
+          AnalysisData data;
+          if (AnalyzeSignalWithFundf(input_signal, &input_fundf, &params,
+                                     &data) != 0)
+             throw std::runtime_error("analysis failed");
+          return AnalysisResult(data);
+       }, py::arg("signal"), py::arg("fundf"), py::arg("params"));
     analysis.def("high_pass_filter", [](py::array signal,
                                         const std::string &config) {
        gsl::vector result = ToVector(signal);

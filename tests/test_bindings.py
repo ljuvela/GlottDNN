@@ -1,6 +1,7 @@
 from pathlib import Path
 from urllib.request import urlopen
 
+import numpy as np
 import pytest
 
 import glottdnn_cpp
@@ -46,6 +47,31 @@ def test_in_memory_analysis_and_synthesis(audio_file, config_file):
     assert synthesized["sample_rate"] == sample_rate
     assert synthesized["signal"].ndim == 1
     assert synthesized["signal"].size == synthesized["excitation_signal"].size
+
+
+def test_in_memory_analysis_reuses_fundf(audio_file, config_file):
+    import soundfile as sf
+    import glottdnn.vocoder as vocoder
+
+    signal, sample_rate = sf.read(audio_file, dtype="float64")
+    first = vocoder.analyze(signal, sample_rate, str(config_file))
+    second = vocoder.analyze(
+        signal, sample_rate, str(config_file), fundf=first["fundf"]
+    )
+    np.testing.assert_array_equal(second["fundf"], first["fundf"])
+
+
+def test_in_memory_analysis_rejects_invalid_fundf_shape(audio_file, config_file):
+    import soundfile as sf
+    import glottdnn.vocoder as vocoder
+
+    signal, sample_rate = sf.read(audio_file, dtype="float64")
+    with pytest.raises(ValueError, match="one-dimensional"):
+        vocoder.analyze(
+            signal, sample_rate, str(config_file), fundf=np.zeros((2, 2))
+        )
+    with pytest.raises(ValueError, match="frame count"):
+        vocoder.analyze(signal, sample_rate, str(config_file), fundf=np.zeros(1))
 
 
 def test_analysis_and_synthesis_share_params(audio_file, config_file):

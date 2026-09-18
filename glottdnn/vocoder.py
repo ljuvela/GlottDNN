@@ -36,13 +36,33 @@ def single_pulse_excitation(data, params, verbose=None):
     )
 
 
-def analyze(signal, sample_rate, default_config, user_config="", verbose=None):
+def analyze(
+    signal, sample_rate, default_config, user_config="", verbose=None, fundf=None
+):
     """Analyze a mono signal and return its vocoder parameters as a dictionary."""
     samples = np.asarray(signal, dtype=np.float64)
     if samples.ndim != 1:
         raise ValueError("signal must be one-dimensional")
     params = _resolve_params(default_config, user_config, verbose)
-    result = dict(glottdnn_cpp.analysis.run_array_with_params(samples, params.as_native()))
+    if fundf is None:
+        result = dict(
+            glottdnn_cpp.analysis.run_array_with_params(samples, params.as_native())
+        )
+    else:
+        external_fundf = np.asarray(fundf, dtype=np.float64)
+        if external_fundf.ndim != 1 or external_fundf.size == 0:
+            raise ValueError("fundf must be a non-empty one-dimensional array")
+        expected_frames = (samples.size + params.frame_shift - 1) // params.frame_shift
+        if external_fundf.size != expected_frames:
+            raise ValueError(
+                "fundf length must match the analysis frame count "
+                "({})".format(expected_frames)
+            )
+        result = dict(
+            glottdnn_cpp.analysis.run_array_with_fundf(
+                samples, external_fundf, params.as_native()
+            )
+        )
     result["sample_rate"] = int(sample_rate)
     return result
 
