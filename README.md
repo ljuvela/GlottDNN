@@ -43,28 +43,48 @@ mkdir -p $DATADIR
 curl -L -o "$DATADIR/$BASENAME.wav" $URL
 ```
 
-### Acoustic feature analysis
+### Acoustic feature analysis with Python
 
-Now run GlottDNN Analysis program with default configuration
-``` bash
-Analysis "$DATADIR/$BASENAME.wav" ./config/config_default_16k.cfg
+Analyze the waveform in memory with the Python API:
+
+```python
+import soundfile as sf
+from glottdnn.vocoder import analyze, load_config
+
+signal, sample_rate = sf.read("data/tmp/slt_arctic_a0001.wav", dtype="float64")
+params = load_config("config/config_default_16k.cfg")
+data = analyze(signal, sample_rate, params)
 ```
 
-We should now have the following files 
+The returned dictionary contains the extracted features, including `fundf`,
+`frame_energy`, `lsf_vocal_tract`, `lsf_glot`, `hnr_glot`, and
+`excitation_pulses`. The analysis result stays in memory rather than writing
+intermediate feature files.
 
+For the legacy file-based `Analysis` command and its generated files, see
+[legacy/README.md](legacy/README.md).
+
+To save the extracted arrays for later use, store them in a named compressed
+NumPy archive:
+
+```python
+import numpy as np
+
+np.savez_compressed("data/tmp/slt_arctic_a0001.features.npz", **data)
 ```
-ls ./data/tmp/ 
 
-    ./data/tmp/slt_arctic_a0001.gain
-    ./data/tmp/slt_arctic_a0001.lsf
-    ./data/tmp/slt_arctic_a0001.slsf
-    ./data/tmp/slt_arctic_a0001.hnr
-    ./data/tmp/slt_arctic_a0001.pls
-    ./data/tmp/slt_arctic_a0001.f0
-    ./data/tmp/slt_arctic_a0001.src.wav
+Read the analysis result back with:
+
+```python
+with np.load(
+    "data/tmp/slt_arctic_a0001.features.npz", allow_pickle=False
+) as archive:
+    data = {name: archive[name] for name in archive.files}
+
+sample_rate = int(data.pop("sample_rate"))
 ```
 
-### Synthesis with single pulse excitation 
+### Synthesis with single pulse excitation
 
 First let's run copy synthesis with `SINGLE_PULSE` excitation. This method uses a single fixed glottal pulse, which is modified according to F0 and HNR (similarly to the original GlottHMM vocoder).
 
