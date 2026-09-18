@@ -8,6 +8,10 @@ project(GlottDNN VERSION 1.2 LANGUAGES CXX)
 
 include(GNUInstallDirs)
 
+if(DEFINED ENV{CONDA_PREFIX})
+    list(APPEND CMAKE_PREFIX_PATH "$ENV{CONDA_PREFIX}")
+endif()
+
 if(APPLE AND DEFINED ENV{CONDA_PREFIX})
     set(CMAKE_BUILD_RPATH "$ENV{CONDA_PREFIX}/lib")
     set(CMAKE_INSTALL_RPATH "$ENV{CONDA_PREFIX}/lib")
@@ -129,6 +133,6 @@ install(FILES
     python/reaper_pitch_analysis.py
     python/signal_processing.py
     python/native_cli.py
-    python/vocoder.py
+    glottdnn/vocoder.py
     DESTINATION .
 )
